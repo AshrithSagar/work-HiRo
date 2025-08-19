@@ -1,0 +1,3 @@
+[submodule "repos/robotics-codes-from-scratch"]
+	path = repos/robotics-codes-from-scratch
+	url = https://gitlab.idiap.ch/rli/robotics-codes-from-scratch.git
