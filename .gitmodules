@@ -1,3 +1,7 @@
 [submodule "repos/robotics-codes-from-scratch"]
 	path = repos/robotics-codes-from-scratch
 	url = https://gitlab.idiap.ch/rli/robotics-codes-from-scratch.git
+
+[submodule "repos/pbdlib-matlab"]
+	path = repos/pbdlib-matlab
+	url = https://gitlab.idiap.ch/rli/pbdlib-matlab.git
