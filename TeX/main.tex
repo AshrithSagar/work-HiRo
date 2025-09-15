@@ -1,0 +1,61 @@
+\documentclass[12pt,openany]{book}
+
+\usepackage[utf8]{inputenc}
+\usepackage{amsfonts, amsmath, amssymb, amsthm, cancel, latexsym, mathtools}
+\usepackage{enumitem, geometry, graphicx, hyperref, microtype, titlesec, tocloft}
+\usepackage[linesnumbered,ruled,vlined]{algorithm2e}
+\usepackage[numbers,sort]{natbib}
+\usepackage[dvipsnames]{xcolor}
+
+\geometry{
+    a4paper,
+    left=1.2cm,
+    right=1.2cm,
+    top=2cm,
+    bottom=2cm,
+}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    citecolor=red,
+}
+
+\makeatletter
+\renewcommand{\part}[1]{
+    \clearpage
+    \refstepcounter{part}
+    \addcontentsline{toc}{part}{\thepart\hspace{1em}#1}
+    {\normalfont\huge\bfseries \thepart. #1}
+}
+\patchcmd{\chapter}{\cleardoublepage}{}{}{}
+\patchcmd{\chapter}{\clearpage}{}{}{}
+\makeatother
+\renewcommand{\cfttoctitlefont}{\normalfont\LARGE\bfseries}
+\setlength{\cftbeforetoctitleskip}{2em}
+\setlength{\cftaftertoctitleskip}{0pt}
+\setlength{\cftbeforesecskip}{0pt}
+\titleformat{\chapter}[hang]{\normalfont\LARGE\bfseries}{\thechapter.}{0.5em}{}
+\titlespacing*{\chapter}{0pt}{1em}{0.2em}
+\titlespacing*{\section}{0pt}{0.7em}{0.2em}
+\titlespacing*{\subsection}{0pt}{0.5em}{0.2em}
+\titlespacing*{\subsubsection}{0pt}{0.3em}{0.2em}
+
+\setlength{\parskip}{0pt}
+\setlength{\parindent}{0pt}
+\setlist{noitemsep, topsep=0pt}
+\setcounter{tocdepth}{2}
+
+\newcommand{\psecref}[1]{(\hyperref[#1]{\S\ref*{#1}})}
+\newcommand{\peqref}[1]{(\hyperref[#1]{Eq.~\ref*{#1}})}
+
+\begin{document}
+
+\frontmatter{
+    \input{sections/titlepage.tex}
+    {\let\clearpage\relax \tableofcontents}
+}
+\mainmatter{
+}
+
+\end{document}
