@@ -1,0 +1,93 @@
+
+\part{Gaussians}
+
+\chapter{Gaussian distribution}
+
+A continuous probability distribution, defined by two parameters: its mean \( \mu \) and standard deviation \( \sigma \).
+
+\paragraph{PDF:}
+\begin{equation*}
+    f(x \mid \mu, \sigma)
+    =
+    \frac{1}{\sigma \sqrt{2\pi}}
+    \exp \left\{ -\frac{{(x - \mu)}^2}{2\sigma^2} \right\}
+\end{equation*}
+
+\section{Properties}
+
+\begin{itemize}
+    \item The mean, median, and mode are all equal.
+
+    \item Symmetric about the mean.
+\end{itemize}
+
+\chapter{Gaussian mixture models (GMMs)}
+
+A probabilistic model that assumes that the data is generated from a mixture of several Gaussian distributions with unknown parameters.
+A GMM is defined as a weighted sum of \( K \) Gaussian components.
+
+\paragraph{PDF:}
+\begin{equation*}
+    p(x)
+    =
+    \sum_{k=1}^{K} \pi_k \mathcal{N}(x \mid \mu_k, \Sigma_k)
+\end{equation*}
+
+\begin{itemize}
+    \item \( K \) is the number of Gaussian components.
+
+    \item \( \pi_k \) is the mixing coefficient for the \( k \)-th component, satisfying \( \sum_{k=1}^{K} \pi_k = 1 \) and \( \pi_k \geq 0 \).
+
+    \item \( \mathcal{N}(x \mid \mu_k, \Sigma_k) \) is the Gaussian distribution with mean \( \mu_k \) and covariance matrix \( \Sigma_k \):
+        \begin{equation*}
+            \mathcal{N}(x \mid \mu_k, \Sigma_k)
+            =
+            \frac{1}{{(2\pi)}^{d/2} |\Sigma_k|^{1/2}}
+            \exp \left\{ -\frac{1}{2}{(x - \mu_k)}^\top \Sigma_k^{-1} (x - \mu_k) \right\}
+        \end{equation*}
+
+    \item \( d \) is the dimensionality of the data.
+\end{itemize}
+
+\section{Parameter estimation}
+
+The parameters of a GMM, including the mixing coefficients \( \pi_k \), means \( \mu_k \), and covariance matrices \( \Sigma_k \), can be estimated using the \textit{Expectation-Maximization (EM)} algorithm.
+The EM algorithm iteratively refines the parameter estimates to maximize the likelihood of the observed data.
+
+\subsection{Expectation-Maximization (EM) algorithm}
+
+The EM algorithm consists of two main steps: the Expectation (E) step and the Maximization (M) step.
+\begin{itemize}
+    \item \textbf{E-step}:
+        Compute the posterior probabilities (responsibilities) that each data point \( x_i \) belongs to each Gaussian component \( k \):
+        \begin{equation*}
+            \gamma_{ik}
+            =
+            \frac{\pi_k \mathcal{N}(x_i \mid \mu_k, \Sigma_k)}
+            {\sum_{j=1}^{K} \pi_j \mathcal{N}(x_i \mid \mu_j, \Sigma_j)}
+        \end{equation*}
+
+    \item \textbf{M-step}:
+        Update the parameters using the responsibilities computed in the E-step:
+        \begin{align*}
+            N_k
+            & =
+            \sum_{i=1}^{N} \gamma_{ik}
+            \\
+            \pi_k^{\text{new}}
+            & =
+            \frac{N_k}{N}
+            \\
+            \mu_k^{\text{new}}
+            & =
+            \frac{1}{N_k} \sum_{i=1}^{N} \gamma_{ik} x_i
+            \\
+            \Sigma_k^{\text{new}}
+            & =
+            \frac{1}{N_k}
+            \sum_{i=1}^{N} \gamma_{ik} (x_i - \mu_k^{\text{new}}) {(x_i - \mu_k^{\text{new}})}^\top
+        \end{align*}
+        where \( N \) is the total number of data points.
+\end{itemize}
+
+The E-step and M-step are repeated until convergence, typically when the change in the log-likelihood of the data given the model parameters is below a certain threshold.
