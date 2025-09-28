@@ -1,0 +1,97 @@
+
+\part{Control theory}
+
+\chapter{Linear control}
+
+\section{State space representation}
+
+A continuous-time linear time-invariant (LTI) system can be represented in state space form as
+\begin{align*}
+    \dot{x}(t)
+    & =
+    A \, x(t) + B \, u(t)
+    \\
+    y(t)
+    & =
+    C \, x(t) + D \, u(t)
+\end{align*}
+\begin{equation*}
+    \implies
+    \begin{bmatrix}
+        \dot{x}(t) \\
+        y(t)
+    \end{bmatrix}
+    =
+    \begin{bmatrix}
+        A & B \\
+        C & D
+    \end{bmatrix}
+    \begin{bmatrix}
+        x(t) \\
+        u(t)
+    \end{bmatrix}
+\end{equation*}
+
+\( n \) is the number of states, \( m \) is the number of inputs, and \( p \) is the number of outputs.
+
+A discrete-time LTI system can be represented in state space form as
+\begin{align*}
+    x[k+1]
+    & =
+    A \, x[k] + B \, u[k]
+    \\
+    y[k]
+    & =
+    C \, x[k] + D \, u[k]
+\end{align*}
+
+\section{Controllability}
+
+A system is controllable if it is possible to drive the state \(x(t)\) from any initial state to any final state in finite time using an appropriate control input \( u(t) \).
+The controllability matrix \( \mathcal{C} \) is defined as
+\begin{equation*}
+    \mathcal{C}
+    =
+    \begin{bmatrix}
+        B & A B & A^2 B & \cdots & A^{n-1} B
+    \end{bmatrix}_{n \times nm}
+\end{equation*}
+
+The system is controllable iff \( \mathcal{C} \) has full rank, i.e., \( \operatorname{rank}(\mathcal{C}) = n \).
+
+\section{Observability}
+
+A system is observable if it is possible to determine the state \( x(t) \) from the output \( y(t) \) over a finite time interval.
+The observability matrix \( \mathcal{O} \) is defined as
+\begin{equation*}
+    \mathcal{O}
+    =
+    \begin{bmatrix}
+        C \\
+        C A \\
+        C A^2 \\
+        \vdots \\
+        C A^{n-1}
+    \end{bmatrix}_{np \times n}
+\end{equation*}
+
+The system is observable iff \( \mathcal{O} \) has full rank, i.e., \( \operatorname{rank}(\mathcal{O}) = n \).
+
+\section{State feedback control}
+
+State feedback control involves designing a control law of the form
+\begin{equation*}
+    u(t)
+    =
+    -K \, x(t) + r(t)
+\end{equation*}
+where \( K \) is the state feedback gain matrix and \( r(t) \) is the reference input.
+
+The closed-loop system dynamics become
+\begin{equation*}
+    \dot{x}(t)
+    =
+    (A - B K) \, x(t) + B \, r(t)
+\end{equation*}
+
+Eigenvalues of the matrix \( (A - B K) \) determine the stability of the closed-loop system.
