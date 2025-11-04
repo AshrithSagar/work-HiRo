@@ -1,0 +1,17 @@
+
+\part{Imitation learning}
+
+\chapter{Learning from demonstrations}
+
+Imitation learning is a paradigm in machine learning where an agent learns to perform tasks by mimicking expert demonstrations rather than relying solely on explicit reward signals.
+This approach is particularly useful in scenarios where designing a reward function is challenging or when expert behavior is readily available.
+
+\section{Types of imitation learning}
+
+\begin{itemize}
+    \item \textbf{Behavioral Cloning:} A supervised learning approach where the agent learns a mapping from states to actions based on the expert demonstrations.
+        The agent is trained to minimise the difference between its actions and the expert's actions.
+
+    \item \textbf{Inverse Reinforcement Learning (IRL):} The agent infers the underlying reward function that the expert is optimizing.
+        Once the reward function is learned, the agent can use reinforcement learning techniques to derive an optimal policy.
+\end{itemize}
