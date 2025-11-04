@@ -1,11 +1,15 @@
 \documentclass[12pt,openany]{book}
 
 \usepackage[utf8]{inputenc}
-\usepackage{amsfonts, amsmath, amssymb, amsthm, cancel, latexsym, mathtools}
-\usepackage{enumitem, geometry, graphicx, hyperref, microtype, titlesec, tocloft}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsfonts, amsmath, amssymb, amsthm, cancel, interval, latexsym, mathcommand, mathtools}
+\usepackage{booktabs, enumitem, geometry, graphicx, hyperref, makeidx, microtype, titlesec, tocloft, xparse}
 \usepackage[linesnumbered,ruled,vlined]{algorithm2e}
+\usepackage[most]{tcolorbox}
 \usepackage[numbers,sort]{natbib}
 \usepackage[dvipsnames]{xcolor}
+\usepackage[notion,quotation]{knowledge}
 
 \geometry{
     a4paper,
@@ -51,6 +55,15 @@
 \newcommand{\psecref}[1]{(\hyperref[#1]{\S\ref*{#1}})}
 \newcommand{\peqref}[1]{(\hyperref[#1]{Eq.~\ref*{#1}})}
 
+\newcommand{\paperchapter}[2]{
+    \refstepcounter{chapter}
+    \chapter*{{\thechapter. #1#2}}
+    \addcontentsline{toc}{chapter}{\thechapter\ \ #2}
+}
+
+\input{macros.tex}
+\input{knowledge.tex}
+
 \begin{document}
 
 \frontmatter{
@@ -61,6 +74,7 @@
     \input{sections/control.tex}
     \input{sections/gaussian.tex}
     \input{sections/imitation-learning.tex}
+    \input{sections/papers.tex}
 }
 
 \end{document}

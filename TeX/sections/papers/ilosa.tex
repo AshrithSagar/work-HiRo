@@ -1,0 +1,68 @@
+
+\paperchapter{\Large}{ILoSA: Interactive Learning of Stiffness and Attractors}
+
+Teaching modalities
+\begin{itemize}
+    \item Kinesthetic demonstration
+    \item Teleoperation feedback
+\end{itemize}
+
+\section{Cartesian impedance control}
+
+\textbf{Cartesian impedance control} models the end-effector dynamics as a mass-spring-damper system
+\begin{equation*}
+    \func{\bfLambda}{\q} \, \ddot\x
+    =
+    \K_s \, \Delta\x
+    -
+    \D \, \dot\x
+    +
+    \f_{\text{ext}}
+\end{equation*}
+where
+\begin{itemize}
+    \item \( \func{\bfLambda}{\q} \to \) Physical system's Cartesian inertia matrix
+    \item \( \K_s \to \) Anisotropic diagonal stiffness matrix
+    \item \( \D \to \) Critical damping matrix
+    \item \( \f_{\text{ext}} \to \) External forces
+\end{itemize}
+
+ILoSA learns both \( \func{\K_s}{\x} \) and \( \func{\Delta\x}{\x} \) as functions of position.
+
+\section{Gaussian process regression}
+
+\begin{align*}
+    \func{\mu}{\x}
+    & =
+    \qf
+    {\func{\k_\ast}{\bfxi, \x}}
+    {\inv{\pbrac{
+                \func{\K}{\bfxi, \bfxi}
+                +
+                \sigma_n^2 \, \I
+    }}}
+    [\y]
+    =
+    \func{\A}{\bfxi, \x} \, \y
+    \\
+    \func{\Sigma}{\x}
+    & =
+    \func{k}{\x, \x}
+    -
+    \qf
+    {\func{\k_\ast}{\bfxi, \x}}
+    {\inv{\pbrac{
+                \func{\K}{\bfxi, \bfxi}
+                +
+                \sigma_n^2 \, \I
+    }}}
+\end{align*}
+where
+\begin{itemize}
+    \item \( \bfxi \to \) Training inputs
+    \item \( \y \to \) Training outputs
+    \item \( \func{k}{\x, \x} \to \) Variance of single evaluation point \( \x \)
+    \item \( \func{\k_\ast}{\bfxi, \x} \to \) Covariance matrix between \( \x \) and training inputs
+    \item \( \func{\K}{\bfxi, \bfxi} \to \) Covariance matrix of training inputs
+    \item \( \sigma_n^2 \to \) Variance of Gaussian noise of the training points
+\end{itemize}

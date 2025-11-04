@@ -1,0 +1,50 @@
+%% macros.tex
+
+\newcommand{\R}{{\mathbb{R}}}
+\newcommand{\N}{{\mathbb{N}}}
+
+\newcommand{\set}[1]{{\left\{#1\right\}}}
+\newcommand{\given}{\;\middle|\;}
+
+\NewDocumentCommand{\pbrac}{om}{{\IfNoValueTF{#1}{\left\lparen#2\right\rparen}{#1\lparen#2#1\rparen}}}
+\NewDocumentCommand{\bbrac}{om}{{\IfNoValueTF{#1}{\left\lbrack#2\right\rbrack}{#1\lbrack#2#1\rbrack}}}
+
+\NewDocumentCommand{\abs}{om}{{\IfNoValueTF{#1}{\left\lvert#2\right\rvert}{#1\lvert#2#1\rvert}}}
+\NewDocumentCommand{\norm}{om}{{\IfNoValueTF{#1}{\left\lVert#2\right\rVert}{#1\lVert#2#1\rVert}}}
+
+\newcommand{\dotp}[2]{{{#1}^\top#2}}
+\newcommand{\outp}[2]{{#1{#2}^\top}}
+\ExplSyntaxOn{}
+\NewDocumentCommand{\qf}{mmo}{
+    \IfValueTF{#3}{
+        \str_if_eq:nnT {#1} {#3} {
+            \PackageWarning{macros}{Argument 3 not needed}
+        }
+        {#1}^\top#2\,#3
+    }{
+        {#1}^\top#2\,#1
+    }
+}
+\ExplSyntaxOff{}
+
+\newcommand{\inv}[1]{{{#1}^{-1}}}
+
+\newcommand{\func}[2]{{#1\!\left\lparen#2\right\rparen}}
+
+\LoopCommands\lettersUppercase[cal#1]{\newmathcommand#2{{\mathcal{#1}}}}
+\newcommand{\classC}{{\calC}}
+
+\LoopCommands{{argmin}{argmax}}[#1]{\newmathcommand#2{\mathop{\mathrm{#1}}}}
+\LoopCommands{{minimize}{maximize}}[#1]{\DeclareMathOperator*{#2}{#1}}
+\DeclareMathOperator{\subjectto}{subject~to}
+\newcommand{\smalloh}[1]{\func{{\scriptstyle\calO}}{#1}}
+\newcommand{\bigoh}[1]{\func{\calO}{#1}}
+
+\LoopCommands{xyzqfk}[#1]{\declaremathcommandPIE#2{{\mathbf{#1}}##1##2\IfEmptyTF{##3}{}{^{(\GetExponent{##3})}}}}
+\LoopCommands\lettersGreekAll[bf#1]{\newmathcommand#2{{\boldsymbol{#3}}}}
+
+\LoopCommands\lettersAll[bf#1]{\newmathcommand#2{{\mathbf{#1}}}}
+\LoopCommands{IABKD}[#1]{\newmathcommand#2{{\mathbf{#1}}}}
+
+\newcommand{\half}{{\frac{1}{2}}}
+\newcommand{\zero}{{\mathbf{0}}}
