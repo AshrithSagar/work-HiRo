@@ -26,6 +26,7 @@
 }
 
 \raggedbottom{}
+\makeindex{}
 
 \makeatletter
 \renewcommand{\part}[1]{
@@ -40,6 +41,8 @@
 \renewcommand{\cfttoctitlefont}{\normalfont\LARGE\bfseries}
 \setlength{\cftbeforetoctitleskip}{2em}
 \setlength{\cftaftertoctitleskip}{0pt}
+\setlength{\cftbeforepartskip}{1em}
+\setlength{\cftbeforechapskip}{0.5em}
 \setlength{\cftbeforesecskip}{0pt}
 \titleformat{\chapter}[hang]{\normalfont\LARGE\bfseries}{\thechapter.}{0.5em}{}
 \titlespacing*{\chapter}{0pt}{1em}{0.2em}
@@ -54,6 +57,7 @@
 
 \newcommand{\psecref}[1]{(\hyperref[#1]{\S\ref*{#1}})}
 \newcommand{\peqref}[1]{(\hyperref[#1]{Eq.~\ref*{#1}})}
+\newcommand{\palgref}[1]{(\hyperref[#1]{Alg.~\ref*{#1}})}
 
 \newcommand{\paperchapter}[2]{
     \refstepcounter{chapter}
@@ -75,6 +79,13 @@
     \input{sections/gaussian.tex}
     \input{sections/imitation-learning.tex}
     \input{sections/papers.tex}
+}
+\backmatter{
+    \renewcommand{\bibname}{References}
+    \bibliographystyle{IEEEtran}
+    \bibliography{sections/references.bib}
+
+    \printindex{}
 }
 
 \end{document}

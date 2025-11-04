@@ -1,0 +1,75 @@
+
+\paperchapter{\Large}{DAgger: Dataset Aggregation}
+
+A Reduction of Imitation Learning and Structured Prediction to No-Regret Online Learning
+
+\begin{itemize}
+    \item DAgger improves on behavioral cloning by using the aggregated dataset to train policies that mimic the expert on states induced by the learned policies themselves, rather than just the expert's states.
+
+    \item DAgger requires querying the expert online though.
+
+    \item DAgger trains a stationary deterministic policy using no-regret online learning.
+\end{itemize}
+
+\section{DAgger algorithm}
+
+\( \Pi \to \) Set of all policies under consideration
+
+\begin{algorithm}[H]
+    \caption{
+        DAgger algorithm
+    }\label{alg:DAgger}
+    \SetAlgoLined{}
+    \KwIn{
+        Expert policy \( \pi^\ast \);
+        Number of iterations \( N \);
+        Mixing parameters \( \{\beta_i\}_{i=1}^N \);
+    }
+
+    \( \calD \leftarrow \emptyset \)\;
+
+    Initialise \( \hat{\pi}_1 \) to any policy in \( \Pi \)\;
+
+    \For{\( i = 1 \) \KwTo \( N \)}{
+        \( \pi_i \leftarrow \beta_i \, \pi^\ast + (1 - \beta_i) \, \hat{\pi}_i \)\;
+
+        Execute policy \( {\pi}_i \) to collect \( T \) states:
+        \( s_1, s_2, \ldots, s_T \)\;
+
+        Obtain expert actions
+        \( a_t = \pi^\ast(s_t) \)
+        for each visited state \( s_t \)\;
+
+        Aggregate dataset:
+        \( \calD \leftarrow \calD \cup \{(s_t, a_t)\}_{t=1}^T \)\;
+
+        Train new policy \( \hat{\pi}_{i+1} \)
+        on dataset \( \calD \)\;
+    }
+    \Return{
+        Best policy \( \hat{\pi}_i \)
+        on a validation set
+    }\;
+\end{algorithm}
+
+Choose \( \beta_1 = 1 \) so that the first iteration doesn't require a initial policy and leverages only the expert.
+Choosing \( \beta_i = p^{i-1} \) for some \( p \in (0, 1) \) gives an exponentially decaying probability of executing the expert policy.
+
+\section{No-regret online learning}
+
+Produces a sequence of policies \( \pi_{1:N} \) such that the average regret with respect to the best policy in hindsight goes to 0 as \( N \to \infty \).
+\begin{equation*}
+    \lim_{N \to \infty}
+    \bbrac{
+        \frac{1}{N}
+        \sum_{i = 1}^{N}
+        \ell_i(\pi_i)
+        -
+        \min_{\pi \in \Pi}
+        \frac{1}{N}
+        \sum_{i = 1}^{N}
+        \ell_i(\pi)
+    }
+    \to 0
+\end{equation*}
+where \( \ell_i(\pi) \) is the loss of policy \( \pi \) at iteration \( i \).
