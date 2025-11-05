@@ -41,7 +41,7 @@ A Reduction of Imitation Learning and Structured Prediction to No-Regret Online 
         for each visited state \( s_t \)\;
 
         Aggregate dataset:
-        \( \calD \leftarrow \calD \cup \{(s_t, a_t)\}_{t=1}^T \)\;
+        \( \calD \leftarrow \calD \cup \set{(s_t, a_t)}_{t = 1}^T \)\;
 
         Train new policy \( \hat{\pi}_{i+1} \)
         on dataset \( \calD \)\;
@@ -54,6 +54,11 @@ A Reduction of Imitation Learning and Structured Prediction to No-Regret Online 
 
 Choose \( \beta_1 = 1 \) so that the first iteration doesn't require a initial policy and leverages only the expert.
 Choosing \( \beta_i = p^{i-1} \) for some \( p \in (0, 1) \) gives an exponentially decaying probability of executing the expert policy.
+
+\paragraph{Implementation resources}
+\begin{itemize}
+    \item \url{https://imitation.readthedocs.io/en/latest/algorithms/dagger.html}
+\end{itemize}
 
 \section{No-regret online learning}
 

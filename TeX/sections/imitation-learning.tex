@@ -15,3 +15,23 @@ This approach is particularly useful in scenarios where designing a reward funct
     \item \textbf{Inverse Reinforcement Learning (IRL):} The agent infers the underlying reward function that the expert is optimizing.
         Once the reward function is learned, the agent can use reinforcement learning techniques to derive an optimal policy.
 \end{itemize}
+
+\section{Compliant control}
+
+\begin{equation*}
+    \M \, \ddot\x + \B \, \dot\x + \K \, \x = \F_{\text{ext}},
+\end{equation*}
+where
+\begin{itemize}
+    \item
+        \( \x \in \mathbb{R}^d \to \)
+        End-effector position
+
+    \item
+        \( \F_{\text{ext}} \in \mathbb{R}^d \to \)
+        External force applied by expert
+
+    \item
+        \( \M, \B, \K \in \mathbb{R}^{d \times d} \to \)
+        Desired inertia, damping and stiffness matrices
+\end{itemize}

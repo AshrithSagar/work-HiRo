@@ -1,6 +1,32 @@
 
 \paperchapter{\Large}{Compliant Residual DAgger (CR-DAgger)}
 
+Two components:
+\begin{itemize}
+    \item Compliant Intervention Interface
+    \item Compliant Residual Policy
+\end{itemize}
+
 \section{Compliant Intervention Interface}
 
+\begin{itemize}
+    \item Mainly, they use a standard admittance controller to realise compliant interventions from the expert.
+        They designed a hardware addon to allow the human expert to apply forces directly to the robot, and their main takeaway is that we don't need to stop the task while giving demonstrations --- the intervention is done while the robot is still executing its learned policy.
+
+    \item Two benefits of this approach as they claim are that the transitions are smoother, and as a result there is minimal distribution shift between the learned policy and the expert interventions.
+
+    \item During the intervention phase, they sample with a high-frequency, which enables more reactive learning, especially in contact-rich tasks.
+\end{itemize}
+
 \section{Compliant Residual Policy}
+
+Their base policy is a diffusion policy with visual and proprioceptive inputs.
+They don't have any force inputs in the base, that's included in their Compliant policy, so as to demonstrate force additions can be learned as residuals.
+
+\section{TODO}
+
+\begin{itemize}
+    \item Read the HG-DAgger paper (Human-Gated DAgger), which deals with how to add in human intervention in the DAgger framework.
+
+    \item Implement CR-DAgger, as they have mentioned.
+\end{itemize}
