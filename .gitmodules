@@ -10,3 +10,6 @@
 [submodule "repos/Task-Parameterized-Gaussian-Mixture-Model"]
 	path = repos/Task-Parameterized-Gaussian-Mixture-Model
 	url = https://github.com/BatyaGG/Task-Parameterized-Gaussian-Mixture-Model
+[submodule "repos/ILoSA"]
+	path = repos/ILoSA
+	url = https://github.com/franzesegiovanni/ILoSA
