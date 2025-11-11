@@ -1,0 +1,20 @@
+[project]
+name = "cr-dagger"
+version = "0.1.0"
+description = "Compliant Residual DAgger"
+readme = "README.md"
+authors = [{ name = "Ashrith Sagar", email = "ashrithy@iisc.ac.in" }]
+requires-python = ">=3.14"
+dependencies = [
+    "matplotlib>=3.10.7",
+    "numpy>=2.3.4",
+    "rich>=14.2.0",
+    "scipy>=1.16.3",
+]
+
+[build-system]
+requires = ["uv_build>=0.9.8,<0.10.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = ["jupyter>=1.1.1"]
