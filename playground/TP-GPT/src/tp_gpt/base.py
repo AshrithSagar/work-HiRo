@@ -4,7 +4,7 @@ Base
 src/tp_gpt/base.py
 """
 
-from typing import Literal
+from typing import Any, Callable, Literal
 
 import numpy as np
 import numpy.typing as npt
@@ -80,7 +80,9 @@ class GaussianProcess:
         self,
         kernel: Kernel,
         alpha: float = 1e-10,
-        optimizer: Literal["fmin_l_bfgs_b"] | None = "fmin_l_bfgs_b",
+        optimizer: Callable[..., Any]
+        | Literal["fmin_l_bfgs_b"]
+        | None = "fmin_l_bfgs_b",
         n_restarts_optimizer: int = 5,
         n_targets: int | None = None,
     ):
@@ -111,5 +113,7 @@ class GaussianProcess:
         self.gp.fit(self.X, self.Y)
         self.kernel = self.gp.kernel_
 
-    def predict(self, x: FloatNDArray, return_std=False, return_cov=False):
+    def predict(
+        self, x: FloatNDArray, return_std: bool = False, return_cov: bool = False
+    ):
         return self.gp.predict(x, return_std=return_std, return_cov=return_cov)
