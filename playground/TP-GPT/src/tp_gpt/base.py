@@ -10,7 +10,7 @@ import numpy as np
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import Kernel
 
-from tp_gpt.typings import Array1D, Array2D, Array3D, Array4D
+from tp_gpt.typings import Array1D, Array2D, Array3D, Array4D, dtype
 
 
 class AffineTransform:
@@ -30,10 +30,10 @@ class AffineTransform:
         self.T_centroid: Array1D = np.mean(target_points, axis=0)
 
         self.source_points_centered: Array2D = np.asarray(
-            source_points - self.S_centroid, dtype=np.double
+            source_points - self.S_centroid, dtype=dtype
         )
         self.target_points_centered: Array2D = np.asarray(
-            target_points - self.T_centroid, dtype=np.double
+            target_points - self.T_centroid, dtype=dtype
         )
 
         H: Array2D = np.dot(
@@ -43,17 +43,17 @@ class AffineTransform:
 
         # Rotation
         if not self.do_rotation or rank_H < dim:
-            self.rotation_matrix: Array2D = np.eye(dim, dtype=np.double)
+            self.rotation_matrix: Array2D = np.eye(dim, dtype=dtype)
         else:
             U: Array2D
             Vt: Array2D
             U, _S, Vt = np.linalg.svd(H)
             V = Vt.T
 
-            self.rotation_matrix: Array2D = np.asarray(V @ U.T, dtype=np.double)
+            self.rotation_matrix: Array2D = np.asarray(V @ U.T, dtype=dtype)
             if np.linalg.det(self.rotation_matrix) < 0:
                 V[:, -1] *= -1
-                self.rotation_matrix = np.asarray(V @ U.T, dtype=np.double)
+                self.rotation_matrix = np.asarray(V @ U.T, dtype=dtype)
 
         # Scale
         if self.do_scale:
@@ -61,22 +61,23 @@ class AffineTransform:
                 np.transpose(
                     self.rotation_matrix @ np.transpose((self.source_points_centered))
                 ),
-                dtype=np.double,
+                dtype=dtype,
             )
-            self.scale: float = np.sum(
-                source_rotated * self.target_points_centered
-            ) / np.sum(source_rotated**2)
+            self.scale = float(
+                np.sum(source_rotated * self.target_points_centered)
+                / np.sum(source_rotated**2)
+            )
 
         # Translation
         self.translation: Array1D = np.asarray(
-            self.T_centroid - self.S_centroid, dtype=np.double
+            self.T_centroid - self.S_centroid, dtype=dtype
         )
 
     def predict(self, x: Array2D) -> Array2D:
         transported_x: Array2D = np.asarray(
             self.scale * (x - self.S_centroid) @ np.transpose(self.rotation_matrix)
             + self.T_centroid,
-            dtype=np.double,
+            dtype=dtype,
         )
         return transported_x
 
