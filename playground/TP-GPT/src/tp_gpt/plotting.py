@@ -13,7 +13,7 @@ from tp_gpt.obstacle import CircularObstacle
 from tp_gpt.typings import Array1D, Array2D, NDArray, Shape1D, dtype
 
 
-def plot_curve():
+def plot_single_obstacle():
     y: Array1D = np.linspace(0, 1, 200, dtype=dtype)
     x: Array1D = np.asarray(2 * y**3 + 1 * y**2, dtype=dtype)
     curve: Array2D = np.column_stack((x, y))
@@ -91,8 +91,87 @@ def plot_curve():
     plt.title("Obstacle avoidance")
     plt.legend()
     plt.tight_layout()
-    plt.show()
+
+
+def plot_multiple_obstacles():
+    y: Array1D = np.linspace(0, 1, 200, dtype=dtype)
+    x: Array1D = np.asarray(2 * y**3 + 1 * y**2, dtype=dtype)
+    curve: Array2D = np.column_stack((x, y))
+
+    obstacles: list[CircularObstacle] = [
+        CircularObstacle(center=(1.5, 0.4), radius=0.1, n_points=20),
+        CircularObstacle(center=(2.2, 0.7), radius=0.15, n_points=20),
+        CircularObstacle(center=(2.8, 0.3), radius=0.1, n_points=20),
+    ]
+    n_sweeps: int = 100
+
+    start_pt = np.array([x[0], y[0]], dtype=dtype)
+    end_x = x[-1]
+
+    obs_pts = np.vstack([obs.boundary_points() for obs in obstacles])
+    obs_centers = np.vstack(
+        [np.tile(obs.center, (obs.n_points, 1)) for obs in obstacles]
+    )
+
+    fig, ax = plt.subplots(figsize=(8, 8))
+    colors: NDArray[Shape1D] = plt.get_cmap("plasma")(np.linspace(0, 1, n_sweeps))
+
+    ax.plot(curve[:, 0], curve[:, 1], "k--", label="Source curve", zorder=3)
+    for obs in obstacles:
+        obs.plot(ax, "k--", zorder=2)
+
+    kernel = ConstantKernel(1.0) * RBF(length_scale=0.6) + WhiteKernel(
+        noise_level=1e-10
+    )
+    last_targets = np.linspace(1.0, -5.0, n_sweeps, dtype=dtype)
+    for i, y_last in enumerate(last_targets):
+        # Target array: start -> obstacle boundary -> final point
+        T: Array2D = np.vstack(
+            (
+                np.atleast_2d(start_pt),
+                obs_pts,
+                np.atleast_2d(np.array([end_x, y_last], dtype=dtype)),
+            )
+        )
+
+        # Source array: start -> obstacle centers -> original final
+        S_ext: Array2D = np.vstack(
+            (
+                np.atleast_2d(start_pt),
+                obs_centers,
+                np.atleast_2d(np.array([end_x, y[-1]], dtype=dtype)),
+            )
+        )
+
+        aff = AffineTransform(scale=False, rotate=True)
+        aff.fit(S_ext, T)
+        resid = T - aff.predict(S_ext)
+
+        gp = GaussianProcess(kernel=kernel, alpha=1e-10, optimizer=None)
+        gp.fit(S_ext, resid)
+
+        def warp(P: Array2D) -> Array2D:
+            return aff.predict(P) + gp.predict(P)
+
+        warped = warp(curve)
+
+        ax.plot(
+            warped[:, 0],
+            warped[:, 1],
+            color=colors[i],
+            linewidth=1.4,
+            zorder=1,
+            label=f"y_last={y_last:.2f}" if i in {0, n_sweeps - 1} else None,
+        )
+
+    ax.set_aspect("equal")
+    ax.set_title("Obstacle avoidance — Multiple obstacles")
+    ax.legend()
+    fig.tight_layout()
 
 
 if __name__ == "__main__":
-    plot_curve()
+    plot_single_obstacle()
+    plot_multiple_obstacles()
+
+    plt.show()
