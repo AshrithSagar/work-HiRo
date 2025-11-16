@@ -8,36 +8,41 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel
 
-from tp_gpt.base import AffineTransform, FloatNDArray, GaussianProcess
+from tp_gpt.base import AffineTransform, GaussianProcess
+from tp_gpt.typings import Array1D, Array2D, NDArray, Shape1D
 
 
 def plot_curve():
-    y: FloatNDArray = np.linspace(0, 1, 200)
-    x: FloatNDArray = 2 * y**3 + 1 * y**2
-    curve: FloatNDArray = np.c_[x, y]
+    y: Array1D = np.linspace(0, 1, 200, dtype=np.double)
+    x: Array1D = np.asarray(2 * y**3 + 1 * y**2, dtype=np.double)
+    curve: Array2D = np.column_stack((x, y))
 
-    mid_center: FloatNDArray = np.array([2.0, 0.6])
+    mid_center: Array1D = np.array([2.0, 0.6], dtype=np.double)
 
     # Original keypoints
-    _S: FloatNDArray = np.array([[x[0], y[0]], mid_center, [x[-1], y[-1]]])
+    _S: Array2D = np.array([[x[0], y[0]], mid_center, [x[-1], y[-1]]])
 
     # Circle boundary around `mid_center`
     r: float = 0.15
-    theta: FloatNDArray = np.linspace(0, 2 * np.pi, 20)
-    circle_pts: FloatNDArray = np.c_[
-        mid_center[0] + r * np.cos(theta),
-        mid_center[1] + r * np.sin(theta),
-    ]
+    theta: Array1D = np.linspace(0, 2 * np.pi, 20, dtype=np.double)
+    circle_pts: Array2D = np.column_stack(
+        (
+            mid_center[0] + r * np.cos(theta, dtype=np.double),
+            mid_center[1] + r * np.sin(theta, dtype=np.double),
+        )
+    )
 
     # Sweep last keypoint
-    last_targets: FloatNDArray = np.linspace(0.9, -5.0, 100)
+    last_targets: Array1D = np.linspace(0.9, -5.0, 100, dtype=np.double)
 
     kernel = ConstantKernel(1.0) * RBF(length_scale=0.6) + WhiteKernel(
         noise_level=1e-10
     )
 
     plt.figure(figsize=(8, 8))
-    colors = plt.get_cmap("plasma")(np.linspace(0, 1, len(last_targets)))
+    colors: NDArray[Shape1D] = plt.get_cmap("plasma")(
+        np.linspace(0, 1, len(last_targets))
+    )
 
     plt.plot(
         curve[:, 0],
@@ -57,18 +62,30 @@ def plot_curve():
 
     for idx, y_last in enumerate(last_targets):
         # Targets: replace middle keypoint with circle points
-        T: FloatNDArray = np.vstack([[x[0], y[0]], circle_pts, [3.0, y_last]])
-        S_ext: FloatNDArray = np.vstack(
-            [[x[0], y[0]], np.tile(mid_center, (len(circle_pts), 1)), [x[-1], y[-1]]]
+        T: Array2D = np.vstack(
+            (
+                np.atleast_2d(np.array([x[0], y[0]], dtype=np.double)),
+                circle_pts,
+                np.atleast_2d(np.array([3.0, y_last], dtype=np.double)),
+            ),
+            dtype=np.double,
         )
-        aff = AffineTransform(do_scale=False, do_rotation=True)
+        S_ext: Array2D = np.vstack(
+            (
+                np.atleast_2d(np.array([x[0], y[0]], dtype=np.double)),
+                np.tile(mid_center, (len(circle_pts), 1)),
+                np.atleast_2d(np.array([x[-1], y[-1]], dtype=np.double)),
+            ),
+            dtype=np.double,
+        )
+        aff = AffineTransform(scale=False, rotate=True)
         aff.fit(S_ext, T)
-        resid = T - aff.predict(S_ext)
+        resid: Array2D = T - aff.predict(S_ext)
 
         gp = GaussianProcess(kernel=kernel, alpha=1e-10, optimizer=None)
         gp.fit(S_ext, resid)
 
-        def phi_pts(P: FloatNDArray) -> FloatNDArray:
+        def phi_pts(P: Array2D) -> Array2D:
             return aff.predict(P) + gp.predict(P)
 
         warped = phi_pts(curve)
