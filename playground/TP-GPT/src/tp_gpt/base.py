@@ -14,7 +14,10 @@ from tp_gpt.typings import Array1D, Array2D, Array3D, Array4D, dtype
 
 
 class AffineTransform:
-    """Performs an affine transformation (rotation + scale + translation)."""
+    """
+    Performs an affine transformation (rotation + scale + translation).
+    Kabsch algorithm.
+    """
 
     def __init__(self, scale: bool = False, rotate: bool = True):
         self.do_scale: bool = scale

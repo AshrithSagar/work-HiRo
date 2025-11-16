@@ -8,7 +8,12 @@ authors = [
     { name = "Shreyas Kumar", email = "shreyaskumar@iisc.ac.in" },
 ]
 requires-python = ">=3.14"
-dependencies = ["matplotlib>=3.10.7", "numpy>=2.3.4", "scikit-learn>=1.7.2"]
+dependencies = [
+    "matplotlib>=3.10.7",
+    "numpy>=2.3.4",
+    "scikit-learn>=1.7.2",
+    "scipy>=1.16.3",
+]
 
 [build-system]
 requires = ["uv_build>=0.9.8,<0.10.0"]

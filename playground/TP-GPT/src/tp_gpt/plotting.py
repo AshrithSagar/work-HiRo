@@ -1,7 +1,7 @@
 """
 Plots
 =======
-src/tp_gpt/plots.py
+src/tp_gpt/plotting.py
 """
 
 import matplotlib.pyplot as plt
@@ -9,7 +9,7 @@ import numpy as np
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel
 
 from tp_gpt.base import AffineTransform, GaussianProcess
-from tp_gpt.obstacle import CircleObstacle
+from tp_gpt.obstacle import CircularObstacle
 from tp_gpt.typings import Array1D, Array2D, NDArray, Shape1D, dtype
 
 
@@ -18,14 +18,12 @@ def plot_curve():
     x: Array1D = np.asarray(2 * y**3 + 1 * y**2, dtype=dtype)
     curve: Array2D = np.column_stack((x, y))
 
-    mid_center: Array1D = np.array([2.0, 0.6], dtype=dtype)
+    # Circle boundary
+    circle_obs = CircularObstacle(center=(2.0, 0.6), radius=0.15, n_points=20)
+    circle_pts = circle_obs.boundary_points()
 
     # Original keypoints
-    _S: Array2D = np.array([[x[0], y[0]], mid_center, [x[-1], y[-1]]])
-
-    # Circle boundary around `mid_center`
-    obs = CircleObstacle(center=mid_center, radius=0.15, n_points=20)
-    circle_pts = obs.boundary_points()
+    _S: Array2D = np.array([[x[0], y[0]], circle_obs.center, [x[-1], y[-1]]])
 
     # Sweep last keypoint
     last_targets: Array1D = np.linspace(0.9, -5.0, 100, dtype=dtype)
@@ -47,13 +45,7 @@ def plot_curve():
         zorder=3,
         label="Source curve",
     )
-    plt.plot(
-        circle_pts[:, 0],
-        circle_pts[:, 1],
-        "k--",
-        zorder=2,
-        label="Obstacle keypoints",
-    )
+    circle_obs.plot(plt.gca(), "k--", zorder=2, label="Obstacle keypoints")
 
     for idx, y_last in enumerate(last_targets):
         # Targets: replace middle keypoint with circle points
@@ -68,7 +60,7 @@ def plot_curve():
         S_ext: Array2D = np.vstack(
             (
                 np.atleast_2d(np.array([x[0], y[0]], dtype=dtype)),
-                np.tile(mid_center, (len(circle_pts), 1)),
+                np.tile(circle_obs.center, (len(circle_pts), 1)),
                 np.atleast_2d(np.array([x[-1], y[-1]], dtype=dtype)),
             ),
             dtype=dtype,

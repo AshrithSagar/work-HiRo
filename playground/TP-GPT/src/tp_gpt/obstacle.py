@@ -7,6 +7,8 @@ src/tp_gpt/obstacle.py
 from abc import ABC, abstractmethod
 
 import numpy as np
+import numpy.typing as npt
+from matplotlib.axes import Axes
 
 from tp_gpt.typings import Array1D, Array2D, dtype
 
@@ -19,19 +21,31 @@ class Obstacle(ABC):
         """Returns an array of points describing the obstacle boundary."""
         raise NotImplementedError
 
+    @property
     def center(self) -> Array1D:
         """Returns the center point of the obstacle."""
         # Defaults to the centroid of the boundary points
         pts: Array2D = self.boundary_points()
         return np.mean(pts, axis=0)
 
+    def plot(self, ax: Axes, *args, **kwargs):
+        """Plots the obstacle on the given `Axes`."""
+        pts = self.boundary_points()
+        ax.plot(pts[:, 0], pts[:, 1], *args, **kwargs)
 
-class CircleObstacle(Obstacle):
-    def __init__(self, center: Array1D, radius: float, n_points: int = 20):
+
+class CircularObstacle(Obstacle):
+    def __init__(self, center: npt.ArrayLike, radius: float, n_points: int = 20):
+        assert radius > 0, "Radius must be positive."
+        assert n_points >= 3, "Number of points must be at least 3."
+        center = np.asarray(center, dtype=dtype)
+        assert center.ndim == 1, "Center must be a 1D array."
+
         self._center: Array1D = np.asarray(center, dtype=dtype)
         self.radius = float(radius)
         self.n_points = int(n_points)
 
+    @property
     def center(self) -> Array1D:
         return self._center
 
