@@ -9,13 +9,13 @@ authors = [
 ]
 requires-python = ">=3.14"
 dependencies = [
-    "beartype>=0.22.5",
-    "jaxtyping>=0.3.3",
     "matplotlib>=3.10.7",
+    "microsoft-python-type-stubs",
     "numpy>=2.3.4",
     "rich>=14.2.0",
     "scikit-learn>=1.7.2",
     "scipy>=1.16.3",
+    "scipy-stubs>=1.16.3.0",
 ]
 
 [build-system]
@@ -24,3 +24,6 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = ["jupyter>=1.1.1", "nbdime>=4.0.2", "nbstripout>=0.8.1"]
+
+[tool.uv.sources]
+microsoft-python-type-stubs = { git = "https://github.com/microsoft/python-type-stubs.git" }

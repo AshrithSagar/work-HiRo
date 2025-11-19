@@ -117,15 +117,6 @@ wheels = [
 ]
 
 [[package]]
-name = "beartype"
-version = "0.22.5"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/a6/09/9003e5662691056e0e8b2e6f57c799e71875fac0be0e785d8cb11557cd2a/beartype-0.22.5.tar.gz", hash = "sha256:516a9096cc77103c96153474fa35c3ebcd9d36bd2ec8d0e3a43307ced0fa6341", size = 1586256, upload-time = "2025-11-01T05:49:20.771Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/f7/f6/073d19f7b571c08327fbba3f8e011578da67ab62a11f98911274ff80653f/beartype-0.22.5-py3-none-any.whl", hash = "sha256:d9743dd7cd6d193696eaa1e025f8a70fb09761c154675679ff236e61952dfba0", size = 1321700, upload-time = "2025-11-01T05:49:18.436Z" },
-]
-
-[[package]]
 name = "beautifulsoup4"
 version = "4.14.2"
 source = { registry = "https://pypi.org/simple" }
@@ -518,18 +509,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/7c/1a/3c8edc664e06e6bd06cce40c6b22da5f1429aa4224d0c590f3be21c91ead/isoduration-20.11.0.tar.gz", hash = "sha256:ac2f9015137935279eac671f94f89eb00584f940f5dc49462a0c4ee692ba1bd9", size = 11649, upload-time = "2020-11-01T11:00:00.312Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7b/55/e5326141505c5d5e34c5e0935d2908a74e4561eca44108fbfb9c13d2911a/isoduration-20.11.0-py3-none-any.whl", hash = "sha256:b2904c2a4228c3d44f409c8ae8e2370eb21a26f7ac2ec5446df141dde3452042", size = 11321, upload-time = "2020-11-01T10:59:58.02Z" },
-]
-
-[[package]]
-name = "jaxtyping"
-version = "0.3.3"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "wadler-lindig" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/e4/1e/827f9e17b26e21c7d4d934fd1a214284ad05663afedd37c21ed105db366b/jaxtyping-0.3.3.tar.gz", hash = "sha256:8003cfd16ba2ad9b47fdda1d982a575299a81ddfc7997ad0e917c87a0897ea86", size = 45484, upload-time = "2025-10-01T13:46:51.933Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b8/97/88264b1af140f66ba7ca6eb2f3a108be233ee278bb3f1d5c750243e7458a/jaxtyping-0.3.3-py3-none-any.whl", hash = "sha256:a1c2f0f4351a8deda84b0e3b5c5a50894a1cdae2b82d841279fce4393aff4a7c", size = 55926, upload-time = "2025-10-01T13:46:50.621Z" },
 ]
 
 [[package]]
@@ -973,6 +952,11 @@ wheels = [
 ]
 
 [[package]]
+name = "microsoft-python-type-stubs"
+version = "0"
+source = { git = "https://github.com/microsoft/python-type-stubs.git#692c37c3969d22612b295ddf7e7af5907204a386" }
+
+[[package]]
 name = "mistune"
 version = "3.1.4"
 source = { registry = "https://pypi.org/simple" }
@@ -1133,6 +1117,33 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/51/41/851c4b4082402d9ea860c3626db5d5df47164a712cb23b54be028b184c1c/numpy-2.3.5-cp314-cp314t-win32.whl", hash = "sha256:93eebbcf1aafdf7e2ddd44c2923e2672e1010bddc014138b229e49725b4d6be5", size = 6479806, upload-time = "2025-11-16T22:52:14.641Z" },
     { url = "https://files.pythonhosted.org/packages/90/30/d48bde1dfd93332fa557cff1972fbc039e055a52021fbef4c2c4b1eefd17/numpy-2.3.5-cp314-cp314t-win_amd64.whl", hash = "sha256:c8a9958e88b65c3b27e22ca2a076311636850b612d6bbfb76e8d156aacde2aaf", size = 13105760, upload-time = "2025-11-16T22:52:17.975Z" },
     { url = "https://files.pythonhosted.org/packages/2d/fd/4b5eb0b3e888d86aee4d198c23acec7d214baaf17ea93c1adec94c9518b9/numpy-2.3.5-cp314-cp314t-win_arm64.whl", hash = "sha256:6203fdf9f3dc5bdaed7319ad8698e685c7a3be10819f41d32a0723e611733b42", size = 10545459, upload-time = "2025-11-16T22:52:20.55Z" },
+]
+
+[[package]]
+name = "numpy-typing-compat"
+version = "20250818.2.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c9/e3/1a29f174c1e09a2bf111d37a41afceea1b501371abb39e73170ca31a7599/numpy_typing_compat-20250818.2.3.tar.gz", hash = "sha256:72e83d535b635d668ba7315e43ae80be1469a6faea6fc96d312516f39b3d8fa5", size = 4974, upload-time = "2025-08-18T23:46:42.968Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c9/4a/fa4c90a03d6a8ee1a7f0e0fb101887d9a8cdb9b07a5901af9ae831e9feea/numpy_typing_compat-20250818.2.3-py3-none-any.whl", hash = "sha256:930413d34dd9083c0bf418815576222f1c66ea2d68950f447fd27ea1a78b26b0", size = 6286, upload-time = "2025-08-18T23:46:35.681Z" },
+]
+
+[[package]]
+name = "optype"
+version = "0.14.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/94/ca/d3a2abcf12cc8c18ccac1178ef87ab50a235bf386d2401341776fdad18aa/optype-0.14.0.tar.gz", hash = "sha256:925cf060b7d1337647f880401f6094321e7d8e837533b8e159b9a92afa3157c6", size = 100880, upload-time = "2025-10-01T04:49:56.232Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/84/a6/11b0eb65eeafa87260d36858b69ec4e0072d09e37ea6714280960030bc93/optype-0.14.0-py3-none-any.whl", hash = "sha256:50d02edafd04edf2e5e27d6249760a51b2198adb9f6ffd778030b3d2806b026b", size = 89465, upload-time = "2025-10-01T04:49:54.674Z" },
+]
+
+[package.optional-dependencies]
+numpy = [
+    { name = "numpy" },
+    { name = "numpy-typing-compat" },
 ]
 
 [[package]]
@@ -1552,6 +1563,18 @@ wheels = [
 ]
 
 [[package]]
+name = "scipy-stubs"
+version = "1.16.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "optype", extra = ["numpy"] },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/bd/68/c53c3bce6bd069a164015be1be2671c968b526be4af1e85db64c88f04546/scipy_stubs-1.16.3.0.tar.gz", hash = "sha256:d6943c085e47a1ed431309f9ca582b6a206a9db808a036132a0bf01ebc34b506", size = 356462, upload-time = "2025-10-28T22:05:31.198Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/86/1c/0ba7305fa01cfe7a6f1b8c86ccdd1b7a0d43fa9bd769c059995311e291a2/scipy_stubs-1.16.3.0-py3-none-any.whl", hash = "sha256:90e5d82ced2183ef3c5c0a28a77df8cc227458624364fa0ff975ad24fa89d6ad", size = 557713, upload-time = "2025-10-28T22:05:29.454Z" },
+]
+
+[[package]]
 name = "send2trash"
 version = "1.8.3"
 source = { registry = "https://pypi.org/simple" }
@@ -1678,13 +1701,13 @@ name = "tp-gpt"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "beartype" },
-    { name = "jaxtyping" },
     { name = "matplotlib" },
+    { name = "microsoft-python-type-stubs" },
     { name = "numpy" },
     { name = "rich" },
     { name = "scikit-learn" },
     { name = "scipy" },
+    { name = "scipy-stubs" },
 ]
 
 [package.dev-dependencies]
@@ -1696,13 +1719,13 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "beartype", specifier = ">=0.22.5" },
-    { name = "jaxtyping", specifier = ">=0.3.3" },
     { name = "matplotlib", specifier = ">=3.10.7" },
+    { name = "microsoft-python-type-stubs", git = "https://github.com/microsoft/python-type-stubs.git" },
     { name = "numpy", specifier = ">=2.3.4" },
     { name = "rich", specifier = ">=14.2.0" },
     { name = "scikit-learn", specifier = ">=1.7.2" },
     { name = "scipy", specifier = ">=1.16.3" },
+    { name = "scipy-stubs", specifier = ">=1.16.3.0" },
 ]
 
 [package.metadata.requires-dev]
@@ -1755,15 +1778,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/15/22/9ee70a2574a4f4599c47dd506532914ce044817c7752a79b6a51286319bc/urllib3-2.5.0.tar.gz", hash = "sha256:3fc47733c7e419d4bc3f6b3dc2b4f890bb743906a30d56ba4a5bfa4bbff92760", size = 393185, upload-time = "2025-06-18T14:07:41.644Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a7/c2/fe1e52489ae3122415c51f387e221dd0773709bad6c6cdaa599e8a2c5185/urllib3-2.5.0-py3-none-any.whl", hash = "sha256:e6b01673c0fa6a13e374b50871808eb3bf7046c4b125b216f6bf1cc604cff0dc", size = 129795, upload-time = "2025-06-18T14:07:40.39Z" },
-]
-
-[[package]]
-name = "wadler-lindig"
-version = "0.1.7"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/1e/67/cbae4bf7683a64755c2c1778c418fea96d00e34395bb91743f08bd951571/wadler_lindig-0.1.7.tar.gz", hash = "sha256:81d14d3fe77d441acf3ebd7f4aefac20c74128bf460e84b512806dccf7b2cd55", size = 15842, upload-time = "2025-06-18T07:00:42.843Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/8d/96/04e7b441807b26b794da5b11e59ed7f83b2cf8af202bd7eba8ad2fa6046e/wadler_lindig-0.1.7-py3-none-any.whl", hash = "sha256:e3ec83835570fd0a9509f969162aeb9c65618f998b1f42918cfc8d45122fe953", size = 20516, upload-time = "2025-06-18T07:00:41.684Z" },
 ]
 
 [[package]]
