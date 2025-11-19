@@ -55,7 +55,7 @@ def _normalise_shape(shape: _Shape) -> _RuntimeShape:
     return tuple(_normalise_dim(dim) for dim in shape)
 
 
-class TypedNDArray(np.ndarray[_ShapeT_co, _DTypeT_co]):
+class NDArray(np.ndarray[_ShapeT_co, _DTypeT_co]):
     """Generic `numpy.ndarray` subclass with static shape typing and runtime shape validation."""
 
     __shape__: _RuntimeShape | None = None
@@ -67,7 +67,7 @@ class TypedNDArray(np.ndarray[_ShapeT_co, _DTypeT_co]):
         *,
         dtype: npt.DTypeLike | None = None,
         shape: _ShapeT_co | None = None,
-    ) -> "TypedNDArray[_ShapeT_co, _DTypeT_co]":
+    ) -> "NDArray[_ShapeT_co, _DTypeT_co]":
         _arr: np.ndarray[tuple[int, ...]] = np.asarray(arr, dtype=dtype)
         obj = _arr.view(cls)
 
@@ -118,23 +118,23 @@ ShapeND: TypeAlias = tuple[int, ...]
 """A tuple representing shape `(N, ...)`."""
 
 # Array type aliases
-Array1D: TypeAlias = TypedNDArray[Shape1D, np.dtype[def_dtype]]
+Array1D: TypeAlias = NDArray[Shape1D, np.dtype[def_dtype]]
 """A `numpy.ndarray` of shape `(N,)` with the default `dtype`."""
-Array2D: TypeAlias = TypedNDArray[Shape2D, np.dtype[def_dtype]]
+Array2D: TypeAlias = NDArray[Shape2D, np.dtype[def_dtype]]
 """A `numpy.ndarray` of shape `(M, N)` with the default `dtype`."""
-Array3D: TypeAlias = TypedNDArray[Shape3D, np.dtype[def_dtype]]
+Array3D: TypeAlias = NDArray[Shape3D, np.dtype[def_dtype]]
 """A `numpy.ndarray` of shape `(L, M, N)` with the default `dtype`."""
-Array4D: TypeAlias = TypedNDArray[Shape4D, np.dtype[def_dtype]]
+Array4D: TypeAlias = NDArray[Shape4D, np.dtype[def_dtype]]
 """A `numpy.ndarray` of shape `(K, L, M, N)` with the default `dtype`."""
-ArrayND: TypeAlias = TypedNDArray[ShapeND, np.dtype[def_dtype]]
+ArrayND: TypeAlias = NDArray[ShapeND, np.dtype[def_dtype]]
 """A `numpy.ndarray` of shape `(N, ...)` with the default `dtype`."""
 
 TWO: TypeAlias = Literal[2]
 """Literal type for the integer `2`."""
 
-Array2x2: TypeAlias = TypedNDArray[tuple[TWO, TWO], np.dtype[def_dtype]]
+Array2x2: TypeAlias = NDArray[tuple[TWO, TWO], np.dtype[def_dtype]]
 """A `numpy.ndarray` of shape `(2, 2)` with the default `dtype`."""
-ArrayN: TypeAlias = TypedNDArray[tuple[int], np.dtype[def_dtype]]
+ArrayN: TypeAlias = NDArray[tuple[int], np.dtype[def_dtype]]
 """A `numpy.ndarray` of shape `(N,)` with the default `dtype`."""
-ArrayNx2: TypeAlias = TypedNDArray[tuple[int, TWO], np.dtype[def_dtype]]
+ArrayNx2: TypeAlias = NDArray[tuple[int, TWO], np.dtype[def_dtype]]
 """A `numpy.ndarray` of shape `(N, 2)` with the default `dtype`."""

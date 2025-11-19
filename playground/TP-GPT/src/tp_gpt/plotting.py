@@ -10,7 +10,7 @@ from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel
 
 from tp_gpt.base import AffineTransform, GaussianProcess
 from tp_gpt.obstacle import CircularObstacle
-from tp_gpt.typings import ArrayN, ArrayNx2, Shape1D, TypedNDArray
+from tp_gpt.typings import ArrayN, ArrayNx2
 
 
 def plot_single_obstacle():
@@ -33,9 +33,7 @@ def plot_single_obstacle():
     )
 
     plt.figure(figsize=(8, 8))
-    colors = TypedNDArray[Shape1D](
-        plt.get_cmap("plasma")(np.linspace(0, 1, len(last_targets)))
-    )
+    colors = ArrayN(plt.get_cmap("plasma")(np.linspace(0, 1, len(last_targets))))
 
     plt.plot(
         curve[:, 0],
@@ -110,7 +108,7 @@ def plot_multiple_obstacles():
     )
 
     fig, ax = plt.subplots(figsize=(8, 8))
-    colors = TypedNDArray[Shape1D](plt.get_cmap("plasma")(np.linspace(0, 1, n_sweeps)))
+    colors = ArrayN(plt.get_cmap("plasma")(np.linspace(0, 1, n_sweeps)))
 
     ax.plot(curve[:, 0], curve[:, 1], "k--", label="Source curve", zorder=3)
     for obs in obstacles:
