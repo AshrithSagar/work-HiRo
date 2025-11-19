@@ -10,18 +10,7 @@ import numpy as np
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import Kernel
 
-from tp_gpt.typings import (
-    Array,
-    Array2D,
-    Array2x2,
-    Array3D,
-    Array4D,
-    ArrayN,
-    ArrayNx2,
-    asArray,
-    dtype,
-    runtime_typecheck,
-)
+from tp_gpt.typings import Array2D, Array2x2, Array3D, Array4D, ArrayN, ArrayNx2
 
 
 class AffineTransform:
@@ -36,15 +25,15 @@ class AffineTransform:
 
         self.scale: float = 1.0
 
-    @runtime_typecheck
-    def fit(self, source_points: Array["N 2"], target_points: Array["N 2"]):
+    def fit(self, source_points: ArrayNx2, target_points: ArrayNx2):
+        assert len(source_points) == len(target_points)
         dim: int = source_points.shape[1]
 
-        self.S_centroid: ArrayN = np.mean(source_points, axis=0)
-        self.T_centroid: ArrayN = np.mean(target_points, axis=0)
+        self.S_centroid = ArrayN(np.mean(source_points, axis=0))
+        self.T_centroid = ArrayN(np.mean(target_points, axis=0))
 
-        self.source_points_centered: ArrayNx2 = asArray(source_points - self.S_centroid)
-        self.target_points_centered: ArrayNx2 = asArray(target_points - self.T_centroid)
+        self.source_points_centered = ArrayNx2(source_points - self.S_centroid)
+        self.target_points_centered = ArrayNx2(target_points - self.T_centroid)
 
         H: Array2x2 = np.dot(
             np.transpose(self.source_points_centered), self.target_points_centered
@@ -53,21 +42,20 @@ class AffineTransform:
 
         # Rotation
         if not self.do_rotation or rank_H < dim:
-            self.rotation_matrix: Array2x2 = np.eye(dim, dtype=dtype)
+            self.rotation_matrix = Array2x2(np.eye(dim))
         else:
-            U: Array2x2
-            Vt: Array2x2
             U, _S, Vt = np.linalg.svd(H)
+            U, Vt = Array2x2(U), Array2x2(Vt)
             V = Vt.T
 
-            self.rotation_matrix: Array2x2 = np.asarray(V @ U.T, dtype=dtype)
+            self.rotation_matrix = Array2x2(V @ U.T)
             if np.linalg.det(self.rotation_matrix) < 0:
                 V[:, -1] *= -1
-                self.rotation_matrix: Array2x2 = np.asarray(V @ U.T, dtype=dtype)
+                self.rotation_matrix = Array2x2(V @ U.T)
 
         # Scale
         if self.do_scale:
-            source_rotated: ArrayNx2 = asArray(
+            source_rotated = ArrayNx2(
                 np.transpose(
                     self.rotation_matrix @ np.transpose((self.source_points_centered))
                 )
@@ -78,11 +66,10 @@ class AffineTransform:
             )
 
         # Translation
-        self.translation: ArrayN = asArray(self.T_centroid - self.S_centroid)
+        self.translation = ArrayN(self.T_centroid - self.S_centroid)
 
-    @runtime_typecheck
-    def predict(self, x: Array["N 2"]) -> Array["N 2"]:
-        transported_x: ArrayNx2 = (
+    def predict(self, x: ArrayNx2) -> ArrayNx2:
+        transported_x = ArrayNx2(
             self.scale * (x - self.S_centroid) @ np.transpose(self.rotation_matrix)
             + self.T_centroid
         )

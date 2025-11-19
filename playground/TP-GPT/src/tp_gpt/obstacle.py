@@ -10,7 +10,7 @@ import numpy as np
 import numpy.typing as npt
 from matplotlib.axes import Axes
 
-from tp_gpt.typings import Array1D, Array2D, dtype
+from tp_gpt.typings import Array1D, Array2D, def_dtype
 
 
 class Obstacle(ABC):
@@ -25,8 +25,8 @@ class Obstacle(ABC):
     def center(self) -> Array1D:
         """Returns the center point of the obstacle."""
         # Defaults to the centroid of the boundary points
-        pts: Array2D = self.boundary_points()
-        return np.mean(pts, axis=0)
+        pts = self.boundary_points()
+        return Array1D(np.mean(pts, axis=0))
 
     def plot(self, ax: Axes, *args, **kwargs):
         """Plots the obstacle on the given `Axes`."""
@@ -38,10 +38,8 @@ class CircularObstacle(Obstacle):
     def __init__(self, center: npt.ArrayLike, radius: float, n_points: int = 20):
         assert radius > 0, "Radius must be positive."
         assert n_points >= 3, "Number of points must be at least 3."
-        center = np.asarray(center, dtype=dtype)
-        assert center.ndim == 1, "Center must be a 1D array."
 
-        self._center: Array1D = np.asarray(center, dtype=dtype)
+        self._center = Array1D(center)
         self.radius = float(radius)
         self.n_points = int(n_points)
 
@@ -50,8 +48,8 @@ class CircularObstacle(Obstacle):
         return self._center
 
     def boundary_points(self) -> Array2D:
-        theta: Array1D = np.linspace(0, 2 * np.pi, self.n_points, dtype=dtype)
+        theta = Array1D(np.linspace(0, 2 * np.pi, self.n_points))
         cx, cy = self._center
-        X = cx + self.radius * np.cos(theta, dtype=dtype)
-        Y = cy + self.radius * np.sin(theta, dtype=dtype)
-        return np.column_stack((X, Y)).astype(dtype=dtype)
+        X = cx + self.radius * np.cos(theta, dtype=def_dtype)
+        Y = cy + self.radius * np.sin(theta, dtype=def_dtype)
+        return Array2D(np.column_stack((X, Y)))
