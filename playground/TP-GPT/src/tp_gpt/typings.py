@@ -146,15 +146,15 @@ def_dtype: TypeAlias = np.double
 
 # Shape type aliases
 Shape1D: TypeAlias = tuple[int]
-"""A tuple representing shape `(N,)`."""
+"""A tuple representing a 1D shape, i.e., `(N,)`."""
 Shape2D: TypeAlias = tuple[int, int]
-"""A tuple representing shape `(M, N)`."""
+"""A tuple representing a 2D shape, i.e., `(M, N)`."""
 Shape3D: TypeAlias = tuple[int, int, int]
-"""A tuple representing shape `(L, M, N)`."""
+"""A tuple representing a 3D shape, i.e., shape `(L, M, N)`."""
 Shape4D: TypeAlias = tuple[int, int, int, int]
-"""A tuple representing shape `(K, L, M, N)`."""
+"""A tuple representing a 4D shape, i.e., shape `(K, L, M, N)`."""
 ShapeND: TypeAlias = tuple[int, ...]
-"""A tuple representing shape `(N, ...)`."""
+"""A tuple representing a ND shape, i.e., shape `(N, ...)`."""
 
 # Array type aliases
 Array1D: TypeAlias = TypedNDArray[Shape1D, np.dtype[def_dtype]]
