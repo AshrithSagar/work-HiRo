@@ -15,7 +15,7 @@ from typed_numpy.helpers import Array1D
 
 from tp_gpt.obstacle import CircularObstacle
 
-OnReleaseCallback = Callable[[], Any]
+OnReleaseCallback = Callable[[bool], Any]
 
 
 @runtime_checkable
@@ -37,11 +37,16 @@ class InteractionManager:
         ax: Axes,
         draggables: Iterable[Draggable],
         on_release_callback: OnReleaseCallback,
+        *,
+        render_during_drag: bool = False,
+        autoscale_on_release: bool = True,
     ) -> None:
         self.fig = fig
         self.ax = ax
         self.draggables = draggables
         self.on_release_callback = on_release_callback
+        self.render_during_drag = render_during_drag
+        self.autoscale_on_release = autoscale_on_release
 
         self.active: Optional[Draggable] = None  # The currently dragged obstacle
         self.cid_press = fig.canvas.mpl_connect("button_press_event", self._on_press)
@@ -63,13 +68,15 @@ class InteractionManager:
         if self.active:
             self.active.drag(event)
             self.fig.canvas.draw_idle()
+            if self.render_during_drag:
+                self.on_release_callback(False)
 
     def _on_release(self, event: Event) -> None:
         event = cast(MouseEvent, event)
         if self.active:
             self.active.end_drag()
             self.active = None
-            self.on_release_callback()
+            self.on_release_callback(True)
 
 
 class InteractiveCircularObstacle(CircularObstacle):

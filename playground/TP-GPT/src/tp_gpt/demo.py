@@ -113,7 +113,7 @@ def plot_single_obstacle_interactive():
         for idx in range(end_targets.n_points)
     ]
 
-    def update_warp() -> None:
+    def update_warp(autoscale: bool = True) -> None:
         warped_curves = warp(
             curve,
             end_targets,
@@ -123,16 +123,18 @@ def plot_single_obstacle_interactive():
         )
         for line, warped_curve in zip(warp_lines, warped_curves):
             line.set_data(warped_curve.xs, warped_curve.ys)
-        ax.relim()
-        ax.autoscale_view()
+        if autoscale:
+            ax.relim()
+            ax.autoscale_view()
         fig.canvas.draw_idle()
 
-    update_warp()
+    update_warp(autoscale=True)
     _ = InteractionManager(
         fig=fig,
         ax=ax,
         draggables=[circle_obs],
         on_release_callback=update_warp,
+        render_during_drag=True,
     )
     ax.legend()
     plt.tight_layout()
@@ -207,7 +209,7 @@ def plot_multiple_obstacles_interactive():
         for idx in range(end_targets.n_points)
     ]
 
-    def update_warp():
+    def update_warp(autoscale: bool = True) -> None:
         obs_pts = ArrayNx2(np.vstack([obs.boundary_points() for obs in obstacles]))
         obs_centers = ArrayNx2(np.vstack([obs.center_tile for obs in obstacles]))
         warped_curves = warp(
@@ -219,17 +221,18 @@ def plot_multiple_obstacles_interactive():
         )
         for line, warped_curve in zip(warp_lines, warped_curves):
             line.set_data(warped_curve.xs, warped_curve.ys)
-
-        ax.relim()
-        ax.autoscale_view()
+        if autoscale:
+            ax.relim()
+            ax.autoscale_view()
         fig.canvas.draw_idle()
 
-    update_warp()
+    update_warp(autoscale=True)
     _ = InteractionManager(
         fig=fig,
         ax=ax,
         draggables=obstacles,
         on_release_callback=update_warp,
+        render_during_drag=True,
     )
     ax.legend()
     plt.tight_layout()
