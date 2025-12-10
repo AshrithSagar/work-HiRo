@@ -11,19 +11,19 @@ requires-python = ">=3.14"
 dependencies = [
     "matplotlib>=3.10.7",
     "microsoft-python-type-stubs",
-    "numpy>=2.3.4",
+    "numpy>=2.3.5",
     "rich>=14.2.0",
     "scikit-learn>=1.7.2",
     "scipy>=1.16.3",
-    "scipy-stubs>=1.16.3.0",
+    "scipy-stubs>=1.16.3.3",
 ]
 
 [build-system]
-requires = ["uv_build>=0.9.8,<0.10.0"]
+requires = ["uv_build>=0.9.13,<0.10.0"]
 build-backend = "uv_build"
 
 [dependency-groups]
-dev = ["jupyter>=1.1.1", "nbdime>=4.0.2", "nbstripout>=0.8.1"]
+dev = ["jupyter>=1.1.1", "nbdime>=4.0.2", "nbstripout>=0.8.2"]
 
 [tool.uv.sources]
 microsoft-python-type-stubs = { git = "https://github.com/microsoft/python-type-stubs.git" }
