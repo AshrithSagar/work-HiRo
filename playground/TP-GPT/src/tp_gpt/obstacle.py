@@ -52,3 +52,7 @@ class CircularObstacle(Obstacle):
         X = cx + self.radius * np.cos(theta, dtype=def_dtype)
         Y = cy + self.radius * np.sin(theta, dtype=def_dtype)
         return Array2D(np.column_stack((X, Y)))
+
+    @property
+    def center_tile(self) -> Array2D:
+        return Array2D(np.tile(self.center, (self.n_points, 1)))

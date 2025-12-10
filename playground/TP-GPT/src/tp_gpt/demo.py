@@ -9,14 +9,15 @@ import numpy as np
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel
 from typed_numpy.helpers import Array2D, ArrayNx2
 
-from tp_gpt.base import AffineTransform, GaussianProcess
 from tp_gpt.curve import Curve
+from tp_gpt.helpers import warp
 from tp_gpt.obstacle import CircularObstacle
+from tp_gpt.plotting import InteractionManager, InteractiveCircularObstacle
 
 
 def make_demo_curve(n_points: int = 200) -> Curve:
-    ys = np.linspace(0, 1, n_points)
-    xs = 2 * ys**3 + ys**2
+    ys = np.linspace(0.0, 1.0, n_points)
+    xs = 2.0 * ys**3 + ys**2
     return Curve(xs, ys)
 
 
@@ -27,19 +28,12 @@ def make_demo_end_targets(n_points: int = 100) -> Curve:
 
 
 def plot_single_obstacle():
-    curve = make_demo_curve()
-    end_targets = make_demo_end_targets()
-
-    # Circle boundary
+    curve = make_demo_curve(n_points=200)
+    end_targets = make_demo_end_targets(n_points=100)
     circle_obs = CircularObstacle(center=(2.0, 0.6), radius=0.15, n_points=20)
-    circle_pts = circle_obs.boundary_points()
 
     # Original keypoints
     _S = ArrayNx2([curve.start_pt, circle_obs.center, curve.end_pt])
-
-    kernel = ConstantKernel(1.0) * RBF(length_scale=0.6) + WhiteKernel(
-        noise_level=1e-10
-    )
 
     plt.figure(figsize=(8, 8))
     colors = Array2D(plt.get_cmap("plasma")(np.linspace(0, 1, end_targets.n_points)))
@@ -54,36 +48,23 @@ def plot_single_obstacle():
     )
     circle_obs.plot(plt.gca(), "k--", zorder=2, label="Obstacle keypoints")
 
-    for idx, end_pt in enumerate(end_targets.points):
-        # Targets: replace middle keypoint with circle points
-        target_points = ArrayNx2(np.vstack((curve.start_pt, circle_pts, end_pt)))
-        source_points = ArrayNx2(
-            np.vstack(
-                (
-                    curve.start_pt,
-                    np.tile(circle_obs.center, (circle_obs.n_points, 1)),
-                    curve.end_pt,
-                )
-            )
-        )
-        aff = AffineTransform(scale=False, rotate=True)
-        aff.fit(source_points, target_points)
-        resid = ArrayNx2(target_points - aff.predict(source_points))
-
-        gp = GaussianProcess(kernel=kernel, alpha=1e-10, optimizer=None)
-        gp.fit(source_points, resid)
-
-        def warp(P: ArrayNx2) -> Curve:
-            return Curve.from_points(aff.predict(P) + gp.predict(P))
-
-        warped = warp(curve.points)
+    kernel = ConstantKernel(1.0) * RBF(length_scale=0.6) + WhiteKernel(
+        noise_level=1e-10
+    )
+    warped_curves = warp(
+        curve,
+        end_targets,
+        kernel,
+        obs_pts=ArrayNx2(circle_obs.boundary_points()),
+        obs_centers=ArrayNx2(circle_obs.center_tile),
+    )
+    for idx, warped_curve in enumerate(warped_curves):
         plt.plot(
-            warped.xs,
-            warped.ys,
+            warped_curve.xs,
+            warped_curve.ys,
             color=colors[idx],
             linewidth=1.4,
             zorder=1,
-            label=rf"EndPt={end_pt}" if idx in {0, end_targets.n_points - 1} else None,
         )
 
     plt.axis("equal")
@@ -92,9 +73,72 @@ def plot_single_obstacle():
     plt.tight_layout()
 
 
+def plot_single_obstacle_interactive():
+    curve = make_demo_curve(n_points=200)
+    end_targets = make_demo_end_targets(n_points=100)
+    circle_obs = InteractiveCircularObstacle(
+        center=(2.0, 0.6), radius=0.15, n_points=20
+    )
+
+    # Original keypoints
+    _S = ArrayNx2([curve.start_pt, circle_obs.center, curve.end_pt])
+
+    kernel = ConstantKernel(1.0) * RBF(length_scale=0.6) + WhiteKernel(
+        noise_level=1e-10
+    )
+
+    fig, ax = plt.subplots(figsize=(8, 8))
+    colors = Array2D(plt.get_cmap("plasma")(np.linspace(0, 1, end_targets.n_points)))
+    ax.axis("equal")
+    ax.set_title("Obstacle avoidance")
+    ax.plot(
+        curve.xs,
+        curve.ys,
+        color="gray",
+        linestyle="--",
+        zorder=3,
+        label="Source curve",
+    )
+    circle_obs.plot(
+        ax,
+        fill=False,
+        zorder=2,
+        ec="k",
+        ls="--",
+        label="Obstacle keypoints",
+    )
+    warp_lines = [
+        ax.plot([], [], color=colors[idx], alpha=0.7, lw=1.2)[0]
+        for idx in range(end_targets.n_points)
+    ]
+
+    def update_warp() -> None:
+        warped_curves = warp(
+            curve,
+            end_targets,
+            kernel,
+            obs_pts=ArrayNx2(circle_obs.boundary_points()),
+            obs_centers=ArrayNx2(circle_obs.center_tile),
+        )
+        for line, warped_curve in zip(warp_lines, warped_curves):
+            line.set_data(warped_curve.xs, warped_curve.ys)
+        fig.canvas.draw_idle()
+
+    update_warp()
+    _ = InteractionManager(
+        fig=fig,
+        ax=ax,
+        draggables=[circle_obs],
+        on_release_callback=update_warp,
+    )
+    ax.legend()
+    plt.tight_layout()
+    plt.show()
+
+
 def plot_multiple_obstacles():
-    curve = make_demo_curve()
-    end_targets = make_demo_end_targets()
+    curve = make_demo_curve(n_points=200)
+    end_targets = make_demo_end_targets(n_points=100)
 
     obstacles = [
         CircularObstacle(center=(1.5, 0.4), radius=0.15, n_points=20),
@@ -103,9 +147,7 @@ def plot_multiple_obstacles():
     ]
 
     obs_pts = ArrayNx2(np.vstack([obs.boundary_points() for obs in obstacles]))
-    obs_centers = ArrayNx2(
-        np.vstack([np.tile(obs.center, (obs.n_points, 1)) for obs in obstacles])
-    )
+    obs_centers = ArrayNx2(np.vstack([obs.center_tile for obs in obstacles]))
 
     fig, ax = plt.subplots(figsize=(8, 8))
     colors = Array2D(plt.get_cmap("plasma")(np.linspace(0, 1, end_targets.n_points)))
@@ -117,31 +159,14 @@ def plot_multiple_obstacles():
     kernel = ConstantKernel(1.0) * RBF(length_scale=0.6) + WhiteKernel(
         noise_level=1e-10
     )
-    for idx, end_pt in enumerate(end_targets.points):
-        # Target array: start -> obstacle boundary -> final point
-        target_points = ArrayNx2(np.vstack((curve.start_pt, obs_pts, end_pt)))
-
-        # Source array: start -> obstacle centers -> original final
-        source_points = ArrayNx2(np.vstack((curve.start_pt, obs_centers, curve.end_pt)))
-
-        aff = AffineTransform(scale=False, rotate=True)
-        aff.fit(source_points, target_points)
-        resid = ArrayNx2(target_points - aff.predict(source_points))
-
-        gp = GaussianProcess(kernel=kernel, alpha=1e-10, optimizer=None)
-        gp.fit(source_points, resid)
-
-        def warp(P: ArrayNx2) -> Curve:
-            return Curve.from_points(aff.predict(P) + gp.predict(P))
-
-        warped = warp(curve.points)
+    warped_curves = warp(curve, end_targets, kernel, obs_pts, obs_centers)
+    for idx, warped_curve in enumerate(warped_curves):
         ax.plot(
-            warped.xs,
-            warped.ys,
+            warped_curve.xs,
+            warped_curve.ys,
             color=colors[idx],
             linewidth=1.4,
             zorder=1,
-            label=rf"EndPt={end_pt}" if idx in {0, end_targets.n_points - 1} else None,
         )
 
     ax.set_aspect("equal")
@@ -153,5 +178,6 @@ def plot_multiple_obstacles():
 if __name__ == "__main__":
     plot_single_obstacle()
     plot_multiple_obstacles()
-
     plt.show()
+
+    plot_single_obstacle_interactive()
