@@ -89,6 +89,7 @@ def plot_single_obstacle_interactive():
 
     fig, ax = plt.subplots(figsize=(8, 8))
     colors = Array2D(plt.get_cmap("plasma")(np.linspace(0, 1, end_targets.n_points)))
+
     ax.axis("equal")
     ax.set_title("Obstacle avoidance")
     ax.plot(
@@ -177,9 +178,68 @@ def plot_multiple_obstacles():
     fig.tight_layout()
 
 
+def plot_multiple_obstacles_interactive():
+    curve = make_demo_curve(n_points=200)
+    end_targets = make_demo_end_targets(n_points=100)
+
+    obstacles = [
+        InteractiveCircularObstacle(center=(1.5, 0.4), radius=0.15, n_points=20),
+        InteractiveCircularObstacle(center=(2.0, 0.6), radius=0.15, n_points=20),
+        InteractiveCircularObstacle(center=(2.8, 0.3), radius=0.15, n_points=20),
+    ]
+
+    kernel = ConstantKernel(1.0) * RBF(length_scale=0.6) + WhiteKernel(
+        noise_level=1e-10
+    )
+
+    fig, ax = plt.subplots(figsize=(8, 8))
+    colors = Array2D(plt.get_cmap("plasma")(np.linspace(0, 1, end_targets.n_points)))
+
+    ax.axis("equal")
+    ax.set_title("Obstacle avoidance — Multiple interactive obstacles")
+
+    ax.plot(curve.xs, curve.ys, "k--", zorder=3, label="Source curve")
+    for obs in obstacles:
+        obs.plot(ax, fill=False, ec="k", ls="--", zorder=2)
+
+    warp_lines = [
+        ax.plot([], [], color=colors[idx], linewidth=1.4, zorder=1)[0]
+        for idx in range(end_targets.n_points)
+    ]
+
+    def update_warp():
+        obs_pts = ArrayNx2(np.vstack([obs.boundary_points() for obs in obstacles]))
+        obs_centers = ArrayNx2(np.vstack([obs.center_tile for obs in obstacles]))
+        warped_curves = warp(
+            curve,
+            end_targets,
+            kernel,
+            obs_pts=obs_pts,
+            obs_centers=obs_centers,
+        )
+        for line, warped_curve in zip(warp_lines, warped_curves):
+            line.set_data(warped_curve.xs, warped_curve.ys)
+
+        ax.relim()
+        ax.autoscale_view()
+        fig.canvas.draw_idle()
+
+    update_warp()
+    _ = InteractionManager(
+        fig=fig,
+        ax=ax,
+        draggables=obstacles,
+        on_release_callback=update_warp,
+    )
+    ax.legend()
+    plt.tight_layout()
+    plt.show()
+
+
 if __name__ == "__main__":
     plot_single_obstacle()
     plot_multiple_obstacles()
     plt.show()
 
     plot_single_obstacle_interactive()
+    plot_multiple_obstacles_interactive()
