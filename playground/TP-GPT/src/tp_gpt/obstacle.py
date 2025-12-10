@@ -9,8 +9,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 import numpy.typing as npt
 from matplotlib.axes import Axes
-
-from tp_gpt.typings import Array1D, Array2D, def_dtype
+from typed_numpy.helpers import Array1D, Array2D, def_dtype
 
 
 class Obstacle(ABC):

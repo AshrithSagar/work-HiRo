@@ -9,8 +9,7 @@ from typing import Any, Callable, Literal, NoReturn, overload
 import numpy as np
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import Kernel
-
-from tp_gpt.typings import Array2D, Array2x2, Array3D, Array4D, ArrayN, ArrayNx2
+from typed_numpy.helpers import Array2D, Array2x2, Array3D, Array4D, ArrayN, ArrayNx2
 
 
 class AffineTransform:

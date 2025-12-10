@@ -7,10 +7,10 @@ src/tp_gpt/plotting.py
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel
+from typed_numpy.helpers import Array2, Array2D, ArrayN, ArrayNx2
 
 from tp_gpt.base import AffineTransform, GaussianProcess
 from tp_gpt.obstacle import CircularObstacle
-from tp_gpt.typings import Array2, Array2D, ArrayN, ArrayNx2
 
 
 def plot_single_obstacle():
