@@ -108,7 +108,7 @@ def plot_single_obstacle_interactive():
         label="Obstacle keypoints",
     )
     warp_lines = [
-        ax.plot([], [], color=colors[idx], alpha=0.7, lw=1.2)[0]
+        ax.plot([], [], color=colors[idx], linewidth=1.4, zorder=1)[0]
         for idx in range(end_targets.n_points)
     ]
 
@@ -122,6 +122,8 @@ def plot_single_obstacle_interactive():
         )
         for line, warped_curve in zip(warp_lines, warped_curves):
             line.set_data(warped_curve.xs, warped_curve.ys)
+        ax.relim()
+        ax.autoscale_view()
         fig.canvas.draw_idle()
 
     update_warp()
