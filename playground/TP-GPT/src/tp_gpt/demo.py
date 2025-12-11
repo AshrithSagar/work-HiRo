@@ -9,22 +9,22 @@ import numpy as np
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel
 from typed_numpy.helpers import Array2D, ArrayNx2
 
-from tp_gpt.curve import Curve
+from tp_gpt.curve import Curve2D
 from tp_gpt.helpers import warp
 from tp_gpt.obstacle import CircularObstacle
 from tp_gpt.plotting import InteractionManager, InteractiveCircularObstacle
 
 
-def make_demo_curve(n_points: int = 200) -> Curve:
+def make_demo_curve(n_points: int = 200) -> Curve2D:
     ys = np.linspace(0.0, 1.0, n_points)
     xs = 2.0 * ys**3 + ys**2
-    return Curve(xs, ys)
+    return Curve2D(xs, ys)
 
 
-def make_demo_end_targets(n_points: int = 100) -> Curve:
+def make_demo_end_targets(n_points: int = 100) -> Curve2D:
     ys = np.linspace(0.9, -5.0, n_points)
     xs = 3.0 * np.ones_like(ys)
-    return Curve(xs, ys)
+    return Curve2D(xs, ys)
 
 
 def plot_single_obstacle():
@@ -38,14 +38,7 @@ def plot_single_obstacle():
     plt.figure(figsize=(8, 8))
     colors = Array2D(plt.get_cmap("plasma")(np.linspace(0, 1, end_targets.n_points)))
 
-    plt.plot(
-        curve.xs,
-        curve.ys,
-        color="gray",
-        linestyle="--",
-        zorder=3,
-        label="Source curve",
-    )
+    curve.plot(plt.gca(), color="gray", linestyle="--", zorder=3, label="Source curve")
     circle_obs.plot(plt.gca(), "k--", zorder=2, label="Obstacle keypoints")
 
     kernel = ConstantKernel(1.0) * RBF(length_scale=0.6) + WhiteKernel(
@@ -59,13 +52,7 @@ def plot_single_obstacle():
         obs_centers=ArrayNx2(circle_obs.center_tile),
     )
     for idx, warped_curve in enumerate(warped_curves):
-        plt.plot(
-            warped_curve.xs,
-            warped_curve.ys,
-            color=colors[idx],
-            linewidth=1.4,
-            zorder=1,
-        )
+        warped_curve.plot(plt.gca(), color=colors[idx], linewidth=1.4, zorder=1)
 
     plt.axis("equal")
     plt.title("Obstacle avoidance")
@@ -92,21 +79,9 @@ def plot_single_obstacle_interactive():
 
     ax.axis("equal")
     ax.set_title("Obstacle avoidance")
-    ax.plot(
-        curve.xs,
-        curve.ys,
-        color="gray",
-        linestyle="--",
-        zorder=3,
-        label="Source curve",
-    )
+    curve.plot(ax, color="gray", linestyle="--", zorder=3, label="Source curve")
     circle_obs.plot(
-        ax,
-        fill=False,
-        zorder=2,
-        ec="k",
-        ls="--",
-        label="Obstacle keypoints",
+        ax, fill=False, zorder=2, ec="k", ls="--", label="Obstacle keypoints"
     )
     warp_lines = [
         ax.plot([], [], color=colors[idx], linewidth=1.4, zorder=1)[0]
@@ -157,7 +132,7 @@ def plot_multiple_obstacles():
     fig, ax = plt.subplots(figsize=(8, 8))
     colors = Array2D(plt.get_cmap("plasma")(np.linspace(0, 1, end_targets.n_points)))
 
-    ax.plot(curve.xs, curve.ys, "k--", label="Source curve", zorder=3)
+    curve.plot(ax, "k--", label="Source curve", zorder=3)
     for obs in obstacles:
         obs.plot(ax, "k--", zorder=2)
 
@@ -166,13 +141,7 @@ def plot_multiple_obstacles():
     )
     warped_curves = warp(curve, end_targets, kernel, obs_pts, obs_centers)
     for idx, warped_curve in enumerate(warped_curves):
-        ax.plot(
-            warped_curve.xs,
-            warped_curve.ys,
-            color=colors[idx],
-            linewidth=1.4,
-            zorder=1,
-        )
+        warped_curve.plot(ax, color=colors[idx], linewidth=1.4, zorder=1)
 
     ax.set_aspect("equal")
     ax.set_title("Obstacle avoidance — Multiple obstacles")
@@ -200,7 +169,7 @@ def plot_multiple_obstacles_interactive():
     ax.axis("equal")
     ax.set_title("Obstacle avoidance — Multiple interactive obstacles")
 
-    ax.plot(curve.xs, curve.ys, "k--", zorder=3, label="Source curve")
+    curve.plot(ax, "k--", zorder=3, label="Source curve")
     for obs in obstacles:
         obs.plot(ax, fill=False, ec="k", ls="--", zorder=2)
 

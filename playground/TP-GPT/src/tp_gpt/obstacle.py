@@ -28,7 +28,7 @@ class Obstacle(ABC):
         return Array1D(np.mean(pts, axis=0))
 
     def plot(self, ax: Axes, *args, **kwargs):
-        """Plots the obstacle on the given `Axes`."""
+        """Plot the obstacle on the given `Axes`."""
         pts = self.boundary_points()
         ax.plot(pts[:, 0], pts[:, 1], *args, **kwargs)
 
