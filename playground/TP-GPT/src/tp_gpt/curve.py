@@ -61,6 +61,10 @@ class Curve2D(Curve):
         points_arr = ArrayNx2(points)
         return cls(xs=points_arr[:, 0], ys=points_arr[:, 1])
 
+    def plot(self, ax: Axes, *args, **kwargs) -> None:
+        """Plot the curve on the given `Axes`."""
+        ax.plot(self.xs, self.ys, *args, **kwargs)
+
 
 class Curve3D(Curve):
     """Represents a 3D curve defined by x, y and z coordinates."""
