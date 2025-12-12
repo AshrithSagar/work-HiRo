@@ -1,181 +1,26 @@
 """
-Base
+Base module
 =======
 src/tp_gpt/base.py
 """
 
-from typing import Any, Callable, Literal, NoReturn, overload
+from typing import Any, Protocol
 
-import numpy as np
-from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.gaussian_process.kernels import Kernel
-from typed_numpy.helpers import Array2D, Array2x2, Array3D, Array4D, ArrayN, ArrayNx2
+from numpy.typing import NDArray
 
 
-class AffineTransform:
-    """
-    Performs an affine transformation (rotation + scale + translation).
-    Kabsch algorithm.
-    """
+class Transform(Protocol):
+    """A generic transform interface"""
 
-    def __init__(self, scale: bool = False, rotate: bool = True):
-        self.do_scale: bool = scale
-        self.do_rotation: bool = rotate
-
-        self.scale: float = 1.0
-
-    def fit(self, source_points: ArrayNx2, target_points: ArrayNx2):
-        assert len(source_points) == len(target_points)
-        dim: int = source_points.shape[1]
-
-        self.S_centroid = ArrayN(np.mean(source_points, axis=0))
-        self.T_centroid = ArrayN(np.mean(target_points, axis=0))
-
-        self.source_points_centered = ArrayNx2(source_points - self.S_centroid)
-        self.target_points_centered = ArrayNx2(target_points - self.T_centroid)
-
-        H: Array2x2 = np.dot(
-            np.transpose(self.source_points_centered), self.target_points_centered
-        )
-        rank_H: int = np.linalg.matrix_rank(H)
-
-        # Rotation
-        if not self.do_rotation or rank_H < dim:
-            self.rotation_matrix = Array2x2(np.eye(dim))
-        else:
-            U, _S, Vt = np.linalg.svd(H)
-            U, Vt = Array2x2(U), Array2x2(Vt)
-            V = Vt.T
-
-            self.rotation_matrix = Array2x2(V @ U.T)
-            if np.linalg.det(self.rotation_matrix) < 0:
-                V[:, -1] *= -1
-                self.rotation_matrix = Array2x2(V @ U.T)
-
-        # Scale
-        if self.do_scale:
-            source_rotated = ArrayNx2(
-                np.transpose(
-                    self.rotation_matrix @ np.transpose((self.source_points_centered))
-                )
-            )
-            self.scale = float(
-                np.sum(source_rotated * self.target_points_centered)
-                / np.sum(source_rotated**2)
-            )
-
-        # Translation
-        self.translation = ArrayN(self.T_centroid - self.S_centroid)
-
-    def predict(self, x: ArrayNx2) -> ArrayNx2:
-        transported_x = ArrayNx2(
-            self.scale * (x - self.S_centroid) @ np.transpose(self.rotation_matrix)
-            + self.T_centroid
-        )
-        return transported_x
-
-
-class GaussianProcess:
-    """Wrapper for `scikit-learn`'s `GaussianProcessRegressor`."""
-
-    def __init__(
+    def fit(
         self,
-        kernel: Kernel,
-        alpha: float = 1e-10,
-        optimizer: Callable[..., Any]
-        | Literal["fmin_l_bfgs_b"]
-        | None = "fmin_l_bfgs_b",
-        n_restarts_optimizer: int = 5,
-        n_targets: int | None = None,
-    ):
-        self.kernel: Kernel = kernel
-        self.alpha: float = alpha
-        self.is_residual: bool = True
+        source_points: NDArray,
+        target_points: NDArray,
+        /,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any: ...
 
-        if optimizer is not None:
-            self.gp = GaussianProcessRegressor(
-                kernel=kernel,
-                alpha=alpha,
-                optimizer=optimizer,
-                n_restarts_optimizer=n_restarts_optimizer,
-            )
-        else:
-            self.gp = GaussianProcessRegressor(
-                kernel=kernel, alpha=alpha, optimizer=optimizer
-            )
+    def predict(self, points: NDArray, /, *args: Any, **kwargs: Any) -> NDArray: ...
 
-    @overload
-    def fit(self, X: Array2D, Y: Array2D): ...
-    @overload
-    def fit(self, X: Array3D, Y: Array3D): ...
-    def fit(self, X: Array2D | Array3D, Y: Array2D | Array3D):
-        self.X = X
-        self.Y = Y
-
-        self.n_samples = np.shape(self.X)[0]
-        self.n_features = np.shape(self.X)[1]
-        self.n_outputs = np.shape(self.Y)[1]
-
-        self.gp.fit(self.X, self.Y)
-        self.kernel = self.gp.kernel_
-
-    @overload
-    def predict(
-        self,
-        x: Array2D,
-        *,
-        return_std: Literal[False] = False,
-        return_cov: Literal[False] = False,
-    ) -> Array2D: ...
-    @overload
-    def predict(
-        self,
-        x: Array3D,
-        *,
-        return_std: Literal[False] = False,
-        return_cov: Literal[False] = False,
-    ) -> Array3D: ...
-    @overload
-    def predict(
-        self,
-        x: Array2D,
-        *,
-        return_std: Literal[True],
-        return_cov: Literal[False] = False,
-    ) -> tuple[Array2D, Array2D]: ...
-    @overload
-    def predict(
-        self,
-        x: Array3D,
-        *,
-        return_std: Literal[True],
-        return_cov: Literal[False] = False,
-    ) -> tuple[Array3D, Array3D]: ...
-    @overload
-    def predict(
-        self,
-        x: Array2D,
-        *,
-        return_std: Literal[False] = False,
-        return_cov: Literal[True],
-    ) -> tuple[Array2D, Array3D]: ...
-    @overload
-    def predict(
-        self,
-        x: Array3D,
-        *,
-        return_std: Literal[False] = False,
-        return_cov: Literal[True],
-    ) -> tuple[Array3D, Array4D]: ...
-    @overload
-    def predict(
-        self, x, *, return_std: Literal[True], return_cov: Literal[True]
-    ) -> NoReturn: ...
-    def predict(
-        self,
-        x: Array2D | Array3D,
-        *,
-        return_std: bool = False,
-        return_cov: bool = False,
-    ):
-        return self.gp.predict(x, return_std=return_std, return_cov=return_cov)
+    def jacobian(self, points: NDArray, /, *args: Any, **kwargs: Any) -> NDArray: ...

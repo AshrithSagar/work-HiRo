@@ -7,8 +7,8 @@ src/tp_gpt/obstacle.py
 from abc import ABC, abstractmethod
 
 import numpy as np
-import numpy.typing as npt
 from matplotlib.axes import Axes
+from numpy.typing import ArrayLike
 from typed_numpy.helpers import Array1D, Array2D, def_dtype
 
 
@@ -34,7 +34,7 @@ class Obstacle(ABC):
 
 
 class CircularObstacle(Obstacle):
-    def __init__(self, center: npt.ArrayLike, radius: float, n_points: int = 20):
+    def __init__(self, center: ArrayLike, radius: float, n_points: int = 20):
         assert radius > 0, "Radius must be positive."
         assert n_points >= 3, "Number of points must be at least 3."
 

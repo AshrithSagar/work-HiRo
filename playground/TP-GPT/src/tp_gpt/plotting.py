@@ -1,6 +1,6 @@
 """
 Plotting utils
-=========
+=======
 src/tp_gpt/plotting.py
 """
 

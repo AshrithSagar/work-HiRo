@@ -1,6 +1,6 @@
 """
 Helper utils
-=========
+=======
 src/tp_gpt/helpers.py
 """
 
@@ -8,8 +8,8 @@ import numpy as np
 from sklearn.gaussian_process.kernels import Kernel
 from typed_numpy.helpers import ArrayNx2
 
-from tp_gpt.base import AffineTransform, GaussianProcess
 from tp_gpt.curve import Curve2D
+from tp_gpt.models import AffineTransform, GaussianProcess
 
 
 def warp(
