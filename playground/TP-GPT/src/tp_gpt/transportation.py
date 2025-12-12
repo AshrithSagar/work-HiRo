@@ -6,6 +6,7 @@ src/tp_gpt/transportation.py
 
 from typing import Generic, Optional, TypeVar, overload
 
+import numpy as np
 from numpy.typing import NDArray
 from typed_numpy.helpers import ArrayNx2, ArrayNx2x2, ArrayNx3, ArrayNx3x3
 
@@ -63,9 +64,6 @@ class PolicyTransportation(Generic[NonLinearTransform], Transform):
         else:
             return points_transformed
 
-    def transport_positions(self, positions: NDArray, /) -> NDArray:
-        return self.predict(positions)
-
     @overload
     def jacobian(self, points: ArrayNx2, /) -> ArrayNx2x2: ...
     @overload
@@ -85,3 +83,31 @@ class PolicyTransportation(Generic[NonLinearTransform], Transform):
             return J_phi
         else:
             return J_gamma
+
+    @overload
+    def transport_positions(self, positions: ArrayNx2, /) -> ArrayNx2: ...
+    @overload
+    def transport_positions(self, positions: ArrayNx3, /) -> ArrayNx3: ...
+    @overload
+    def transport_positions(self, positions: NDArray, /) -> NDArray: ...
+
+    def transport_positions(self, positions: NDArray, /) -> NDArray:
+        return self.predict(positions)
+
+    @overload
+    def transport_velocities(
+        self, positions: ArrayNx2, velocities: ArrayNx2, /
+    ) -> ArrayNx2: ...
+    @overload
+    def transport_velocities(
+        self, positions: ArrayNx3, velocities: ArrayNx3, /
+    ) -> ArrayNx3: ...
+    @overload
+    def transport_velocities(
+        self, positions: NDArray, velocities: NDArray, /
+    ) -> NDArray: ...
+
+    def transport_velocities(self, positions: NDArray, velocities: NDArray) -> NDArray:
+        J_phi = self.jacobian(positions)
+        velocities_transported = np.einsum("nij,nj->ni", J_phi, velocities)
+        return velocities_transported
