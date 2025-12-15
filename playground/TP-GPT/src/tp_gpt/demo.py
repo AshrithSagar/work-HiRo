@@ -10,27 +10,27 @@ from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel
 from typed_numpy.helpers import Array2D, ArrayNx2
 
 from tp_gpt.curve import Curve2D
-from tp_gpt.helpers import warp2D
+from tp_gpt.helpers import warp_2D
 from tp_gpt.obstacle import CircularObstacle
 from tp_gpt.plotting import InteractionManager, InteractiveCircularObstacle
 
 
-def make_demo_curve(n_points: int = 200) -> Curve2D:
+def make_demo_curve_2D(n_points: int = 200) -> Curve2D:
     ys = np.linspace(0.0, 1.0, n_points)
     xs = 2.0 * ys**3 + ys**2
     return Curve2D(xs, ys)
 
 
-def make_demo_end_targets(n_points: int = 100) -> Curve2D:
+def make_demo_end_targets_2D(n_points: int = 100) -> Curve2D:
     ys = np.linspace(0.9, -5.0, n_points)
     xs = 3.0 * np.ones_like(ys)
     return Curve2D(xs, ys)
 
 
-def plot_single_obstacle():
-    curve = make_demo_curve(n_points=200)
-    end_targets = make_demo_end_targets(n_points=100)
-    circle_obs = CircularObstacle(center=(2.0, 0.6), radius=0.15, n_points=20)
+def plot_single_obstacle_2D():
+    curve = make_demo_curve_2D(n_points=200)
+    end_targets = make_demo_end_targets_2D(n_points=100)
+    circle_obs = CircularObstacle(center=(2.0, 0.6), radius=0.15, n_theta=20)
 
     # Original keypoints
     _S = ArrayNx2([curve.start_pt, circle_obs.center, curve.end_pt])
@@ -44,11 +44,11 @@ def plot_single_obstacle():
     kernel = ConstantKernel(1.0) * RBF(length_scale=0.6) + WhiteKernel(
         noise_level=1e-10
     )
-    warped_curves = warp2D(
+    warped_curves = warp_2D(
         curve,
         end_targets,
         kernel,
-        obs_pts=ArrayNx2(circle_obs.boundary_points()),
+        obs_pts=ArrayNx2(circle_obs.boundary_points),
         obs_centers=ArrayNx2(circle_obs.center_tile),
     )
     for idx, warped_curve in enumerate(warped_curves):
@@ -60,12 +60,10 @@ def plot_single_obstacle():
     plt.tight_layout()
 
 
-def plot_single_obstacle_interactive():
-    curve = make_demo_curve(n_points=200)
-    end_targets = make_demo_end_targets(n_points=100)
-    circle_obs = InteractiveCircularObstacle(
-        center=(2.0, 0.6), radius=0.15, n_points=20
-    )
+def plot_single_obstacle_interactive_2D():
+    curve = make_demo_curve_2D(n_points=200)
+    end_targets = make_demo_end_targets_2D(n_points=100)
+    circle_obs = InteractiveCircularObstacle(center=(2.0, 0.6), radius=0.15, n_theta=20)
 
     # Original keypoints
     _S = ArrayNx2([curve.start_pt, circle_obs.center, curve.end_pt])
@@ -89,11 +87,11 @@ def plot_single_obstacle_interactive():
     ]
 
     def update_warp(autoscale: bool = True) -> None:
-        warped_curves = warp2D(
+        warped_curves = warp_2D(
             curve,
             end_targets,
             kernel,
-            obs_pts=ArrayNx2(circle_obs.boundary_points()),
+            obs_pts=ArrayNx2(circle_obs.boundary_points),
             obs_centers=ArrayNx2(circle_obs.center_tile),
         )
         for line, warped_curve in zip(warp_lines, warped_curves):
@@ -116,17 +114,17 @@ def plot_single_obstacle_interactive():
     plt.show()
 
 
-def plot_multiple_obstacles():
-    curve = make_demo_curve(n_points=200)
-    end_targets = make_demo_end_targets(n_points=100)
+def plot_multiple_obstacles_2D():
+    curve = make_demo_curve_2D(n_points=200)
+    end_targets = make_demo_end_targets_2D(n_points=100)
 
     obstacles = [
-        CircularObstacle(center=(1.5, 0.4), radius=0.15, n_points=20),
-        CircularObstacle(center=(2, 0.6), radius=0.15, n_points=20),
-        CircularObstacle(center=(2.8, 0.3), radius=0.15, n_points=20),
+        CircularObstacle(center=(1.5, 0.4), radius=0.15, n_theta=20),
+        CircularObstacle(center=(2, 0.6), radius=0.15, n_theta=20),
+        CircularObstacle(center=(2.8, 0.3), radius=0.15, n_theta=20),
     ]
 
-    obs_pts = ArrayNx2(np.vstack([obs.boundary_points() for obs in obstacles]))
+    obs_pts = ArrayNx2(np.vstack([obs.boundary_points for obs in obstacles]))
     obs_centers = ArrayNx2(np.vstack([obs.center_tile for obs in obstacles]))
 
     fig, ax = plt.subplots(figsize=(8, 8))
@@ -139,7 +137,7 @@ def plot_multiple_obstacles():
     kernel = ConstantKernel(1.0) * RBF(length_scale=0.6) + WhiteKernel(
         noise_level=1e-10
     )
-    warped_curves = warp2D(curve, end_targets, kernel, obs_pts, obs_centers)
+    warped_curves = warp_2D(curve, end_targets, kernel, obs_pts, obs_centers)
     for idx, warped_curve in enumerate(warped_curves):
         warped_curve.plot(ax, color=colors[idx], linewidth=1.4, zorder=1)
 
@@ -149,14 +147,14 @@ def plot_multiple_obstacles():
     fig.tight_layout()
 
 
-def plot_multiple_obstacles_interactive():
-    curve = make_demo_curve(n_points=200)
-    end_targets = make_demo_end_targets(n_points=100)
+def plot_multiple_obstacles_interactive_2D():
+    curve = make_demo_curve_2D(n_points=200)
+    end_targets = make_demo_end_targets_2D(n_points=100)
 
     obstacles = [
-        InteractiveCircularObstacle(center=(1.5, 0.4), radius=0.15, n_points=20),
-        InteractiveCircularObstacle(center=(2.0, 0.6), radius=0.15, n_points=20),
-        InteractiveCircularObstacle(center=(2.8, 0.3), radius=0.15, n_points=20),
+        InteractiveCircularObstacle(center=(1.5, 0.4), radius=0.15, n_theta=20),
+        InteractiveCircularObstacle(center=(2.0, 0.6), radius=0.15, n_theta=20),
+        InteractiveCircularObstacle(center=(2.8, 0.3), radius=0.15, n_theta=20),
     ]
 
     kernel = ConstantKernel(1.0) * RBF(length_scale=0.6) + WhiteKernel(
@@ -179,9 +177,9 @@ def plot_multiple_obstacles_interactive():
     ]
 
     def update_warp(autoscale: bool = True) -> None:
-        obs_pts = ArrayNx2(np.vstack([obs.boundary_points() for obs in obstacles]))
+        obs_pts = ArrayNx2(np.vstack([obs.boundary_points for obs in obstacles]))
         obs_centers = ArrayNx2(np.vstack([obs.center_tile for obs in obstacles]))
-        warped_curves = warp2D(
+        warped_curves = warp_2D(
             curve,
             end_targets,
             kernel,
@@ -209,9 +207,9 @@ def plot_multiple_obstacles_interactive():
 
 
 if __name__ == "__main__":
-    plot_single_obstacle()
-    plot_multiple_obstacles()
+    plot_single_obstacle_2D()
+    plot_multiple_obstacles_2D()
     plt.show()
 
-    plot_single_obstacle_interactive()
-    plot_multiple_obstacles_interactive()
+    plot_single_obstacle_interactive_2D()
+    plot_multiple_obstacles_interactive_2D()

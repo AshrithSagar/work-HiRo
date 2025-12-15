@@ -8,24 +8,21 @@ from typing import Generic, Self
 
 import numpy as np
 from matplotlib.axes import Axes
+from mpl_toolkits.mplot3d import Axes3D  # type: ignore[import-untyped]
 from numpy.typing import ArrayLike
-from typed_numpy.helpers import Array2, Array3, ArrayN, ArrayNx2, ArrayNx3
+from typed_numpy.helpers import Array1D
 
-from tp_gpt.typings import PointsT, PointT
+from tp_gpt.typings import DimT, Point, PointsArray, ThreeD, TwoD
 
 
-class Curve(Generic[PointT, PointsT]):
+class Curve(Generic[DimT]):
     """Represents a general curve defined in a general space."""
 
-    PointClass: type[PointT]
-    PointsClass: type[PointsT]
-
     def __init__(self, points: ArrayLike) -> None:
-        # Create a Curve instance from an array of points.
-        self.points = self.PointsClass(points)
-        self.n_points = len(self.points)
+        self.points: PointsArray[DimT] = PointsArray[DimT](points)
+        self.n_points: int = len(self.points)
 
-    def __getitem__(self, idx: int) -> PointT:
+    def __getitem__(self, idx: int) -> Point[DimT]:
         return self.points[idx]
 
     def __len__(self) -> int:
@@ -35,55 +32,54 @@ class Curve(Generic[PointT, PointsT]):
         return f"Curve(points={self.points}, shape={self.points.shape})"
 
     @property
-    def start_pt(self) -> PointT:
+    def start_pt(self) -> Point[DimT]:
         return self.points[0]
 
     @property
-    def end_pt(self) -> PointT:
+    def end_pt(self) -> Point[DimT]:
         return self.points[-1]
+
+    @classmethod
+    def from_points(cls, points: ArrayLike) -> Self:
+        """Create a Curve instance from an array of points."""
+        return cls(points=points)
 
     def plot(self, ax: Axes, *args, **kwargs) -> None:
         """Plot the curve on the given `Axes`."""
         raise NotImplementedError
 
 
-class Curve2D(Curve[Array2, ArrayNx2]):
-    """Represents a 2D curve defined by x and y coordinates."""
-
-    PointClass = Array2
-    PointsClass = ArrayNx2
+class Curve2D(Curve[TwoD]):
+    """Represents a 2D curve in cartesian coordinates."""
 
     def __init__(self, xs: ArrayLike, ys: ArrayLike) -> None:
-        self.xs = ArrayN(xs)
-        self.ys = ArrayN(ys)
-        self.points = self.PointsClass(np.column_stack((self.xs, self.ys)))
-        self.n_points = len(self.points)
+        self.xs = Array1D(xs)
+        self.ys = Array1D(ys)
+        super().__init__(points=np.column_stack((self.xs, self.ys)))
 
     @classmethod
     def from_points(cls, points: ArrayLike) -> Self:
-        """Create a Curve2D instance from an array of points."""
-        points_arr = cls.PointsClass(points)
+        points_arr = PointsArray[TwoD](points)
         return cls(xs=points_arr[:, 0], ys=points_arr[:, 1])
 
     def plot(self, ax: Axes, *args, **kwargs) -> None:
         ax.plot(self.xs, self.ys, *args, **kwargs)
 
 
-class Curve3D(Curve[Array3, ArrayNx3]):
-    """Represents a 3D curve defined by x, y and z coordinates."""
-
-    PointClass = Array3
-    PointsClass = ArrayNx3
+class Curve3D(Curve[ThreeD]):
+    """Represents a 3D curve in cartesian coordinates."""
 
     def __init__(self, xs: ArrayLike, ys: ArrayLike, zs: ArrayLike) -> None:
-        self.xs = ArrayN(xs)
-        self.ys = ArrayN(ys)
-        self.zs = ArrayN(zs)
-        self.points = self.PointsClass(np.column_stack((self.xs, self.ys, self.zs)))
-        self.n_points = len(self.points)
+        self.xs = Array1D(xs)
+        self.ys = Array1D(ys)
+        self.zs = Array1D(zs)
+        super().__init__(points=np.column_stack((self.xs, self.ys, self.zs)))
 
     @classmethod
     def from_points(cls, points: ArrayLike) -> Self:
         """Create a Curve3D instance from an array of points."""
-        points_arr = cls.PointsClass(points)
+        points_arr = PointsArray[ThreeD](points)
         return cls(xs=points_arr[:, 0], ys=points_arr[:, 1], zs=points_arr[:, 2])
+
+    def plot(self, ax: Axes3D, *args, **kwargs) -> None:
+        ax.plot(self.xs, self.ys, self.zs, *args, **kwargs)

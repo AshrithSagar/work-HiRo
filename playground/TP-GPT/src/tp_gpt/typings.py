@@ -4,11 +4,19 @@ Typing utils
 src/tp_gpt/typings.py
 """
 
-from typing import TypeVar
+from typing import TypeAlias, TypeVar
 
-from typed_numpy.helpers import Array1D, Array2D, Array3D
+from typed_numpy import TypedNDArray
+from typed_numpy.shapes import THREE, TWO
 
-PointT = TypeVar("PointT", bound=Array1D, default=Array1D)
-PointsT = TypeVar("PointsT", bound=Array2D, default=Array2D)
-RotationT = TypeVar("RotationT", bound=Array2D, default=Array2D)
-JacobianT = TypeVar("JacobianT", bound=Array3D, default=Array3D)
+TwoD: TypeAlias = TWO
+ThreeD: TypeAlias = THREE
+
+DimT = TypeVar("DimT", TwoD, ThreeD)
+
+
+Point: TypeAlias = TypedNDArray[tuple[DimT]]
+PointsArray: TypeAlias = TypedNDArray[tuple[int, DimT]]
+RotationMatrix: TypeAlias = TypedNDArray[tuple[DimT, DimT]]
+Jacobian: TypeAlias = TypedNDArray[tuple[DimT, DimT]]
+JacobianArray: TypeAlias = TypedNDArray[tuple[int, DimT, DimT]]

@@ -11,7 +11,7 @@ from matplotlib.axes import Axes
 from matplotlib.backend_bases import Event, MouseEvent
 from matplotlib.figure import Figure
 from matplotlib.patches import Circle
-from typed_numpy.helpers import Array1D
+from typed_numpy.helpers import Array2
 
 from tp_gpt.obstacle import CircularObstacle
 
@@ -96,15 +96,17 @@ class InteractiveCircularObstacle(CircularObstacle):
 
     def start_drag(self, event: MouseEvent):
         self.dragging = True
-        self._offset = np.array(
+        self._offset = Array2(
             [event.xdata - self.center[0], event.ydata - self.center[1]]
         )
 
     def drag(self, event: MouseEvent):
         if not self.dragging:
             return
-        new_center = [event.xdata - self._offset[0], event.ydata - self._offset[1]]
-        self._center = Array1D(new_center)
+        new_center = Array2(
+            [event.xdata - self._offset[0], event.ydata - self._offset[1]]
+        )
+        self._center = new_center
         self.patch.center = tuple(new_center)
 
     def end_drag(self):

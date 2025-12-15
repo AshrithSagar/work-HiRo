@@ -10,18 +10,10 @@ import numpy as np
 from numpy.typing import ArrayLike, NDArray
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import Kernel
-from typed_numpy.helpers import (
-    Array2D,
-    Array3D,
-    Array4D,
-    ArrayNx2,
-    ArrayNx2x2,
-    ArrayNx3,
-    ArrayNx3x3,
-)
+from typed_numpy.helpers import Array2D, Array3D, Array4D
 
 from tp_gpt.transforms.base import Transform
-from tp_gpt.typings import JacobianT, PointsT
+from tp_gpt.typings import DimT, JacobianArray, PointsArray, ThreeD, TwoD
 
 
 class GaussianProcess:
@@ -140,19 +132,12 @@ class GaussianProcess:
         return self.gp.predict(x, return_std=return_std, return_cov=return_cov)
 
 
-class GaussianProcessTransform(GaussianProcess, Transform[PointsT, JacobianT]):
-    PointsClass: type[PointsT]
-    JacobianClass: type[JacobianT]
-
-    def jacobian(self, points: PointsT, /) -> JacobianT:
+class GaussianProcessTransform(GaussianProcess, Transform[DimT]):
+    def jacobian(self, points: PointsArray[DimT], /) -> JacobianArray[DimT]:
         raise NotImplementedError
 
 
-class GaussianProcessTransform2D(GaussianProcessTransform[ArrayNx2, ArrayNx2x2]):
-    PointsClass = ArrayNx2
-    JacobianClass = ArrayNx2x2
+class GaussianProcessTransform2D(GaussianProcessTransform[TwoD]): ...
 
 
-class GaussianProcessTransform3D(GaussianProcessTransform[ArrayNx3, ArrayNx3x3]):
-    PointsClass = ArrayNx3
-    JacobianClass = ArrayNx3x3
+class GaussianProcessTransform3D(GaussianProcessTransform[ThreeD]): ...
