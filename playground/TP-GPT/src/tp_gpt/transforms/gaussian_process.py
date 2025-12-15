@@ -1,7 +1,7 @@
 """
 Gaussian Process Transform
 =======
-src/tp_gpt/models/gaussian_process.py
+src/tp_gpt/transforms/gaussian_process.py
 """
 
 from typing import Any, Callable, Literal, NoReturn, overload
@@ -10,12 +10,21 @@ import numpy as np
 from numpy.typing import ArrayLike, NDArray
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import Kernel
-from typed_numpy.helpers import Array2D, Array3D, Array4D
+from typed_numpy.helpers import (
+    Array2D,
+    Array3D,
+    Array4D,
+    ArrayNx2,
+    ArrayNx2x2,
+    ArrayNx3,
+    ArrayNx3x3,
+)
 
-from tp_gpt.base import Transform
+from tp_gpt.transforms.base import Transform
+from tp_gpt.typings import JacobianT, PointsT
 
 
-class GaussianProcess(Transform):
+class GaussianProcess:
     """Wrapper for `scikit-learn`'s `GaussianProcessRegressor`."""
 
     def __init__(
@@ -118,7 +127,7 @@ class GaussianProcess(Transform):
     ) -> tuple[Array3D, Array4D]: ...
     @overload
     def predict(
-        self, x, /, *, return_std: Literal[True], return_cov: Literal[True]
+        self, x: ArrayLike, /, *, return_std: Literal[True], return_cov: Literal[True]
     ) -> NoReturn: ...
     @overload
     def predict(
@@ -130,5 +139,20 @@ class GaussianProcess(Transform):
     ) -> NDArray | tuple[NDArray, NDArray] | tuple[NDArray, NDArray, NDArray]:
         return self.gp.predict(x, return_std=return_std, return_cov=return_cov)
 
-    def jacobian(self, points: NDArray, /) -> NDArray:
+
+class GaussianProcessTransform(GaussianProcess, Transform[PointsT, JacobianT]):
+    PointsClass: type[PointsT]
+    JacobianClass: type[JacobianT]
+
+    def jacobian(self, points: PointsT, /) -> JacobianT:
         raise NotImplementedError
+
+
+class GaussianProcessTransform2D(GaussianProcessTransform[ArrayNx2, ArrayNx2x2]):
+    PointsClass = ArrayNx2
+    JacobianClass = ArrayNx2x2
+
+
+class GaussianProcessTransform3D(GaussianProcessTransform[ArrayNx3, ArrayNx3x3]):
+    PointsClass = ArrayNx3
+    JacobianClass = ArrayNx3x3

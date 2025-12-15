@@ -10,7 +10,7 @@ from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel
 from typed_numpy.helpers import Array2D, ArrayNx2
 
 from tp_gpt.curve import Curve2D
-from tp_gpt.helpers import warp
+from tp_gpt.helpers import warp2D
 from tp_gpt.obstacle import CircularObstacle
 from tp_gpt.plotting import InteractionManager, InteractiveCircularObstacle
 
@@ -44,7 +44,7 @@ def plot_single_obstacle():
     kernel = ConstantKernel(1.0) * RBF(length_scale=0.6) + WhiteKernel(
         noise_level=1e-10
     )
-    warped_curves = warp(
+    warped_curves = warp2D(
         curve,
         end_targets,
         kernel,
@@ -89,7 +89,7 @@ def plot_single_obstacle_interactive():
     ]
 
     def update_warp(autoscale: bool = True) -> None:
-        warped_curves = warp(
+        warped_curves = warp2D(
             curve,
             end_targets,
             kernel,
@@ -139,7 +139,7 @@ def plot_multiple_obstacles():
     kernel = ConstantKernel(1.0) * RBF(length_scale=0.6) + WhiteKernel(
         noise_level=1e-10
     )
-    warped_curves = warp(curve, end_targets, kernel, obs_pts, obs_centers)
+    warped_curves = warp2D(curve, end_targets, kernel, obs_pts, obs_centers)
     for idx, warped_curve in enumerate(warped_curves):
         warped_curve.plot(ax, color=colors[idx], linewidth=1.4, zorder=1)
 
@@ -181,7 +181,7 @@ def plot_multiple_obstacles_interactive():
     def update_warp(autoscale: bool = True) -> None:
         obs_pts = ArrayNx2(np.vstack([obs.boundary_points() for obs in obstacles]))
         obs_centers = ArrayNx2(np.vstack([obs.center_tile for obs in obstacles]))
-        warped_curves = warp(
+        warped_curves = warp2D(
             curve,
             end_targets,
             kernel,
