@@ -4,7 +4,7 @@ Curve utils
 src/tp_gpt/curve.py
 """
 
-from typing import Generic, Self
+from typing import Self
 
 import numpy as np
 from matplotlib.axes import Axes
@@ -12,14 +12,14 @@ from mpl_toolkits.mplot3d import Axes3D  # type: ignore[import-untyped]
 from numpy.typing import ArrayLike
 from typed_numpy.helpers import Array1D
 
-from tp_gpt.typings import DimT, Point, PointsArray, ThreeD, TwoD
+from tp_gpt.typings import THREE, TWO, DimT, Point, PointsArray, Space
 
 
-class Curve(Generic[DimT]):
+class Curve(Space[DimT]):
     """Represents a general curve defined in a general space."""
 
     def __init__(self, points: ArrayLike) -> None:
-        self.points: PointsArray[DimT] = PointsArray[DimT](points)
+        self.points = self.PointsArray(points)
         self.n_points: int = len(self.points)
 
     def __getitem__(self, idx: int) -> Point[DimT]:
@@ -49,7 +49,7 @@ class Curve(Generic[DimT]):
         raise NotImplementedError
 
 
-class Curve2D(Curve[TwoD]):
+class Curve2D(Curve[TWO]):
     """Represents a 2D curve in cartesian coordinates."""
 
     def __init__(self, xs: ArrayLike, ys: ArrayLike) -> None:
@@ -59,14 +59,14 @@ class Curve2D(Curve[TwoD]):
 
     @classmethod
     def from_points(cls, points: ArrayLike) -> Self:
-        points_arr = PointsArray[TwoD](points)
+        points_arr = PointsArray(points)
         return cls(xs=points_arr[:, 0], ys=points_arr[:, 1])
 
     def plot(self, ax: Axes, *args, **kwargs) -> None:
         ax.plot(self.xs, self.ys, *args, **kwargs)
 
 
-class Curve3D(Curve[ThreeD]):
+class Curve3D(Curve[THREE]):
     """Represents a 3D curve in cartesian coordinates."""
 
     def __init__(self, xs: ArrayLike, ys: ArrayLike, zs: ArrayLike) -> None:
@@ -78,7 +78,7 @@ class Curve3D(Curve[ThreeD]):
     @classmethod
     def from_points(cls, points: ArrayLike) -> Self:
         """Create a Curve3D instance from an array of points."""
-        points_arr = PointsArray[ThreeD](points)
+        points_arr = PointsArray(points)
         return cls(xs=points_arr[:, 0], ys=points_arr[:, 1], zs=points_arr[:, 2])
 
     def plot(self, ax: Axes3D, *args, **kwargs) -> None:

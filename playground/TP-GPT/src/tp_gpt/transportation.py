@@ -9,7 +9,7 @@ from typing import Generic, Optional, TypeVar
 import numpy as np
 
 from tp_gpt.transforms import AffineTransform, Transform
-from tp_gpt.typings import DimT, JacobianArray, PointsArray, ThreeD, TwoD
+from tp_gpt.typings import THREE, TWO, DimT, JacobianArray, PointsArray
 
 NonLinearTransformT = TypeVar("NonLinearTransformT", bound=Transform)
 
@@ -81,11 +81,11 @@ class PolicyTransportation(Generic[NonLinearTransformT, DimT], Transform[DimT]):
 
 
 class PolicyTransportation2D(
-    Generic[NonLinearTransformT], PolicyTransportation[NonLinearTransformT, TwoD]
+    Generic[NonLinearTransformT], PolicyTransportation[NonLinearTransformT, TWO]
 ): ...
 
 
 class PolicyTransportation3D(
     Generic[NonLinearTransformT],
-    PolicyTransportation[NonLinearTransformT, ThreeD],
+    PolicyTransportation[NonLinearTransformT, THREE],
 ): ...

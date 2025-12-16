@@ -6,7 +6,7 @@ src/tp_gpt/transforms/base.py
 
 from typing import Any, Protocol
 
-from tp_gpt.typings import DimT, JacobianArray, PointsArray, ThreeD, TwoD
+from tp_gpt.typings import THREE, TWO, DimT, JacobianArray, PointsArray
 
 
 class Transform(Protocol[DimT]):
@@ -30,9 +30,9 @@ class Transform(Protocol[DimT]):
     ) -> JacobianArray[DimT]: ...
 
 
-class Transform2D(Transform[TwoD], Protocol):
+class Transform2D(Transform[TWO], Protocol):
     """A generic 2D transform interface"""
 
 
-class Transform3D(Transform[ThreeD], Protocol):
+class Transform3D(Transform[THREE], Protocol):
     """A generic 3D transform interface"""

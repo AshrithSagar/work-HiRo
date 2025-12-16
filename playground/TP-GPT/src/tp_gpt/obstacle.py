@@ -6,17 +6,16 @@ src/tp_gpt/obstacle.py
 
 from abc import ABC, abstractmethod
 from functools import cached_property
-from typing import Generic
 
 import numpy as np
 from matplotlib.axes import Axes
 from mpl_toolkits.mplot3d import Axes3D  # type: ignore[import-untyped]
 from numpy.typing import ArrayLike
 
-from tp_gpt.typings import DimT, Point, PointsArray, ThreeD, TwoD
+from tp_gpt.typings import THREE, TWO, DimT, Point, PointsArray, Space
 
 
-class Obstacle(Generic[DimT], ABC):
+class Obstacle(Space[DimT], ABC):
     """Abstract base class for obstacles."""
 
     @cached_property
@@ -29,7 +28,7 @@ class Obstacle(Generic[DimT], ABC):
     def center(self) -> Point[DimT]:
         """Returns the center point of the obstacle."""
         # Defaults to the centroid of the boundary points
-        return Point[DimT](np.mean(self.boundary_points, axis=0))
+        return self.Point(np.mean(self.boundary_points, axis=0))
 
     @property
     def n_points(self) -> int:
@@ -41,7 +40,7 @@ class Obstacle(Generic[DimT], ABC):
 
     @property
     def center_tile(self) -> PointsArray[DimT]:
-        return PointsArray[DimT](np.tile(self.center, (self.n_points, 1)))
+        return self.PointsArray(np.tile(self.center, (self.n_points, 1)))
 
     def plot(self, ax: Axes, *args, **kwargs) -> None:
         """Plot the obstacle on the given `Axes`."""
@@ -70,11 +69,11 @@ class BallObstacle(Obstacle[DimT], ABC):
         return self._center
 
 
-class CircularObstacle(BallObstacle[TwoD]):
+class CircularObstacle(BallObstacle[TWO]):
     """A 2D Circular Obstacle"""
 
     def __init__(self, center: ArrayLike, radius: float, n_theta: int = 20) -> None:
-        self._center = Point[TwoD](center)
+        self._center = self.Point(center)
         self.radius = float(np.abs(radius))
         self.n_theta = int(n_theta)
 
@@ -82,21 +81,21 @@ class CircularObstacle(BallObstacle[TwoD]):
         self.n_points = self.n_theta
 
     @cached_property
-    def boundary_points(self) -> PointsArray[TwoD]:
+    def boundary_points(self) -> PointsArray[TWO]:
         theta = np.linspace(0, 2 * np.pi, self.n_theta)
 
         cx, cy = self._center
         xs = cx + self.radius * np.cos(theta)
         ys = cy + self.radius * np.sin(theta)
 
-        return PointsArray[TwoD](np.column_stack((xs, ys)))
+        return self.PointsArray(np.column_stack((xs, ys)))
 
     def plot(self, ax: Axes, *args, **kwargs) -> None:
         pts = self.boundary_points
         ax.plot(pts[:, 0], pts[:, 1], *args, **kwargs)
 
 
-class SphericalObstacle(BallObstacle[ThreeD]):
+class SphericalObstacle(BallObstacle[THREE]):
     """A 3D Spherical Obstacle"""
 
     def __init__(
@@ -106,7 +105,7 @@ class SphericalObstacle(BallObstacle[ThreeD]):
         n_theta: int = 20,
         n_phi: int = 20,
     ) -> None:
-        self._center = Point[ThreeD](center)
+        self._center = self.Point(center)
         self.radius = float(np.abs(radius))
         self.n_theta = int(n_theta)
         self.n_phi = int(n_phi)
@@ -116,7 +115,7 @@ class SphericalObstacle(BallObstacle[ThreeD]):
         self.n_points = self.n_theta * self.n_phi
 
     @cached_property
-    def boundary_points(self) -> PointsArray[ThreeD]:
+    def boundary_points(self) -> PointsArray[THREE]:
         theta = np.linspace(0, 2 * np.pi, self.n_theta)
         phi = np.linspace(0, np.pi, self.n_phi)
         theta, phi = np.meshgrid(theta, phi)
@@ -126,9 +125,7 @@ class SphericalObstacle(BallObstacle[ThreeD]):
         ys = cy + self.radius * np.sin(theta) * np.sin(phi)
         zs = cz + self.radius * np.cos(phi)
 
-        return PointsArray[ThreeD](
-            np.column_stack((xs.ravel(), ys.ravel(), zs.ravel()))
-        )
+        return self.PointsArray(np.column_stack((xs.ravel(), ys.ravel(), zs.ravel())))
 
     def plot(self, ax: Axes3D, *args, **kwargs) -> None:
         pts = self.boundary_points
