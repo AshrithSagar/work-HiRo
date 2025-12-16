@@ -5,7 +5,6 @@ src/tp_gpt/obstacle.py
 """
 
 from abc import ABC, abstractmethod
-from functools import cached_property
 
 import numpy as np
 from matplotlib.axes import Axes
@@ -18,7 +17,7 @@ from tp_gpt.typings import THREE, TWO, DimT, Point, PointsArray, Space
 class Obstacle(Space[DimT], ABC):
     """Abstract base class for obstacles."""
 
-    @cached_property
+    @property
     @abstractmethod
     def boundary_points(self) -> PointsArray[DimT]:
         """Returns an array of points describing the obstacle boundary."""
@@ -59,7 +58,7 @@ class BallObstacle(Obstacle[DimT], ABC):
     _center: Point[DimT]
     radius: float
 
-    @cached_property
+    @property
     @abstractmethod
     def boundary_points(self) -> PointsArray[DimT]:
         raise NotImplementedError
@@ -80,7 +79,7 @@ class CircularObstacle(BallObstacle[TWO]):
         assert self.n_theta >= 3
         self.n_points = self.n_theta
 
-    @cached_property
+    @property
     def boundary_points(self) -> PointsArray[TWO]:
         theta = np.linspace(0, 2 * np.pi, self.n_theta)
 
@@ -114,7 +113,7 @@ class SphericalObstacle(BallObstacle[THREE]):
         assert self.n_phi >= 2
         self.n_points = self.n_theta * self.n_phi
 
-    @cached_property
+    @property
     def boundary_points(self) -> PointsArray[THREE]:
         theta = np.linspace(0, 2 * np.pi, self.n_theta)
         phi = np.linspace(0, np.pi, self.n_phi)
