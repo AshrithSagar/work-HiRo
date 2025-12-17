@@ -6,9 +6,9 @@ src/tp_gpt/typings.py
 
 from typing import TypeAlias
 
-from typed_numpy import TypedNDArray
+from typed_numpy import ShapedNDArray, TypedNDArray
 from typed_numpy.dimensions import DimT, GenericDim
-from typed_numpy.shapes import THREE, TWO, Shape
+from typed_numpy.shapes import THREE, TWO
 
 Point: TypeAlias = TypedNDArray[tuple[DimT]]
 PointsArray: TypeAlias = TypedNDArray[tuple[int, DimT]]
@@ -18,11 +18,11 @@ JacobianArray: TypeAlias = TypedNDArray[tuple[int, DimT, DimT]]
 
 
 class Space(GenericDim[DimT]):
-    Point: Shape[tuple[DimT]] = Shape("D")
-    PointsArray: Shape[tuple[int, DimT]] = Shape("N", "D")
-    RotationMatrix: Shape[tuple[DimT, DimT]] = Shape("D", "D")
-    Jacobian: Shape[tuple[DimT, DimT]] = Shape("D", "D")
-    JacobianArray: Shape[tuple[int, DimT, DimT]] = Shape("N", "D", "D")
+    Point: ShapedNDArray[tuple[DimT]] = ShapedNDArray("D")
+    PointsArray: ShapedNDArray[tuple[int, DimT]] = ShapedNDArray("N", "D")
+    RotationMatrix: ShapedNDArray[tuple[DimT, DimT]] = ShapedNDArray("D", "D")
+    Jacobian: ShapedNDArray[tuple[DimT, DimT]] = ShapedNDArray("D", "D")
+    JacobianArray: ShapedNDArray[tuple[int, DimT, DimT]] = ShapedNDArray("N", "D", "D")
 
 
 class Space2D(Space[TWO]): ...
