@@ -1746,7 +1746,7 @@ wheels = [
 [[package]]
 name = "typed-numpy"
 version = "0.1.0"
-source = { git = "https://github.com/AshrithSagar/typed-numpy.git?rev=main#917c402365af4b59c677febfc66a28bde53fa7e5" }
+source = { git = "https://github.com/AshrithSagar/typed-numpy.git?rev=main#b6fbadf5dcef9399b43486a21a7a9bfe1230e65c" }
 dependencies = [
     { name = "numpy" },
 ]

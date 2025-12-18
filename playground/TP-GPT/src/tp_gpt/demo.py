@@ -7,7 +7,7 @@ src/tp_gpt/demo.py
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel
-from typed_numpy.helpers import Array2D, ArrayNx2
+from typed_numpy._typed.helpers import Array2D, ArrayNx2
 
 from tp_gpt.curve import Curve2D
 from tp_gpt.helpers import warp_2D

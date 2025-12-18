@@ -6,9 +6,9 @@ src/tp_gpt/typings.py
 
 from typing import TypeAlias
 
-from typed_numpy import ShapedNDArray, TypedNDArray
-from typed_numpy.dimensions import DimT, GenericDim
-from typed_numpy.shapes import THREE, TWO
+from typed_numpy._typed import ShapedNDArray, TypedNDArray
+from typed_numpy._typed.dimensions import DimT, GenericDim
+from typed_numpy._typed.shapes import THREE, TWO
 
 Point: TypeAlias = TypedNDArray[tuple[DimT]]
 PointsArray: TypeAlias = TypedNDArray[tuple[int, DimT]]

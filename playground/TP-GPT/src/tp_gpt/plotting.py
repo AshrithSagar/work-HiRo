@@ -11,7 +11,7 @@ from matplotlib.axes import Axes
 from matplotlib.backend_bases import Event, MouseEvent
 from matplotlib.figure import Figure
 from matplotlib.patches import Circle
-from typed_numpy.helpers import Array2
+from typed_numpy._typed.helpers import Array2
 
 from tp_gpt.obstacle import CircularObstacle
 

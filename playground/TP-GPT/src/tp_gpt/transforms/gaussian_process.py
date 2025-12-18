@@ -10,7 +10,7 @@ import numpy as np
 from numpy.typing import ArrayLike, NDArray
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import Kernel
-from typed_numpy.helpers import Array2D, Array3D, Array4D
+from typed_numpy._typed.helpers import Array2D, Array3D, Array4D
 
 from tp_gpt.transforms.base import Transform
 from tp_gpt.typings import THREE, TWO, DimT, JacobianArray, PointsArray, Space

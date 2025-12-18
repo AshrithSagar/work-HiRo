@@ -10,7 +10,7 @@ import numpy as np
 from matplotlib.axes import Axes
 from mpl_toolkits.mplot3d import Axes3D  # type: ignore[import-untyped]
 from numpy.typing import ArrayLike
-from typed_numpy.helpers import Array1D
+from typed_numpy._typed.helpers import Array1D
 
 from tp_gpt.typings import THREE, TWO, DimT, Point, PointsArray, Space
 
