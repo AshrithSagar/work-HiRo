@@ -19,7 +19,7 @@ class Curve(Space[DimNT, DimDT]):
     """Represents a general curve defined in a general space."""
 
     def __init__(self, points: ArrayLike) -> None:
-        self.points = self.PointsArray(points)
+        self.points = self._PointsArray(points)
         self.n_points: int = len(self.points)
 
     def __getitem__(self, idx: int) -> Point[DimDT]:

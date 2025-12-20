@@ -27,7 +27,7 @@ class Obstacle(Space[DimNT, DimDT], ABC):
     def center(self) -> Point[DimDT]:
         """Returns the center point of the obstacle."""
         # Defaults to the centroid of the boundary points
-        return self.Point(np.mean(self.boundary_points, axis=0))
+        return self._Point(np.mean(self.boundary_points, axis=0))
 
     @property
     def n_points(self) -> int:
@@ -39,7 +39,7 @@ class Obstacle(Space[DimNT, DimDT], ABC):
 
     @property
     def center_tile(self) -> PointsArray[DimNT, DimDT]:
-        return self.PointsArray(np.tile(self.center, (self.n_points, 1)))
+        return self._PointsArray(np.tile(self.center, (self.n_points, 1)))
 
     def plot(self, ax: Axes, *args, **kwargs) -> None:
         """Plot the obstacle on the given `Axes`."""
@@ -72,7 +72,7 @@ class CircularObstacle(BallObstacle[DimNT, TWO]):
     """A 2D Circular Obstacle"""
 
     def __init__(self, center: ArrayLike, radius: float, n_theta: int = 20) -> None:
-        self._center = self.Point(center)
+        self._center = self._Point(center)
         self.radius = float(np.abs(radius))
         self.n_theta = int(n_theta)
 
@@ -87,7 +87,7 @@ class CircularObstacle(BallObstacle[DimNT, TWO]):
         xs = cx + self.radius * np.cos(theta)
         ys = cy + self.radius * np.sin(theta)
 
-        return self.PointsArray(np.column_stack((xs, ys)))
+        return self._PointsArray(np.column_stack((xs, ys)))
 
     def plot(self, ax: Axes, *args, **kwargs) -> None:
         pts = self.boundary_points
@@ -104,7 +104,7 @@ class SphericalObstacle(BallObstacle[DimNT, THREE]):
         n_theta: int = 20,
         n_phi: int = 20,
     ) -> None:
-        self._center = self.Point(center)
+        self._center = self._Point(center)
         self.radius = float(np.abs(radius))
         self.n_theta = int(n_theta)
         self.n_phi = int(n_phi)
@@ -124,7 +124,7 @@ class SphericalObstacle(BallObstacle[DimNT, THREE]):
         ys = cy + self.radius * np.sin(theta) * np.sin(phi)
         zs = cz + self.radius * np.cos(phi)
 
-        return self.PointsArray(np.column_stack((xs.ravel(), ys.ravel(), zs.ravel())))
+        return self._PointsArray(np.column_stack((xs.ravel(), ys.ravel(), zs.ravel())))
 
     def plot(self, ax: Axes3D, *args, **kwargs) -> None:
         pts = self.boundary_points

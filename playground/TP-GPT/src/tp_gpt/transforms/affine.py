@@ -48,31 +48,31 @@ class AffineTransform(Space[DimNT, DimDT], Transform[DimNT, DimDT]):
         assert len(source_points) == len(target_points)
         dim: int = source_points.shape[1]
 
-        self.source_centroid = self.Point(np.mean(source_points, axis=0))
-        self.target_centroid = self.Point(np.mean(target_points, axis=0))
+        self.source_centroid = self._Point(np.mean(source_points, axis=0))
+        self.target_centroid = self._Point(np.mean(target_points, axis=0))
 
-        self.source_centered = self.PointsArray(source_points - self.source_centroid)
-        self.target_centered = self.PointsArray(target_points - self.target_centroid)
+        self.source_centered = self._PointsArray(source_points - self.source_centroid)
+        self.target_centered = self._PointsArray(target_points - self.target_centroid)
 
-        H = self.RotationMatrix(np.dot(self.source_centered.T, self.target_centered))
+        H = self._RotationMatrix(np.dot(self.source_centered.T, self.target_centered))
         rank_H: int = np.linalg.matrix_rank(H)
 
         # Rotation
         if not self.do_rotation or rank_H < dim:
-            self.rotation_matrix = self.RotationMatrix(np.eye(dim))
+            self.rotation_matrix = self._RotationMatrix(np.eye(dim))
         else:
             U, _S, Vt = np.linalg.svd(H)
-            U, Vt = self.RotationMatrix(U), self.RotationMatrix(Vt)
+            U, Vt = self._RotationMatrix(U), self._RotationMatrix(Vt)
             V = Vt.T
 
-            self.rotation_matrix = self.RotationMatrix(V @ U.T)
+            self.rotation_matrix = self._RotationMatrix(V @ U.T)
             if np.linalg.det(self.rotation_matrix) < 0:
                 V[:, -1] *= -1
-                self.rotation_matrix = self.RotationMatrix(V @ U.T)
+                self.rotation_matrix = self._RotationMatrix(V @ U.T)
 
         # Scale
         if self.do_scale:
-            source_rotated = self.PointsArray(
+            source_rotated = self._PointsArray(
                 self.source_centered @ self.rotation_matrix.T
             )
             self.scale = float(
@@ -81,12 +81,12 @@ class AffineTransform(Space[DimNT, DimDT], Transform[DimNT, DimDT]):
             )
 
         # Translation
-        self.translation = self.Point(self.target_centroid - self.source_centroid)
+        self.translation = self._Point(self.target_centroid - self.source_centroid)
 
     def predict(
         self, points: PointsArray[DimNT, DimDT], /
     ) -> PointsArray[DimNT, DimDT]:
-        points_transported = self.PointsArray(
+        points_transported = self._PointsArray(
             self.scale * (points - self.source_centroid) @ self.rotation_matrix.T
             + self.target_centroid
         )
@@ -95,7 +95,7 @@ class AffineTransform(Space[DimNT, DimDT], Transform[DimNT, DimDT]):
     def inverse(
         self, points: PointsArray[DimNT, DimDT], /
     ) -> PointsArray[DimNT, DimDT]:
-        points_inverse = self.PointsArray(
+        points_inverse = self._PointsArray(
             (1 / self.scale) * (points - self.target_centroid) @ self.rotation_matrix
             + self.source_centroid
         )
@@ -105,7 +105,7 @@ class AffineTransform(Space[DimNT, DimDT], Transform[DimNT, DimDT]):
         self, points: PointsArray[DimNT, DimDT], /
     ) -> JacobianArray[DimNT, DimDT]:
         n_points = points.shape[0]
-        jacobian = self.JacobianArray(
+        jacobian = self._JacobianArray(
             np.tile(self.scale * self.rotation_matrix, (n_points, 1, 1))
         )
         return jacobian
