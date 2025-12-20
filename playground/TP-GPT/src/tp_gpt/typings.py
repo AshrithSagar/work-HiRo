@@ -4,30 +4,35 @@ Typing utils
 src/tp_gpt/typings.py
 """
 
-from typing import TypeAlias
+from typing import Generic, TypeAlias, TypeVar
 
-from typed_numpy._typed import ShapedNDArray, TypedNDArray
-from typed_numpy._typed.generics import DimT, DimVar, GenericDim
+from typed_numpy._typed import DimVar, DimVarBinder, ShapedNDArray, TypedNDArray
 from typed_numpy._typed.shapes import THREE, TWO
 
-Point: TypeAlias = TypedNDArray[tuple[DimT]]
-PointsArray: TypeAlias = TypedNDArray[tuple[int, DimT]]
-RotationMatrix: TypeAlias = TypedNDArray[tuple[DimT, DimT]]
-Jacobian: TypeAlias = TypedNDArray[tuple[DimT, DimT]]
-JacobianArray: TypeAlias = TypedNDArray[tuple[int, DimT, DimT]]
+DimNT = TypeVar("DimNT", bound=int, default=int)
+"""TypeVar denoting number of points"""
+DimDT = TypeVar("DimDT", bound=int, default=int)
+"""TypeVar denoting dimension of the space"""
+
+Point: TypeAlias = TypedNDArray[tuple[DimDT]]
+PointsArray: TypeAlias = TypedNDArray[tuple[DimNT, DimDT]]
+RotationMatrix: TypeAlias = TypedNDArray[tuple[DimDT, DimDT]]
+Jacobian: TypeAlias = TypedNDArray[tuple[DimDT, DimDT]]
+JacobianArray: TypeAlias = TypedNDArray[tuple[DimNT, DimDT, DimDT]]
 
 
-class Space(GenericDim[DimT]):
-    D = DimVar()
+class Space(Generic[DimNT, DimDT], DimVarBinder):
+    _N = DimVar()
+    _D = DimVar()
 
-    Point: ShapedNDArray[tuple[DimT]] = ShapedNDArray(D)
-    PointsArray: ShapedNDArray[tuple[int, DimT]] = ShapedNDArray(None, D)
-    RotationMatrix: ShapedNDArray[tuple[DimT, DimT]] = ShapedNDArray(D, D)
-    Jacobian: ShapedNDArray[tuple[DimT, DimT]] = ShapedNDArray(D, D)
-    JacobianArray: ShapedNDArray[tuple[int, DimT, DimT]] = ShapedNDArray(None, D, D)
-
-
-class Space2D(Space[TWO]): ...
+    Point: ShapedNDArray[tuple[DimDT]] = ShapedNDArray(_D)
+    PointsArray: ShapedNDArray[tuple[DimNT, DimDT]] = ShapedNDArray(_N, _D)
+    RotationMatrix: ShapedNDArray[tuple[DimDT, DimDT]] = ShapedNDArray(_D, _D)
+    Jacobian: ShapedNDArray[tuple[DimDT, DimDT]] = ShapedNDArray(_D, _D)
+    JacobianArray: ShapedNDArray[tuple[DimNT, DimDT, DimDT]] = ShapedNDArray(_N, _D, _D)
 
 
-class Space3D(Space[THREE]): ...
+class Space2D(Space[DimNT, TWO]): ...
+
+
+class Space3D(Space[DimNT, THREE]): ...

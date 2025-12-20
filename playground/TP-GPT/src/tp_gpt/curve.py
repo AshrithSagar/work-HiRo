@@ -12,17 +12,17 @@ from mpl_toolkits.mplot3d import Axes3D  # type: ignore[import-untyped]
 from numpy.typing import ArrayLike
 from typed_numpy._typed.helpers import Array1D
 
-from tp_gpt.typings import THREE, TWO, DimT, Point, PointsArray, Space
+from tp_gpt.typings import THREE, TWO, DimDT, DimNT, Point, PointsArray, Space
 
 
-class Curve(Space[DimT]):
+class Curve(Space[DimNT, DimDT]):
     """Represents a general curve defined in a general space."""
 
     def __init__(self, points: ArrayLike) -> None:
         self.points = self.PointsArray(points)
         self.n_points: int = len(self.points)
 
-    def __getitem__(self, idx: int) -> Point[DimT]:
+    def __getitem__(self, idx: int) -> Point[DimDT]:
         return self.points[idx]
 
     def __len__(self) -> int:
@@ -32,11 +32,11 @@ class Curve(Space[DimT]):
         return f"Curve(points={self.points}, shape={self.points.shape})"
 
     @property
-    def start_pt(self) -> Point[DimT]:
+    def start_pt(self) -> Point[DimDT]:
         return self.points[0]
 
     @property
-    def end_pt(self) -> Point[DimT]:
+    def end_pt(self) -> Point[DimDT]:
         return self.points[-1]
 
     @classmethod
@@ -49,7 +49,7 @@ class Curve(Space[DimT]):
         raise NotImplementedError
 
 
-class Curve2D(Curve[TWO]):
+class Curve2D(Curve[DimNT, TWO]):
     """Represents a 2D curve in cartesian coordinates."""
 
     def __init__(self, xs: ArrayLike, ys: ArrayLike) -> None:
@@ -66,7 +66,7 @@ class Curve2D(Curve[TWO]):
         ax.plot(self.xs, self.ys, *args, **kwargs)
 
 
-class Curve3D(Curve[THREE]):
+class Curve3D(Curve[DimNT, THREE]):
     """Represents a 3D curve in cartesian coordinates."""
 
     def __init__(self, xs: ArrayLike, ys: ArrayLike, zs: ArrayLike) -> None:

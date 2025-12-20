@@ -11,20 +11,20 @@ from matplotlib.axes import Axes
 from mpl_toolkits.mplot3d import Axes3D  # type: ignore[import-untyped]
 from numpy.typing import ArrayLike
 
-from tp_gpt.typings import THREE, TWO, DimT, Point, PointsArray, Space
+from tp_gpt.typings import THREE, TWO, DimDT, DimNT, Point, PointsArray, Space
 
 
-class Obstacle(Space[DimT], ABC):
+class Obstacle(Space[DimNT, DimDT], ABC):
     """Abstract base class for obstacles."""
 
     @property
     @abstractmethod
-    def boundary_points(self) -> PointsArray[DimT]:
+    def boundary_points(self) -> PointsArray[DimNT, DimDT]:
         """Returns an array of points describing the obstacle boundary."""
         raise NotImplementedError
 
     @property
-    def center(self) -> Point[DimT]:
+    def center(self) -> Point[DimDT]:
         """Returns the center point of the obstacle."""
         # Defaults to the centroid of the boundary points
         return self.Point(np.mean(self.boundary_points, axis=0))
@@ -38,7 +38,7 @@ class Obstacle(Space[DimT], ABC):
     def n_points(self, value: int) -> None: ...
 
     @property
-    def center_tile(self) -> PointsArray[DimT]:
+    def center_tile(self) -> PointsArray[DimNT, DimDT]:
         return self.PointsArray(np.tile(self.center, (self.n_points, 1)))
 
     def plot(self, ax: Axes, *args, **kwargs) -> None:
@@ -52,23 +52,23 @@ class Obstacle(Space[DimT], ABC):
             raise ValueError("Unsupported obstacle dimensionality")
 
 
-class BallObstacle(Obstacle[DimT], ABC):
+class BallObstacle(Obstacle[DimNT, DimDT], ABC):
     """Abstract base class for ball-shaped obstacles."""
 
-    _center: Point[DimT]
+    _center: Point[DimDT]
     radius: float
 
     @property
     @abstractmethod
-    def boundary_points(self) -> PointsArray[DimT]:
+    def boundary_points(self) -> PointsArray[DimNT, DimDT]:
         raise NotImplementedError
 
     @property
-    def center(self) -> Point[DimT]:
+    def center(self) -> Point[DimDT]:
         return self._center
 
 
-class CircularObstacle(BallObstacle[TWO]):
+class CircularObstacle(BallObstacle[DimNT, TWO]):
     """A 2D Circular Obstacle"""
 
     def __init__(self, center: ArrayLike, radius: float, n_theta: int = 20) -> None:
@@ -80,7 +80,7 @@ class CircularObstacle(BallObstacle[TWO]):
         self.n_points = self.n_theta
 
     @property
-    def boundary_points(self) -> PointsArray[TWO]:
+    def boundary_points(self) -> PointsArray[DimNT, TWO]:
         theta = np.linspace(0, 2 * np.pi, self.n_theta)
 
         cx, cy = self._center
@@ -94,7 +94,7 @@ class CircularObstacle(BallObstacle[TWO]):
         ax.plot(pts[:, 0], pts[:, 1], *args, **kwargs)
 
 
-class SphericalObstacle(BallObstacle[THREE]):
+class SphericalObstacle(BallObstacle[DimNT, THREE]):
     """A 3D Spherical Obstacle"""
 
     def __init__(
@@ -114,7 +114,7 @@ class SphericalObstacle(BallObstacle[THREE]):
         self.n_points = self.n_theta * self.n_phi
 
     @property
-    def boundary_points(self) -> PointsArray[THREE]:
+    def boundary_points(self) -> PointsArray[DimNT, THREE]:
         theta = np.linspace(0, 2 * np.pi, self.n_theta)
         phi = np.linspace(0, np.pi, self.n_phi)
         theta, phi = np.meshgrid(theta, phi)

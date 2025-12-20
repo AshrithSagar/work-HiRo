@@ -10,7 +10,8 @@ from tp_gpt.transforms.base import Transform
 from tp_gpt.typings import (
     THREE,
     TWO,
-    DimT,
+    DimDT,
+    DimNT,
     JacobianArray,
     Point,
     PointsArray,
@@ -19,18 +20,18 @@ from tp_gpt.typings import (
 )
 
 
-class AffineTransform(Space[DimT], Transform[DimT]):
+class AffineTransform(Space[DimNT, DimDT], Transform[DimNT, DimDT]):
     """
     Performs an affine transformation (rotation + scale + translation).
     Kabsch algorithm.
     """
 
-    source_centroid: Point[DimT]
-    target_centroid: Point[DimT]
-    source_centered: PointsArray[DimT]
-    target_centered: PointsArray[DimT]
-    rotation_matrix: RotationMatrix[DimT]
-    translation: Point[DimT]
+    source_centroid: Point[DimDT]
+    target_centroid: Point[DimDT]
+    source_centered: PointsArray[DimNT, DimDT]
+    target_centered: PointsArray[DimNT, DimDT]
+    rotation_matrix: RotationMatrix[DimDT]
+    translation: Point[DimDT]
 
     def __init__(self, scale: bool = False, rotate: bool = True) -> None:
         self.do_scale: bool = scale
@@ -39,7 +40,10 @@ class AffineTransform(Space[DimT], Transform[DimT]):
         self.scale: float = 1.0
 
     def fit(
-        self, source_points: PointsArray[DimT], target_points: PointsArray[DimT], /
+        self,
+        source_points: PointsArray[DimNT, DimDT],
+        target_points: PointsArray[DimNT, DimDT],
+        /,
     ) -> None:
         assert len(source_points) == len(target_points)
         dim: int = source_points.shape[1]
@@ -79,21 +83,27 @@ class AffineTransform(Space[DimT], Transform[DimT]):
         # Translation
         self.translation = self.Point(self.target_centroid - self.source_centroid)
 
-    def predict(self, points: PointsArray[DimT], /) -> PointsArray[DimT]:
+    def predict(
+        self, points: PointsArray[DimNT, DimDT], /
+    ) -> PointsArray[DimNT, DimDT]:
         points_transported = self.PointsArray(
             self.scale * (points - self.source_centroid) @ self.rotation_matrix.T
             + self.target_centroid
         )
         return points_transported
 
-    def inverse(self, points: PointsArray[DimT], /) -> PointsArray[DimT]:
+    def inverse(
+        self, points: PointsArray[DimNT, DimDT], /
+    ) -> PointsArray[DimNT, DimDT]:
         points_inverse = self.PointsArray(
             (1 / self.scale) * (points - self.target_centroid) @ self.rotation_matrix
             + self.source_centroid
         )
         return points_inverse
 
-    def jacobian(self, points: PointsArray[DimT], /) -> JacobianArray[DimT]:
+    def jacobian(
+        self, points: PointsArray[DimNT, DimDT], /
+    ) -> JacobianArray[DimNT, DimDT]:
         n_points = points.shape[0]
         jacobian = self.JacobianArray(
             np.tile(self.scale * self.rotation_matrix, (n_points, 1, 1))
@@ -101,7 +111,7 @@ class AffineTransform(Space[DimT], Transform[DimT]):
         return jacobian
 
 
-class AffineTransform2D(AffineTransform[TWO]): ...
+class AffineTransform2D(AffineTransform[DimNT, TWO]): ...
 
 
-class AffineTransform3D(AffineTransform[THREE]): ...
+class AffineTransform3D(AffineTransform[DimNT, THREE]): ...
