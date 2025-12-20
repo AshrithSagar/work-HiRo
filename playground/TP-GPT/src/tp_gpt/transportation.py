@@ -9,13 +9,13 @@ from typing import Generic, Optional, TypeVar
 import numpy as np
 
 from tp_gpt.transforms import AffineTransform, Transform
-from tp_gpt.typings import THREE, TWO, DimDT, DimNT, JacobianArray, PointsArray
+from tp_gpt.typings import DimSpace, JacobianArray, NumPoints, PointSet, ThreeD, TwoD
 
 NonLinearTransformT = TypeVar("NonLinearTransformT", bound=Transform)
 
 
 class PolicyTransportation(
-    Generic[NonLinearTransformT, DimNT, DimDT], Transform[DimNT, DimDT]
+    Generic[NonLinearTransformT, NumPoints, DimSpace], Transform[NumPoints, DimSpace]
 ):
     def __init__(
         self,
@@ -30,8 +30,8 @@ class PolicyTransportation(
 
     def fit(
         self,
-        source_points: PointsArray[DimNT, DimDT],
-        target_points: PointsArray[DimNT, DimDT],
+        source_points: PointSet[NumPoints, DimSpace],
+        target_points: PointSet[NumPoints, DimSpace],
         /,
     ) -> None:
         self.affine_transform.fit(source_points, target_points)
@@ -39,7 +39,7 @@ class PolicyTransportation(
 
         if self.nonlinear_transform is not None:
             if self.use_residuals:
-                residuals = PointsArray[DimNT, DimDT](
+                residuals = PointSet[NumPoints, DimSpace](
                     target_points - source_points_transformed
                 )
                 self.nonlinear_transform.fit(source_points_transformed, residuals)
@@ -47,63 +47,63 @@ class PolicyTransportation(
                 self.nonlinear_transform.fit(source_points_transformed, target_points)
 
     def predict(
-        self, points: PointsArray[DimNT, DimDT], /
-    ) -> PointsArray[DimNT, DimDT]:
-        points_transformed = PointsArray[DimNT, DimDT](
+        self, points: PointSet[NumPoints, DimSpace], /
+    ) -> PointSet[NumPoints, DimSpace]:
+        points_transformed = PointSet[NumPoints, DimSpace](
             self.affine_transform.predict(points)
         )
         if self.nonlinear_transform is not None:
-            residuals = PointsArray[DimNT, DimDT](
+            residuals = PointSet[NumPoints, DimSpace](
                 self.nonlinear_transform.predict(points_transformed)
             )
             if self.use_residuals:
-                return PointsArray[DimNT, DimDT](points_transformed + residuals)
+                return PointSet[NumPoints, DimSpace](points_transformed + residuals)
             else:
                 return residuals
         else:
             return points_transformed
 
     def jacobian(
-        self, points: PointsArray[DimNT, DimDT], /
-    ) -> JacobianArray[DimNT, DimDT]:
+        self, points: PointSet[NumPoints, DimSpace], /
+    ) -> JacobianArray[NumPoints, DimSpace]:
         points_transformed = self.affine_transform.predict(points)
         J_gamma = self.affine_transform.jacobian(points)
         if self.nonlinear_transform is not None:
-            J_psi = JacobianArray[DimNT, DimDT](
+            J_psi = JacobianArray[NumPoints, DimSpace](
                 self.nonlinear_transform.jacobian(points_transformed)
             )
             if self.use_residuals:
                 J_phi = J_gamma + J_psi @ J_gamma
             else:
                 J_phi = J_psi @ J_gamma
-            return JacobianArray[DimNT, DimDT](J_phi)
+            return JacobianArray[NumPoints, DimSpace](J_phi)
         else:
-            return JacobianArray[DimNT, DimDT](J_gamma)
+            return JacobianArray[NumPoints, DimSpace](J_gamma)
 
     def transport_positions(
-        self, positions: PointsArray[DimNT, DimDT], /
-    ) -> PointsArray[DimNT, DimDT]:
+        self, positions: PointSet[NumPoints, DimSpace], /
+    ) -> PointSet[NumPoints, DimSpace]:
         return self.predict(positions)
 
     def transport_velocities(
         self,
-        positions: PointsArray[DimNT, DimDT],
-        velocities: PointsArray[DimNT, DimDT],
-    ) -> PointsArray[DimNT, DimDT]:
+        positions: PointSet[NumPoints, DimSpace],
+        velocities: PointSet[NumPoints, DimSpace],
+    ) -> PointSet[NumPoints, DimSpace]:
         J_phi = self.jacobian(positions)
-        velocities_transported = PointsArray[DimNT, DimDT](
+        velocities_transported = PointSet[NumPoints, DimSpace](
             np.einsum("nij,nj->ni", J_phi, velocities)
         )
         return velocities_transported
 
 
 class PolicyTransportation2D(
-    Generic[NonLinearTransformT, DimNT],
-    PolicyTransportation[NonLinearTransformT, DimNT, TWO],
+    Generic[NonLinearTransformT, NumPoints],
+    PolicyTransportation[NonLinearTransformT, NumPoints, TwoD],
 ): ...
 
 
 class PolicyTransportation3D(
-    Generic[NonLinearTransformT, DimNT],
-    PolicyTransportation[NonLinearTransformT, DimNT, THREE],
+    Generic[NonLinearTransformT, NumPoints],
+    PolicyTransportation[NonLinearTransformT, NumPoints, ThreeD],
 ): ...

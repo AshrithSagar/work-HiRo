@@ -6,34 +6,64 @@ src/tp_gpt/typings.py
 
 from typing import Generic, TypeAlias, TypeVar
 
-from typed_numpy._typed import DimVar, DimVarBinder, TypedNDArray
+from typed_numpy._typed import DimVar
+from typed_numpy._typed import DimVarBinder as Dimensioned
 from typed_numpy._typed import ShapedNDArray as Shaped
-from typed_numpy._typed.shapes import THREE, TWO
+from typed_numpy._typed import TypedNDArray as NDArray
+from typed_numpy._typed.shapes import THREE as ThreeD
+from typed_numpy._typed.shapes import TWO as TwoD
 
-DimNT = TypeVar("DimNT", bound=int, default=int)
-"""TypeVar denoting number of points"""
-DimDT = TypeVar("DimDT", bound=int, default=int)
+## Static bindings
+
+DimSpace = TypeVar("DimSpace", bound=int, default=int)
 """TypeVar denoting dimension of the space"""
 
-Point: TypeAlias = TypedNDArray[tuple[DimDT]]
-PointsArray: TypeAlias = TypedNDArray[tuple[DimNT, DimDT]]
-RotationMatrix: TypeAlias = TypedNDArray[tuple[DimDT, DimDT]]
-Jacobian: TypeAlias = TypedNDArray[tuple[DimDT, DimDT]]
-JacobianArray: TypeAlias = TypedNDArray[tuple[DimNT, DimDT, DimDT]]
+Point: TypeAlias = NDArray[tuple[DimSpace]]
+Vector: TypeAlias = NDArray[tuple[DimSpace]]
+RotationMatrix: TypeAlias = NDArray[tuple[DimSpace, DimSpace]]
 
 
-class Space(Generic[DimNT, DimDT], DimVarBinder):
-    _N = DimVar()
-    _D = DimVar()
+NumPoints = TypeVar("NumPoints", bound=int, default=int)
+"""TypeVar denoting number of points"""
 
-    _Point: Shaped[tuple[DimDT]] = Shaped(_D)
-    _PointsArray: Shaped[tuple[DimNT, DimDT]] = Shaped(_N, _D)
-    _RotationMatrix: Shaped[tuple[DimDT, DimDT]] = Shaped(_D, _D)
-    _Jacobian: Shaped[tuple[DimDT, DimDT]] = Shaped(_D, _D)
-    _JacobianArray: Shaped[tuple[DimNT, DimDT, DimDT]] = Shaped(_N, _D, _D)
+PointSet: TypeAlias = NDArray[tuple[NumPoints, DimSpace]]
+JacobianArray: TypeAlias = NDArray[tuple[NumPoints, DimSpace, DimSpace]]
 
 
-class Space2D(Space[DimNT, TWO]): ...
+## Runtime bindings
+
+_DimSpace = DimVar()
+"""DimVar denoting dimension of the space"""
+
+_NumPoints = DimVar()
+"""DimVar denoting number of points"""
 
 
-class Space3D(Space[DimNT, THREE]): ...
+class CoordinateSpace(Generic[DimSpace], Dimensioned):
+    _DimSpace = _DimSpace
+
+    _Point: Shaped[tuple[DimSpace]] = Shaped(_DimSpace)
+    _Vector: Shaped[tuple[DimSpace]] = Shaped(_DimSpace)
+    _RotationMatrix: Shaped[tuple[DimSpace, DimSpace]] = Shaped(_DimSpace, _DimSpace)
+
+
+class CoordinateSpace2D(CoordinateSpace[TwoD]): ...
+
+
+class CoordinateSpace3D(CoordinateSpace[ThreeD]): ...
+
+
+class PointSetSpace(Generic[NumPoints, DimSpace], CoordinateSpace[DimSpace]):
+    _NumPoints = _NumPoints
+    _DimSpace = _DimSpace
+
+    _PointSet: Shaped[tuple[NumPoints, DimSpace]] = Shaped(_NumPoints, _DimSpace)
+    _JacobianArray: Shaped[tuple[NumPoints, DimSpace, DimSpace]] = Shaped(
+        _NumPoints, _DimSpace, _DimSpace
+    )
+
+
+class PointSetSpace2D(PointSetSpace[NumPoints, TwoD]): ...
+
+
+class PointSetSpace3D(PointSetSpace[NumPoints, ThreeD]): ...

@@ -11,20 +11,28 @@ from matplotlib.axes import Axes
 from mpl_toolkits.mplot3d import Axes3D  # type: ignore[import-untyped]
 from numpy.typing import ArrayLike
 
-from tp_gpt.typings import THREE, TWO, DimDT, DimNT, Point, PointsArray, Space
+from tp_gpt.typings import (
+    DimSpace,
+    NumPoints,
+    Point,
+    PointSet,
+    PointSetSpace,
+    ThreeD,
+    TwoD,
+)
 
 
-class Obstacle(Space[DimNT, DimDT], ABC):
+class Obstacle(PointSetSpace[NumPoints, DimSpace], ABC):
     """Abstract base class for obstacles."""
 
     @property
     @abstractmethod
-    def boundary_points(self) -> PointsArray[DimNT, DimDT]:
+    def boundary_points(self) -> PointSet[NumPoints, DimSpace]:
         """Returns an array of points describing the obstacle boundary."""
         raise NotImplementedError
 
     @property
-    def center(self) -> Point[DimDT]:
+    def center(self) -> Point[DimSpace]:
         """Returns the center point of the obstacle."""
         # Defaults to the centroid of the boundary points
         return self._Point(np.mean(self.boundary_points, axis=0))
@@ -38,8 +46,8 @@ class Obstacle(Space[DimNT, DimDT], ABC):
     def n_points(self, value: int) -> None: ...
 
     @property
-    def center_tile(self) -> PointsArray[DimNT, DimDT]:
-        return self._PointsArray(np.tile(self.center, (self.n_points, 1)))
+    def center_tile(self) -> PointSet[NumPoints, DimSpace]:
+        return self._PointSet(np.tile(self.center, (self.n_points, 1)))
 
     def plot(self, ax: Axes, *args, **kwargs) -> None:
         """Plot the obstacle on the given `Axes`."""
@@ -52,23 +60,23 @@ class Obstacle(Space[DimNT, DimDT], ABC):
             raise ValueError("Unsupported obstacle dimensionality")
 
 
-class BallObstacle(Obstacle[DimNT, DimDT], ABC):
+class BallObstacle(Obstacle[NumPoints, DimSpace], ABC):
     """Abstract base class for ball-shaped obstacles."""
 
-    _center: Point[DimDT]
+    _center: Point[DimSpace]
     radius: float
 
     @property
     @abstractmethod
-    def boundary_points(self) -> PointsArray[DimNT, DimDT]:
+    def boundary_points(self) -> PointSet[NumPoints, DimSpace]:
         raise NotImplementedError
 
     @property
-    def center(self) -> Point[DimDT]:
+    def center(self) -> Point[DimSpace]:
         return self._center
 
 
-class CircularObstacle(BallObstacle[DimNT, TWO]):
+class CircularObstacle(BallObstacle[NumPoints, TwoD]):
     """A 2D Circular Obstacle"""
 
     def __init__(self, center: ArrayLike, radius: float, n_theta: int = 20) -> None:
@@ -80,21 +88,21 @@ class CircularObstacle(BallObstacle[DimNT, TWO]):
         self.n_points = self.n_theta
 
     @property
-    def boundary_points(self) -> PointsArray[DimNT, TWO]:
+    def boundary_points(self) -> PointSet[NumPoints, TwoD]:
         theta = np.linspace(0, 2 * np.pi, self.n_theta)
 
         cx, cy = self._center
         xs = cx + self.radius * np.cos(theta)
         ys = cy + self.radius * np.sin(theta)
 
-        return self._PointsArray(np.column_stack((xs, ys)))
+        return self._PointSet(np.column_stack((xs, ys)))
 
     def plot(self, ax: Axes, *args, **kwargs) -> None:
         pts = self.boundary_points
         ax.plot(pts[:, 0], pts[:, 1], *args, **kwargs)
 
 
-class SphericalObstacle(BallObstacle[DimNT, THREE]):
+class SphericalObstacle(BallObstacle[NumPoints, ThreeD]):
     """A 3D Spherical Obstacle"""
 
     def __init__(
@@ -114,7 +122,7 @@ class SphericalObstacle(BallObstacle[DimNT, THREE]):
         self.n_points = self.n_theta * self.n_phi
 
     @property
-    def boundary_points(self) -> PointsArray[DimNT, THREE]:
+    def boundary_points(self) -> PointSet[NumPoints, ThreeD]:
         theta = np.linspace(0, 2 * np.pi, self.n_theta)
         phi = np.linspace(0, np.pi, self.n_phi)
         theta, phi = np.meshgrid(theta, phi)
@@ -124,7 +132,7 @@ class SphericalObstacle(BallObstacle[DimNT, THREE]):
         ys = cy + self.radius * np.sin(theta) * np.sin(phi)
         zs = cz + self.radius * np.cos(phi)
 
-        return self._PointsArray(np.column_stack((xs.ravel(), ys.ravel(), zs.ravel())))
+        return self._PointSet(np.column_stack((xs.ravel(), ys.ravel(), zs.ravel())))
 
     def plot(self, ax: Axes3D, *args, **kwargs) -> None:
         pts = self.boundary_points

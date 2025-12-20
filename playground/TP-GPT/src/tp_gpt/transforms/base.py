@@ -6,33 +6,33 @@ src/tp_gpt/transforms/base.py
 
 from typing import Any, Protocol
 
-from tp_gpt.typings import THREE, TWO, DimDT, DimNT, JacobianArray, PointsArray
+from tp_gpt.typings import DimSpace, JacobianArray, NumPoints, PointSet, ThreeD, TwoD
 
 
-class Transform(Protocol[DimNT, DimDT]):
+class Transform(Protocol[NumPoints, DimSpace]):
     """A generic transform interface"""
 
     def fit(
         self,
-        source_points: PointsArray[DimNT, DimDT],
-        target_points: PointsArray[DimNT, DimDT],
+        source_points: PointSet[NumPoints, DimSpace],
+        target_points: PointSet[NumPoints, DimSpace],
         /,
         *args: Any,
         **kwargs: Any,
     ) -> Any: ...
 
     def predict(
-        self, points: PointsArray[DimNT, DimDT], /, *args: Any, **kwargs: Any
-    ) -> PointsArray[DimNT, DimDT]: ...
+        self, points: PointSet[NumPoints, DimSpace], /, *args: Any, **kwargs: Any
+    ) -> PointSet[NumPoints, DimSpace]: ...
 
     def jacobian(
-        self, points: PointsArray[DimNT, DimDT], /, *args: Any, **kwargs: Any
-    ) -> JacobianArray[DimNT, DimDT]: ...
+        self, points: PointSet[NumPoints, DimSpace], /, *args: Any, **kwargs: Any
+    ) -> JacobianArray[NumPoints, DimSpace]: ...
 
 
-class Transform2D(Transform[DimNT, TWO], Protocol):
+class Transform2D(Transform[NumPoints, TwoD], Protocol):
     """A generic 2D transform interface"""
 
 
-class Transform3D(Transform[DimNT, THREE], Protocol):
+class Transform3D(Transform[NumPoints, ThreeD], Protocol):
     """A generic 3D transform interface"""

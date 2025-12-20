@@ -12,17 +12,25 @@ from mpl_toolkits.mplot3d import Axes3D  # type: ignore[import-untyped]
 from numpy.typing import ArrayLike
 from typed_numpy._typed.helpers import Array1D
 
-from tp_gpt.typings import THREE, TWO, DimDT, DimNT, Point, PointsArray, Space
+from tp_gpt.typings import (
+    DimSpace,
+    NumPoints,
+    Point,
+    PointSet,
+    PointSetSpace,
+    ThreeD,
+    TwoD,
+)
 
 
-class Curve(Space[DimNT, DimDT]):
+class Curve(PointSetSpace[NumPoints, DimSpace]):
     """Represents a general curve defined in a general space."""
 
     def __init__(self, points: ArrayLike) -> None:
-        self.points = self._PointsArray(points)
+        self.points = self._PointSet(points)
         self.n_points: int = len(self.points)
 
-    def __getitem__(self, idx: int) -> Point[DimDT]:
+    def __getitem__(self, idx: int) -> Point[DimSpace]:
         return self.points[idx]
 
     def __len__(self) -> int:
@@ -32,11 +40,11 @@ class Curve(Space[DimNT, DimDT]):
         return f"Curve(points={self.points}, shape={self.points.shape})"
 
     @property
-    def start_pt(self) -> Point[DimDT]:
+    def start_pt(self) -> Point[DimSpace]:
         return self.points[0]
 
     @property
-    def end_pt(self) -> Point[DimDT]:
+    def end_pt(self) -> Point[DimSpace]:
         return self.points[-1]
 
     @classmethod
@@ -49,7 +57,7 @@ class Curve(Space[DimNT, DimDT]):
         raise NotImplementedError
 
 
-class Curve2D(Curve[DimNT, TWO]):
+class Curve2D(Curve[NumPoints, TwoD]):
     """Represents a 2D curve in cartesian coordinates."""
 
     def __init__(self, xs: ArrayLike, ys: ArrayLike) -> None:
@@ -59,14 +67,14 @@ class Curve2D(Curve[DimNT, TWO]):
 
     @classmethod
     def from_points(cls, points: ArrayLike) -> Self:
-        points_arr = PointsArray(points)
+        points_arr = PointSet(points)
         return cls(xs=points_arr[:, 0], ys=points_arr[:, 1])
 
     def plot(self, ax: Axes, *args, **kwargs) -> None:
         ax.plot(self.xs, self.ys, *args, **kwargs)
 
 
-class Curve3D(Curve[DimNT, THREE]):
+class Curve3D(Curve[NumPoints, ThreeD]):
     """Represents a 3D curve in cartesian coordinates."""
 
     def __init__(self, xs: ArrayLike, ys: ArrayLike, zs: ArrayLike) -> None:
@@ -78,7 +86,7 @@ class Curve3D(Curve[DimNT, THREE]):
     @classmethod
     def from_points(cls, points: ArrayLike) -> Self:
         """Create a Curve3D instance from an array of points."""
-        points_arr = PointsArray(points)
+        points_arr = PointSet(points)
         return cls(xs=points_arr[:, 0], ys=points_arr[:, 1], zs=points_arr[:, 2])
 
     def plot(self, ax: Axes3D, *args, **kwargs) -> None:

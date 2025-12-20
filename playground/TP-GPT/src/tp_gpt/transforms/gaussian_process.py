@@ -13,7 +13,15 @@ from sklearn.gaussian_process.kernels import Kernel
 from typed_numpy._typed.helpers import Array2D, Array3D, Array4D
 
 from tp_gpt.transforms.base import Transform
-from tp_gpt.typings import THREE, TWO, DimDT, DimNT, JacobianArray, PointsArray, Space
+from tp_gpt.typings import (
+    DimSpace,
+    JacobianArray,
+    NumPoints,
+    PointSet,
+    PointSetSpace,
+    ThreeD,
+    TwoD,
+)
 
 
 class GaussianProcess:
@@ -133,15 +141,15 @@ class GaussianProcess:
 
 
 class GaussianProcessTransform(
-    GaussianProcess, Space[DimNT, DimDT], Transform[DimNT, DimDT]
+    GaussianProcess, PointSetSpace[NumPoints, DimSpace], Transform[NumPoints, DimSpace]
 ):
     def jacobian(
-        self, points: PointsArray[DimNT, DimDT], /
-    ) -> JacobianArray[DimNT, DimDT]:
+        self, points: PointSet[NumPoints, DimSpace], /
+    ) -> JacobianArray[NumPoints, DimSpace]:
         raise NotImplementedError
 
 
-class GaussianProcessTransform2D(GaussianProcessTransform[DimNT, TWO]): ...
+class GaussianProcessTransform2D(GaussianProcessTransform[NumPoints, TwoD]): ...
 
 
-class GaussianProcessTransform3D(GaussianProcessTransform[DimNT, THREE]): ...
+class GaussianProcessTransform3D(GaussianProcessTransform[NumPoints, ThreeD]): ...
