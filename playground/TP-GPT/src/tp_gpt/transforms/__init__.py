@@ -9,7 +9,6 @@ from tp_gpt.transforms.affine import (
     AffineTransform2D,
     AffineTransform3D,
 )
-from tp_gpt.transforms.base import Transform, Transform2D, Transform3D
 from tp_gpt.transforms.gaussian_process import (
     GaussianProcessTransform,
     GaussianProcessTransform2D,
@@ -17,9 +16,6 @@ from tp_gpt.transforms.gaussian_process import (
 )
 
 __all__ = [
-    "Transform",
-    "Transform2D",
-    "Transform3D",
     "AffineTransform",
     "AffineTransform2D",
     "AffineTransform3D",

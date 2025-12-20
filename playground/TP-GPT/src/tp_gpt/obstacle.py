@@ -11,18 +11,18 @@ from matplotlib.axes import Axes
 from mpl_toolkits.mplot3d import Axes3D  # type: ignore[import-untyped]
 from numpy.typing import ArrayLike
 
-from tp_gpt.core.typings import (
+from tp_gpt.core.spaces import (
     DimSpace,
     NumPoints,
     Point,
     PointSet,
-    PointSetSpace,
+    SpaceCollection,
     ThreeD,
     TwoD,
 )
 
 
-class Obstacle(PointSetSpace[NumPoints, DimSpace], ABC):
+class Obstacle(SpaceCollection[NumPoints, DimSpace], ABC):
     """Abstract base class for obstacles."""
 
     @property

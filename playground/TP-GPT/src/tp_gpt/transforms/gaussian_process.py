@@ -12,16 +12,12 @@ from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import Kernel
 from typed_numpy._typed.helpers import Array2D, Array3D, Array4D
 
-from tp_gpt.core.typings import (
-    DimSpace,
-    JacobianArray,
-    NumPoints,
-    PointSet,
-    PointSetSpace,
-    ThreeD,
-    TwoD,
+from tp_gpt.core.mappings import (
+    EndomorphicMappingCollection,
+    JacobianSet,
+    LearnableEndomorphicMappingProtocol,
 )
-from tp_gpt.transforms.base import Transform
+from tp_gpt.core.spaces import DimSpace, NumPoints, PointSet, ThreeD, TwoD
 
 
 class GaussianProcess:
@@ -141,11 +137,13 @@ class GaussianProcess:
 
 
 class GaussianProcessTransform(
-    GaussianProcess, PointSetSpace[NumPoints, DimSpace], Transform[NumPoints, DimSpace]
+    GaussianProcess,
+    EndomorphicMappingCollection[NumPoints, DimSpace],
+    LearnableEndomorphicMappingProtocol[NumPoints, DimSpace],
 ):
     def jacobian(
         self, points: PointSet[NumPoints, DimSpace], /
-    ) -> JacobianArray[NumPoints, DimSpace]:
+    ) -> JacobianSet[NumPoints, DimSpace]:
         raise NotImplementedError
 
 

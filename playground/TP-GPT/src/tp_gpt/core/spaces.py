@@ -1,7 +1,7 @@
 """
-Typing utils
+Space abstractions
 =======
-src/tp_gpt/typings.py
+src/tp_gpt/core/spaces.py
 """
 
 from typing import Generic, TypeAlias, TypeVar
@@ -31,7 +31,6 @@ NumPoints = TypeVar("NumPoints", bound=int, default=int)
 
 ScalarArray: TypeAlias = NDArray[tuple[NumPoints]]
 PointSet: TypeAlias = NDArray[tuple[NumPoints, DimSpace]]
-JacobianArray: TypeAlias = NDArray[tuple[NumPoints, DimSpace, DimSpace]]
 
 
 ## Runtime bindings
@@ -51,24 +50,9 @@ class CoordinateSpace(Generic[DimSpace], Dimensioned):
     _RotationMatrix: Shaped[tuple[DimSpace, DimSpace]] = Shaped(_DimSpace, _DimSpace)
 
 
-class CoordinateSpace2D(CoordinateSpace[TwoD]): ...
-
-
-class CoordinateSpace3D(CoordinateSpace[ThreeD]): ...
-
-
-class PointSetSpace(Generic[NumPoints, DimSpace], CoordinateSpace[DimSpace]):
+class SpaceCollection(Generic[NumPoints, DimSpace], CoordinateSpace[DimSpace]):
     _NumPoints = _NumPoints
     _DimSpace = _DimSpace
 
     _ScalarArray: Shaped[tuple[NumPoints]] = Shaped(_NumPoints)
     _PointSet: Shaped[tuple[NumPoints, DimSpace]] = Shaped(_NumPoints, _DimSpace)
-    _JacobianArray: Shaped[tuple[NumPoints, DimSpace, DimSpace]] = Shaped(
-        _NumPoints, _DimSpace, _DimSpace
-    )
-
-
-class PointSetSpace2D(PointSetSpace[NumPoints, TwoD]): ...
-
-
-class PointSetSpace3D(PointSetSpace[NumPoints, ThreeD]): ...

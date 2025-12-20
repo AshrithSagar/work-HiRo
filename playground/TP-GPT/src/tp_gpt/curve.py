@@ -11,18 +11,18 @@ from matplotlib.axes import Axes
 from mpl_toolkits.mplot3d import Axes3D  # type: ignore[import-untyped]
 from numpy.typing import ArrayLike
 
-from tp_gpt.core.typings import (
+from tp_gpt.core.spaces import (
     DimSpace,
     NumPoints,
     Point,
     PointSet,
-    PointSetSpace,
+    SpaceCollection,
     ThreeD,
     TwoD,
 )
 
 
-class Curve(PointSetSpace[NumPoints, DimSpace]):
+class Curve(SpaceCollection[NumPoints, DimSpace]):
     """Represents a general curve defined in a general space."""
 
     def __init__(self, points: ArrayLike) -> None:
@@ -30,7 +30,7 @@ class Curve(PointSetSpace[NumPoints, DimSpace]):
         self.n_points: int = len(self.points)
 
     def __getitem__(self, idx: int) -> Point[DimSpace]:
-        return self.points[idx]
+        return self._Point(self.points[idx])
 
     def __len__(self) -> int:
         return self.n_points
@@ -40,11 +40,11 @@ class Curve(PointSetSpace[NumPoints, DimSpace]):
 
     @property
     def start_pt(self) -> Point[DimSpace]:
-        return self.points[0]
+        return self[0]
 
     @property
     def end_pt(self) -> Point[DimSpace]:
-        return self.points[-1]
+        return self[-1]
 
     @classmethod
     def from_points(cls, points: ArrayLike) -> Self:

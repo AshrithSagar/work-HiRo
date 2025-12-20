@@ -6,22 +6,25 @@ src/tp_gpt/transforms/affine.py
 
 import numpy as np
 
-from tp_gpt.core.typings import (
+from tp_gpt.core.mappings import (
+    EndomorphicMappingCollection,
+    JacobianSet,
+    LearnableEndomorphicMappingProtocol,
+)
+from tp_gpt.core.spaces import (
     DimSpace,
-    JacobianArray,
     NumPoints,
     Point,
     PointSet,
-    PointSetSpace,
     RotationMatrix,
     ThreeD,
     TwoD,
 )
-from tp_gpt.transforms.base import Transform
 
 
 class AffineTransform(
-    PointSetSpace[NumPoints, DimSpace], Transform[NumPoints, DimSpace]
+    EndomorphicMappingCollection[NumPoints, DimSpace],
+    LearnableEndomorphicMappingProtocol[NumPoints, DimSpace],
 ):
     """
     Performs an affine transformation (rotation + scale + translation).
@@ -105,9 +108,9 @@ class AffineTransform(
 
     def jacobian(
         self, points: PointSet[NumPoints, DimSpace], /
-    ) -> JacobianArray[NumPoints, DimSpace]:
+    ) -> JacobianSet[NumPoints, DimSpace]:
         n_points = points.shape[0]
-        jacobian = self._JacobianArray(
+        jacobian = self._JacobianSet(
             np.tile(self.scale * self.rotation_matrix, (n_points, 1, 1))
         )
         return jacobian
