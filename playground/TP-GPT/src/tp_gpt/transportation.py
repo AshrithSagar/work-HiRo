@@ -8,8 +8,15 @@ from typing import Generic, Optional, TypeVar
 
 import numpy as np
 
+from tp_gpt.core.typings import (
+    DimSpace,
+    JacobianArray,
+    NumPoints,
+    PointSet,
+    ThreeD,
+    TwoD,
+)
 from tp_gpt.transforms import AffineTransform, Transform
-from tp_gpt.typings import DimSpace, JacobianArray, NumPoints, PointSet, ThreeD, TwoD
 
 NonLinearTransformT = TypeVar("NonLinearTransformT", bound=Transform)
 

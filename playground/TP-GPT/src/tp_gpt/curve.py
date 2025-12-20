@@ -10,9 +10,8 @@ import numpy as np
 from matplotlib.axes import Axes
 from mpl_toolkits.mplot3d import Axes3D  # type: ignore[import-untyped]
 from numpy.typing import ArrayLike
-from typed_numpy._typed.helpers import Array1D
 
-from tp_gpt.typings import (
+from tp_gpt.core.typings import (
     DimSpace,
     NumPoints,
     Point,
@@ -61,8 +60,8 @@ class Curve2D(Curve[NumPoints, TwoD]):
     """Represents a 2D curve in cartesian coordinates."""
 
     def __init__(self, xs: ArrayLike, ys: ArrayLike) -> None:
-        self.xs = Array1D(xs)
-        self.ys = Array1D(ys)
+        self.xs = self._ScalarArray(xs)
+        self.ys = self._ScalarArray(ys)
         super().__init__(points=np.column_stack((self.xs, self.ys)))
 
     @classmethod
@@ -78,9 +77,9 @@ class Curve3D(Curve[NumPoints, ThreeD]):
     """Represents a 3D curve in cartesian coordinates."""
 
     def __init__(self, xs: ArrayLike, ys: ArrayLike, zs: ArrayLike) -> None:
-        self.xs = Array1D(xs)
-        self.ys = Array1D(ys)
-        self.zs = Array1D(zs)
+        self.xs = self._ScalarArray(xs)
+        self.ys = self._ScalarArray(ys)
+        self.zs = self._ScalarArray(zs)
         super().__init__(points=np.column_stack((self.xs, self.ys, self.zs)))
 
     @classmethod

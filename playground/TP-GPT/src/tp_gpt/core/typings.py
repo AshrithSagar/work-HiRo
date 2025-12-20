@@ -10,10 +10,13 @@ from typed_numpy._typed import DimVar
 from typed_numpy._typed import DimVarBinder as Dimensioned
 from typed_numpy._typed import ShapedNDArray as Shaped
 from typed_numpy._typed import TypedNDArray as NDArray
-from typed_numpy._typed.shapes import THREE as ThreeD
-from typed_numpy._typed.shapes import TWO as TwoD
+from typed_numpy._typed.shapes import THREE, TWO
 
 ## Static bindings
+
+TwoD: TypeAlias = TWO
+ThreeD: TypeAlias = THREE
+
 
 DimSpace = TypeVar("DimSpace", bound=int, default=int)
 """TypeVar denoting dimension of the space"""
@@ -26,6 +29,7 @@ RotationMatrix: TypeAlias = NDArray[tuple[DimSpace, DimSpace]]
 NumPoints = TypeVar("NumPoints", bound=int, default=int)
 """TypeVar denoting number of points"""
 
+ScalarArray: TypeAlias = NDArray[tuple[NumPoints]]
 PointSet: TypeAlias = NDArray[tuple[NumPoints, DimSpace]]
 JacobianArray: TypeAlias = NDArray[tuple[NumPoints, DimSpace, DimSpace]]
 
@@ -57,6 +61,7 @@ class PointSetSpace(Generic[NumPoints, DimSpace], CoordinateSpace[DimSpace]):
     _NumPoints = _NumPoints
     _DimSpace = _DimSpace
 
+    _ScalarArray: Shaped[tuple[NumPoints]] = Shaped(_NumPoints)
     _PointSet: Shaped[tuple[NumPoints, DimSpace]] = Shaped(_NumPoints, _DimSpace)
     _JacobianArray: Shaped[tuple[NumPoints, DimSpace, DimSpace]] = Shaped(
         _NumPoints, _DimSpace, _DimSpace

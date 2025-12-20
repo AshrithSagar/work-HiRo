@@ -6,8 +6,7 @@ src/tp_gpt/transforms/affine.py
 
 import numpy as np
 
-from tp_gpt.transforms.base import Transform
-from tp_gpt.typings import (
+from tp_gpt.core.typings import (
     DimSpace,
     JacobianArray,
     NumPoints,
@@ -18,6 +17,7 @@ from tp_gpt.typings import (
     ThreeD,
     TwoD,
 )
+from tp_gpt.transforms.base import Transform
 
 
 class AffineTransform(

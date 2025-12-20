@@ -12,8 +12,7 @@ from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import Kernel
 from typed_numpy._typed.helpers import Array2D, Array3D, Array4D
 
-from tp_gpt.transforms.base import Transform
-from tp_gpt.typings import (
+from tp_gpt.core.typings import (
     DimSpace,
     JacobianArray,
     NumPoints,
@@ -22,6 +21,7 @@ from tp_gpt.typings import (
     ThreeD,
     TwoD,
 )
+from tp_gpt.transforms.base import Transform
 
 
 class GaussianProcess:

@@ -11,7 +11,7 @@ from matplotlib.axes import Axes
 from mpl_toolkits.mplot3d import Axes3D  # type: ignore[import-untyped]
 from numpy.typing import ArrayLike
 
-from tp_gpt.typings import (
+from tp_gpt.core.typings import (
     DimSpace,
     NumPoints,
     Point,

@@ -6,7 +6,14 @@ src/tp_gpt/transforms/base.py
 
 from typing import Any, Protocol
 
-from tp_gpt.typings import DimSpace, JacobianArray, NumPoints, PointSet, ThreeD, TwoD
+from tp_gpt.core.typings import (
+    DimSpace,
+    JacobianArray,
+    NumPoints,
+    PointSet,
+    ThreeD,
+    TwoD,
+)
 
 
 class Transform(Protocol[NumPoints, DimSpace]):
