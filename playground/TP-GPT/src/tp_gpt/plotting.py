@@ -41,8 +41,9 @@ class InteractionManager:
         draggables: Iterable[Draggable],
         on_release_callback: OnUpdateCallback,
         *,
-        render_during_drag: bool = False,
+        autoscale_initial: bool = True,
         autoscale_on_release: bool = True,
+        render_during_drag: bool = False,
     ) -> None:
         self.fig = fig
         self.ax = ax
@@ -57,7 +58,8 @@ class InteractionManager:
         self.cid_release = fig.canvas.mpl_connect(
             "button_release_event", self._on_release
         )
-        self._autoscale_if_needed()  # Initial autoscale
+        if autoscale_initial:
+            self._autoscale_if_needed()
 
     def _on_press(self, event: Event) -> None:
         event = cast(MouseEvent, event)
@@ -156,16 +158,22 @@ class PlotSession:
         return [self.ax.plot([], [], color=colors[i], **kwargs)[0] for i in range(n)]
 
     def enable_interaction(
-        self, draggables: Iterable[Draggable], on_update: OnUpdateCallback
+        self,
+        draggables: Iterable[Draggable],
+        on_update: OnUpdateCallback,
+        *,
+        initial_update: bool = True,
     ):
-        on_update()  # Initial update
+        if initial_update:
+            on_update()
         self.interaction = InteractionManager(
             fig=self.fig,
             ax=self.ax,
             draggables=draggables,
             on_release_callback=on_update,
-            render_during_drag=self.render_during_drag,
+            autoscale_initial=True,
             autoscale_on_release=self.autoscale,
+            render_during_drag=self.render_during_drag,
         )
 
     def show(self, show_immediately: bool = True) -> None:
