@@ -22,13 +22,13 @@ from tp_gpt.warp import ObstacleAvoidanceWarp2D
 def make_demo_curve_2D(n_points: int = 200) -> Curve2D:
     ys = np.linspace(0.0, 1.0, n_points)
     xs = 2.0 * ys**3 + ys**2
-    return Curve2D(xs, ys)
+    return Curve2D.from_xy(xs, ys)
 
 
 def make_demo_end_targets_2D(n_points: int = 100) -> Curve2D:
     ys = np.linspace(0.9, -5.0, n_points)
     xs = 3.0 * np.ones_like(ys)
-    return Curve2D(xs, ys)
+    return Curve2D.from_xy(xs, ys)
 
 
 def make_policy_transportation_2D() -> PolicyTransportation2D:
@@ -100,7 +100,7 @@ def plot_single_obstacle_interactive_2D():
             warper.fit(Point[TwoD](end_pt))
 
             warped_curve = warper.warp_curve()
-            line.set_data(warped_curve.xs, warped_curve.ys)
+            line.set_data(*warped_curve.components)
 
         if autoscale:
             ax.relim()
@@ -183,7 +183,7 @@ def plot_multiple_obstacles_interactive_2D():
             warper.fit(Point[TwoD](end_pt))
 
             warped_curve = warper.warp_curve()
-            line.set_data(warped_curve.xs, warped_curve.ys)
+            line.set_data(*warped_curve.components)
 
         if autoscale:
             ax.relim()

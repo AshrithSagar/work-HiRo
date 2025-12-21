@@ -11,7 +11,7 @@ import numpy as np
 from tp_gpt.core.spaces import Point, PointSet, SpaceCollection
 from tp_gpt.core.transportation import NonLinearTransform, PolicyTransportation
 from tp_gpt.core.typings import DimSpace, NumPoints, ThreeD, TwoD
-from tp_gpt.curve import Curve, Curve2D, Curve3D
+from tp_gpt.curve import Curve
 from tp_gpt.obstacle import Obstacle
 
 
@@ -44,7 +44,7 @@ class ObstacleAvoidanceWarp(
 
     def warp_curve(self) -> Curve[NumPoints, DimSpace]:
         warped = self.transportation.transport_positions(self.curve.points)
-        return type(self.curve).from_points(warped)
+        return type(self.curve)(points=warped)
 
     def fit(self, target_end_point: Point[DimSpace]) -> None:
         source_points, target_points = self._make_keypoints(target_end_point)
@@ -53,15 +53,9 @@ class ObstacleAvoidanceWarp(
 
 class ObstacleAvoidanceWarp2D(
     ObstacleAvoidanceWarp[NumPoints, TwoD, NonLinearTransform]
-):
-    def warp_curve(self) -> Curve2D[NumPoints]:
-        warped = self.transportation.transport_positions(self.curve.points)
-        return Curve2D[NumPoints].from_points(warped)
+): ...
 
 
 class ObstacleAvoidanceWarp3D(
     ObstacleAvoidanceWarp[NumPoints, ThreeD, NonLinearTransform]
-):
-    def warp_curve(self) -> Curve3D[NumPoints]:
-        warped = self.transportation.transport_positions(self.curve.points)
-        return Curve3D[NumPoints].from_points(warped)
+): ...
