@@ -14,6 +14,7 @@ from matplotlib.colors import Colormap
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 from matplotlib.patches import Circle
+from mpl_toolkits.mplot3d import Axes3D  # type: ignore[import-untyped]
 from typed_numpy._typed.helpers import Array2
 
 from tp_gpt.obstacle import CircularObstacle
@@ -102,10 +103,9 @@ class InteractiveCircularObstacle(CircularObstacle):
     def contains(self, event: MouseEvent):
         if event.xdata is None or event.ydata is None:
             return False
-        return (
-            np.hypot(event.xdata - self.center[0], event.ydata - self.center[1])
-            < self.radius
-        )
+        dx = event.xdata - self.center[0]
+        dy = event.ydata - self.center[1]
+        return np.hypot(dx, dy) < self.radius
 
     def start_drag(self, event: MouseEvent):
         self.dragging = True
@@ -184,3 +184,23 @@ class PlotSession:
         self.fig.show()
         if show_immediately:
             plt.show()
+
+
+def set_axes_equal(ax: Axes3D):
+    x_limits = ax.get_xlim()
+    y_limits = ax.get_ylim()
+    z_limits = ax.get_zlim()
+
+    x_range = abs(x_limits[1] - x_limits[0])
+    y_range = abs(y_limits[1] - y_limits[0])
+    z_range = abs(z_limits[1] - z_limits[0])
+
+    max_range = max(x_range, y_range, z_range)
+
+    x_middle = np.mean(x_limits)
+    y_middle = np.mean(y_limits)
+    z_middle = np.mean(z_limits)
+
+    ax.set_xlim([x_middle - max_range / 2, x_middle + max_range / 2])
+    ax.set_ylim([y_middle - max_range / 2, y_middle + max_range / 2])
+    ax.set_zlim([z_middle - max_range / 2, z_middle + max_range / 2])

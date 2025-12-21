@@ -5,11 +5,13 @@ src/tp_gpt/obstacle.py
 """
 
 from abc import ABC, abstractmethod
+from typing import Literal
 
 import numpy as np
 from matplotlib.axes import Axes
 from mpl_toolkits.mplot3d import Axes3D  # type: ignore[import-untyped]
 from numpy.typing import ArrayLike
+from typed_numpy._typed.helpers import Array1D, Array2D
 
 from tp_gpt.core.spaces import Point, PointSet, SpaceCollection
 from tp_gpt.core.typings import DimSpace, NumPoints, ThreeD, TwoD
@@ -114,19 +116,37 @@ class SphericalObstacle(BallObstacle[NumPoints, ThreeD]):
         assert self.n_phi >= 2
         self.n_points = self.n_theta * self.n_phi
 
-    @property
-    def boundary_points(self) -> PointSet[NumPoints, ThreeD]:
-        theta = np.linspace(0, 2 * np.pi, self.n_theta)
-        phi = np.linspace(0, np.pi, self.n_phi)
-        theta, phi = np.meshgrid(theta, phi)
+    def _spherical_mesh(self):
+        _theta = Array1D(np.linspace(0, 2 * np.pi, self.n_theta))
+        _phi = Array1D(np.linspace(0, np.pi, self.n_phi))
+        theta, phi = np.meshgrid(_theta, _phi)
 
         cx, cy, cz = self._center
-        xs = cx + self.radius * np.cos(theta) * np.sin(phi)
-        ys = cy + self.radius * np.sin(theta) * np.sin(phi)
-        zs = cz + self.radius * np.cos(phi)
+        X = Array2D(cx + self.radius * np.outer(np.cos(theta), np.sin(phi)))
+        Y = Array2D(cy + self.radius * np.outer(np.sin(theta), np.sin(phi)))
+        _ones = np.ones((self.n_phi, self.n_theta))
+        Z = Array2D(cz + self.radius * np.outer(_ones, np.cos(phi)))
+        return X, Y, Z
 
-        return self._PointSet(np.column_stack((xs.ravel(), ys.ravel(), zs.ravel())))
+    @property
+    def boundary_points(self) -> PointSet[NumPoints, ThreeD]:
+        X, Y, Z = self._spherical_mesh()
+        return self._PointSet(np.column_stack((X.ravel(), Y.ravel(), Z.ravel())))
 
-    def plot(self, ax: Axes3D, *args, **kwargs) -> None:
-        pts = self.boundary_points
-        ax.plot_surface(pts[:, 0], pts[:, 1], pts[:, 2], *args, **kwargs)
+    def plot(
+        self,
+        ax: Axes3D,
+        mode: Literal["scatter", "surface", "wireframe"],
+        *args,
+        **kwargs,
+    ) -> None:
+        match mode:
+            case "scatter":
+                pts = self.boundary_points
+                ax.scatter(pts[:, 0], pts[:, 1], pts[:, 2], *args, **kwargs)  # type: ignore
+            case "surface":
+                X, Y, Z = self._spherical_mesh()
+                ax.plot_surface(X, Y, Z, *args, **kwargs)
+            case "wireframe":
+                X, Y, Z = self._spherical_mesh()
+                ax.plot_wireframe(X, Y, Z, *args, **kwargs)
