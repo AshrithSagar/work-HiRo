@@ -4,7 +4,7 @@ Policy transportation
 src/tp_gpt/core/transportation.py
 """
 
-from typing import Generic, Optional, TypeVar
+from typing import Any, Generic, Optional, TypeVar
 
 import numpy as np
 
@@ -17,12 +17,12 @@ from tp_gpt.core.spaces import DimSpace, NumPoints, PointSet, ThreeD, TwoD
 from tp_gpt.transforms import AffineTransform
 
 NonLinearTransform = TypeVar(
-    "NonLinearTransform", bound=LearnableEndomorphicMappingProtocol
+    "NonLinearTransform", bound=LearnableEndomorphicMappingProtocol, default=Any
 )
 
 
 class PolicyTransportation(
-    Generic[NonLinearTransform, NumPoints, DimSpace],
+    Generic[NumPoints, DimSpace, NonLinearTransform],
     EndomorphicMappingCollection[NumPoints, DimSpace],
     LearnableEndomorphicMappingProtocol[NumPoints, DimSpace],
 ):
@@ -104,12 +104,12 @@ class PolicyTransportation(
 
 
 class PolicyTransportation2D(
-    Generic[NonLinearTransform, NumPoints],
-    PolicyTransportation[NonLinearTransform, NumPoints, TwoD],
+    Generic[NumPoints, NonLinearTransform],
+    PolicyTransportation[NumPoints, TwoD, NonLinearTransform],
 ): ...
 
 
 class PolicyTransportation3D(
-    Generic[NonLinearTransform, NumPoints],
-    PolicyTransportation[NonLinearTransform, NumPoints, ThreeD],
+    Generic[NumPoints, NonLinearTransform],
+    PolicyTransportation[NumPoints, ThreeD, NonLinearTransform],
 ): ...
