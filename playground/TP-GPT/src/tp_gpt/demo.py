@@ -7,14 +7,14 @@ src/tp_gpt/demo.py
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel
-from typed_numpy._typed.helpers import Array2D, ArrayNx2
+from typed_numpy._typed.helpers import Array2D
 
 from tp_gpt.core.spaces import Point
 from tp_gpt.core.transportation import PolicyTransportation2D
 from tp_gpt.core.typings import TwoD
 from tp_gpt.curve import Curve2D
 from tp_gpt.obstacle import CircularObstacle
-from tp_gpt.plotting import InteractionManager, InteractiveCircularObstacle
+from tp_gpt.plotting import InteractiveCircularObstacle, PlotSession
 from tp_gpt.transforms import AffineTransform2D, GaussianProcessTransform2D
 from tp_gpt.warp import ObstacleAvoidanceWarp2D
 
@@ -41,172 +41,109 @@ def make_policy_transportation_2D() -> PolicyTransportation2D:
     return transport
 
 
-def plot_single_obstacle_2D():
+def plot_single_obstacle_2D() -> None:
     curve = make_demo_curve_2D(n_points=200)
     end_targets = make_demo_end_targets_2D(n_points=100)
     transport = make_policy_transportation_2D()
-
     circle_obs = CircularObstacle(center=(2.0, 0.6), radius=0.15, n_theta=20)
 
-    # Original keypoints
-    _S = ArrayNx2([curve.start_pt, circle_obs.center, curve.end_pt])
-
-    plt.figure(figsize=(8, 8))
+    ps = PlotSession(title="Obstacle avoidance")
     colors = Array2D(plt.get_cmap("plasma")(np.linspace(0, 1, end_targets.n_points)))
-
-    curve.plot(plt.gca(), color="gray", linestyle="--", zorder=3, label="Source curve")
-    circle_obs.plot(plt.gca(), "k--", zorder=2, label="Obstacle keypoints")
+    curve.plot(ps.ax, color="gray", linestyle="--", zorder=3, label="Source curve")
+    circle_obs.plot(ps.ax, "k--", zorder=2, label="Obstacle keypoints")
 
     for idx, end_pt in enumerate(end_targets.points):
         warper = ObstacleAvoidanceWarp2D(transport, [circle_obs], curve)
         warper.fit(Point[TwoD](end_pt))
-
         warped_curve = warper.warp_curve()
-        warped_curve.plot(plt.gca(), color=colors[idx], linewidth=1.4, zorder=1)
-
-    plt.axis("equal")
-    plt.title("Obstacle avoidance")
-    plt.legend()
-    plt.tight_layout()
+        warped_curve.plot(ps.ax, color=colors[idx], linewidth=1.4, zorder=1)
+    ps.show()
 
 
-def plot_single_obstacle_interactive_2D():
+def plot_single_obstacle_interactive_2D() -> None:
     curve = make_demo_curve_2D(n_points=200)
     end_targets = make_demo_end_targets_2D(n_points=100)
     transport = make_policy_transportation_2D()
-
     circle_obs = InteractiveCircularObstacle(center=(2.0, 0.6), radius=0.15, n_theta=20)
 
-    # Original keypoints
-    _S = ArrayNx2([curve.start_pt, circle_obs.center, curve.end_pt])
-
-    fig, ax = plt.subplots(figsize=(8, 8))
-    colors = Array2D(plt.get_cmap("plasma")(np.linspace(0, 1, end_targets.n_points)))
-
-    ax.axis("equal")
-    ax.set_title("Obstacle avoidance")
-    curve.plot(ax, color="gray", linestyle="--", zorder=3, label="Source curve")
+    ps = PlotSession(title="Obstacle avoidance", render_during_drag=True)
+    curve.plot(ps.ax, color="gray", linestyle="--", zorder=3, label="Source curve")
     circle_obs.plot(
-        ax, fill=False, zorder=2, ec="k", ls="--", label="Obstacle keypoints"
+        ps.ax, fill=False, zorder=2, ec="k", ls="--", label="Obstacle keypoints"
     )
-    warp_lines = [
-        ax.plot([], [], color=colors[idx], linewidth=1.4, zorder=1)[0]
-        for idx in range(end_targets.n_points)
-    ]
+    warp_lines = ps.make_lines(
+        end_targets.n_points, colormap="plasma", linewidth=1.4, zorder=1
+    )
 
-    def update_warp(autoscale: bool = True) -> None:
+    def update_warp() -> None:
         for line, end_pt in zip(warp_lines, end_targets.points):
             warper = ObstacleAvoidanceWarp2D(transport, [circle_obs], curve)
             warper.fit(Point[TwoD](end_pt))
-
             warped_curve = warper.warp_curve()
             line.set_data(*warped_curve.components)
 
-        if autoscale:
-            ax.relim()
-            ax.autoscale_view()
-        fig.canvas.draw_idle()
-
-    update_warp(autoscale=True)
-    _ = InteractionManager(
-        fig=fig,
-        ax=ax,
-        draggables=[circle_obs],
-        on_release_callback=update_warp,
-        render_during_drag=True,
-    )
-    ax.legend()
-    plt.tight_layout()
-    plt.show()
+    ps.enable_interaction(draggables=[circle_obs], on_update=update_warp)
+    ps.show()
 
 
-def plot_multiple_obstacles_2D():
+def plot_multiple_obstacles_2D() -> None:
     curve = make_demo_curve_2D(n_points=200)
     end_targets = make_demo_end_targets_2D(n_points=100)
     transport = make_policy_transportation_2D()
-
     obstacles = [
         CircularObstacle(center=(1.5, 0.4), radius=0.15, n_theta=20),
         CircularObstacle(center=(2, 0.6), radius=0.15, n_theta=20),
         CircularObstacle(center=(2.8, 0.3), radius=0.15, n_theta=20),
     ]
 
-    fig, ax = plt.subplots(figsize=(8, 8))
+    ps = PlotSession(title="Obstacle avoidance — Multiple obstacles")
     colors = Array2D(plt.get_cmap("plasma")(np.linspace(0, 1, end_targets.n_points)))
-
-    curve.plot(ax, "k--", label="Source curve", zorder=3)
+    curve.plot(ps.ax, "k--", label="Source curve", zorder=3)
     for obs in obstacles:
-        obs.plot(ax, "k--", zorder=2)
-
+        obs.plot(ps.ax, "k--", zorder=2)
     for idx, end_pt in enumerate(end_targets.points):
         warper = ObstacleAvoidanceWarp2D(transport, obstacles, curve)
         warper.fit(Point[TwoD](end_pt))
-
         warped_curve = warper.warp_curve()
-        warped_curve.plot(ax, color=colors[idx], linewidth=1.4, zorder=1)
-
-    ax.set_aspect("equal")
-    ax.set_title("Obstacle avoidance — Multiple obstacles")
-    ax.legend()
-    fig.tight_layout()
+        warped_curve.plot(ps.ax, color=colors[idx], linewidth=1.4, zorder=1)
+    ps.show()
 
 
-def plot_multiple_obstacles_interactive_2D():
+def plot_multiple_obstacles_interactive_2D() -> None:
     curve = make_demo_curve_2D(n_points=200)
     end_targets = make_demo_end_targets_2D(n_points=100)
     transport = make_policy_transportation_2D()
-
     obstacles = [
         InteractiveCircularObstacle(center=(1.5, 0.4), radius=0.15, n_theta=20),
         InteractiveCircularObstacle(center=(2.0, 0.6), radius=0.15, n_theta=20),
         InteractiveCircularObstacle(center=(2.8, 0.3), radius=0.15, n_theta=20),
     ]
 
-    fig, ax = plt.subplots(figsize=(8, 8))
-    colors = Array2D(plt.get_cmap("plasma")(np.linspace(0, 1, end_targets.n_points)))
-
-    ax.axis("equal")
-    ax.set_title("Obstacle avoidance — Multiple interactive obstacles")
-
-    curve.plot(ax, "k--", zorder=3, label="Source curve")
+    ps = PlotSession(
+        title="Obstacle avoidance — Multiple interactive obstacles",
+        render_during_drag=True,
+    )
+    curve.plot(ps.ax, "k--", zorder=3, label="Source curve")
     for obs in obstacles:
-        obs.plot(ax, fill=False, ec="k", ls="--", zorder=2)
+        obs.plot(ps.ax, fill=False, ec="k", ls="--", zorder=2)
+    warp_lines = ps.make_lines(
+        end_targets.n_points, colormap="plasma", linewidth=1.4, zorder=1
+    )
 
-    warp_lines = [
-        ax.plot([], [], color=colors[idx], linewidth=1.4, zorder=1)[0]
-        for idx in range(end_targets.n_points)
-    ]
-
-    def update_warp(autoscale: bool = True) -> None:
+    def update_warp() -> None:
         for line, end_pt in zip(warp_lines, end_targets.points):
             warper = ObstacleAvoidanceWarp2D(transport, obstacles, curve)
             warper.fit(Point[TwoD](end_pt))
-
             warped_curve = warper.warp_curve()
             line.set_data(*warped_curve.components)
 
-        if autoscale:
-            ax.relim()
-            ax.autoscale_view()
-        fig.canvas.draw_idle()
-
-    update_warp(autoscale=True)
-    _ = InteractionManager(
-        fig=fig,
-        ax=ax,
-        draggables=obstacles,
-        on_release_callback=update_warp,
-        render_during_drag=True,
-    )
-    ax.legend()
-    plt.tight_layout()
-    plt.show()
+    ps.enable_interaction(draggables=obstacles, on_update=update_warp)
+    ps.show()
 
 
 if __name__ == "__main__":
     plot_single_obstacle_2D()
     plot_multiple_obstacles_2D()
-    plt.show()
 
     plot_single_obstacle_interactive_2D()
     plot_multiple_obstacles_interactive_2D()

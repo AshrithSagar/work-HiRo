@@ -6,16 +6,19 @@ src/tp_gpt/plotting.py
 
 from typing import Any, Callable, Iterable, Optional, Protocol, cast, runtime_checkable
 
+import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.backend_bases import Event, MouseEvent
+from matplotlib.colors import Colormap
 from matplotlib.figure import Figure
+from matplotlib.lines import Line2D
 from matplotlib.patches import Circle
 from typed_numpy._typed.helpers import Array2
 
 from tp_gpt.obstacle import CircularObstacle
 
-OnReleaseCallback = Callable[[bool], Any]
+OnUpdateCallback = Callable[[], Any]
 
 
 @runtime_checkable
@@ -36,7 +39,7 @@ class InteractionManager:
         fig: Figure,
         ax: Axes,
         draggables: Iterable[Draggable],
-        on_release_callback: OnReleaseCallback,
+        on_release_callback: OnUpdateCallback,
         *,
         render_during_drag: bool = False,
         autoscale_on_release: bool = True,
@@ -54,6 +57,7 @@ class InteractionManager:
         self.cid_release = fig.canvas.mpl_connect(
             "button_release_event", self._on_release
         )
+        self._autoscale_if_needed()  # Initial autoscale
 
     def _on_press(self, event: Event) -> None:
         event = cast(MouseEvent, event)
@@ -69,14 +73,21 @@ class InteractionManager:
             self.active.drag(event)
             self.fig.canvas.draw_idle()
             if self.render_during_drag:
-                self.on_release_callback(False)
+                self.on_release_callback()
 
     def _on_release(self, event: Event) -> None:
         event = cast(MouseEvent, event)
         if self.active:
             self.active.end_drag()
             self.active = None
-            self.on_release_callback(True)
+            self.on_release_callback()
+            self._autoscale_if_needed()
+
+    def _autoscale_if_needed(self) -> None:
+        if self.autoscale_on_release:
+            self.ax.relim()
+            self.ax.autoscale_view()
+        self.fig.canvas.draw_idle()
 
 
 class InteractiveCircularObstacle(CircularObstacle):
@@ -111,3 +122,57 @@ class InteractiveCircularObstacle(CircularObstacle):
 
     def end_drag(self):
         self.dragging = False
+
+
+class PlotSession:
+    """Helper class to manage a plot session."""
+
+    def __init__(
+        self,
+        *,
+        figsize=(8, 8),
+        title: str | None = None,
+        legend: bool = True,
+        tight_layout: bool = True,
+        equal: bool = True,
+        autoscale: bool = True,
+        render_during_drag: bool = False,
+    ):
+        self.fig, self.ax = plt.subplots(figsize=figsize)
+        if title:
+            self.ax.set_title(title)
+        if equal:
+            self.ax.set_aspect("equal")
+
+        self.show_legend = legend
+        self.tight_layout = tight_layout
+        self.autoscale = autoscale
+        self.render_during_drag = render_during_drag
+
+    def make_lines(
+        self, n: int, colormap: Colormap | str | None = None, **kwargs
+    ) -> list[Line2D]:
+        colors = plt.get_cmap(colormap)(np.linspace(0, 1, n))
+        return [self.ax.plot([], [], color=colors[i], **kwargs)[0] for i in range(n)]
+
+    def enable_interaction(
+        self, draggables: Iterable[Draggable], on_update: OnUpdateCallback
+    ):
+        on_update()  # Initial update
+        self.interaction = InteractionManager(
+            fig=self.fig,
+            ax=self.ax,
+            draggables=draggables,
+            on_release_callback=on_update,
+            render_during_drag=self.render_during_drag,
+            autoscale_on_release=self.autoscale,
+        )
+
+    def show(self, show_immediately: bool = True) -> None:
+        if self.show_legend:
+            self.ax.legend()
+        if self.tight_layout:
+            self.fig.tight_layout()
+        self.fig.show()
+        if show_immediately:
+            plt.show()
