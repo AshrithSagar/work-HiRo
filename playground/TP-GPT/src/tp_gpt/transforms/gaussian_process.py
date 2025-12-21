@@ -17,7 +17,8 @@ from tp_gpt.core.mappings import (
     JacobianSet,
     LearnableEndomorphicMappingProtocol,
 )
-from tp_gpt.core.spaces import DimSpace, NumPoints, PointSet, ThreeD, TwoD
+from tp_gpt.core.spaces import PointSet
+from tp_gpt.core.typings import DimSpace, NumPoints, ThreeD, TwoD
 
 
 class GaussianProcess:

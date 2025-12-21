@@ -11,15 +11,8 @@ from tp_gpt.core.mappings import (
     JacobianSet,
     LearnableEndomorphicMappingProtocol,
 )
-from tp_gpt.core.spaces import (
-    DimSpace,
-    NumPoints,
-    Point,
-    PointSet,
-    RotationMatrix,
-    ThreeD,
-    TwoD,
-)
+from tp_gpt.core.spaces import Point, PointSet, RotationMatrix
+from tp_gpt.core.typings import DimSpace, NumPoints, ThreeD, TwoD
 
 
 class AffineTransform(

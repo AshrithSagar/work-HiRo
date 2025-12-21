@@ -9,8 +9,9 @@ import numpy as np
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel
 from typed_numpy._typed.helpers import Array2D, ArrayNx2
 
-from tp_gpt.core.spaces import Point, TwoD
+from tp_gpt.core.spaces import Point
 from tp_gpt.core.transportation import PolicyTransportation2D
+from tp_gpt.core.typings import TwoD
 from tp_gpt.curve import Curve2D
 from tp_gpt.obstacle import CircularObstacle
 from tp_gpt.plotting import InteractionManager, InteractiveCircularObstacle

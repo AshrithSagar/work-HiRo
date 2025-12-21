@@ -9,15 +9,8 @@ from typing import Any, Protocol, TypeAlias
 from typed_numpy._typed import ShapedNDArray as Shaped
 from typed_numpy._typed import TypedNDArray as NDArray
 
-from tp_gpt.core.spaces import (
-    CoordinateSpace,
-    DimSpace,
-    NumPoints,
-    PointSet,
-    SpaceCollection,
-    _DimSpace,
-    _NumPoints,
-)
+from tp_gpt.core.spaces import CoordinateSpace, PointSet, SpaceCollection
+from tp_gpt.core.typings import DimSpace, NumPoints, _DimSpace, _NumPoints
 
 Jacobian: TypeAlias = NDArray[tuple[DimSpace, DimSpace]]
 JacobianSet: TypeAlias = NDArray[tuple[NumPoints, DimSpace, DimSpace]]

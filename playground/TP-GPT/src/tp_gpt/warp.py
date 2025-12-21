@@ -8,16 +8,9 @@ from typing import Generic, Sequence
 
 import numpy as np
 
-from tp_gpt.core.spaces import (
-    DimSpace,
-    NumPoints,
-    Point,
-    PointSet,
-    SpaceCollection,
-    ThreeD,
-    TwoD,
-)
+from tp_gpt.core.spaces import Point, PointSet, SpaceCollection
 from tp_gpt.core.transportation import NonLinearTransform, PolicyTransportation
+from tp_gpt.core.typings import DimSpace, NumPoints, ThreeD, TwoD
 from tp_gpt.curve import Curve, Curve2D, Curve3D
 from tp_gpt.obstacle import Obstacle
 
