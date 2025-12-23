@@ -2114,7 +2114,7 @@ easy = [
 [[package]]
 name = "typed-numpy"
 version = "0.1.0"
-source = { git = "https://github.com/AshrithSagar/typed-numpy.git?rev=main#304242449d67be8a808741a2f8903a42eab84bf1" }
+source = { git = "https://github.com/AshrithSagar/typed-numpy.git?rev=main#c4da6c7b225de29a790e5d01f1c356e543d293f5" }
 dependencies = [
     { name = "numpy" },
 ]
