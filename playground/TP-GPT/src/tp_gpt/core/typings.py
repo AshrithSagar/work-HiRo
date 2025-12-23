@@ -4,15 +4,10 @@ Typing utils
 src/tp_gpt/core/typings.py
 """
 
-from typing import TypeAlias, TypeVar
+from typing import Any, Protocol, TypeAlias, TypeVar
 
-from typed_numpy._typed import DimVar
+from typed_numpy._typed import ShapedNDArray
 from typed_numpy._typed.shapes import THREE, TWO
-
-## Static bindings
-
-TwoD: TypeAlias = TWO
-ThreeD: TypeAlias = THREE
 
 DimSpace = TypeVar("DimSpace", bound=int, default=int)
 """TypeVar denoting dimension of the space"""
@@ -20,11 +15,36 @@ DimSpace = TypeVar("DimSpace", bound=int, default=int)
 NumPoints = TypeVar("NumPoints", bound=int, default=int)
 """TypeVar denoting number of points"""
 
+TwoD: TypeAlias = TWO
+ThreeD: TypeAlias = THREE
 
-## Runtime bindings
+Point: TypeAlias = ShapedNDArray[DimSpace]
+Vector: TypeAlias = ShapedNDArray[DimSpace]
+RotationMatrix: TypeAlias = ShapedNDArray[DimSpace, DimSpace]
 
-_DimSpace = DimVar()
-"""DimVar denoting dimension of the space"""
+ScalarArray: TypeAlias = ShapedNDArray[NumPoints]
+PointSet: TypeAlias = ShapedNDArray[NumPoints, DimSpace]
 
-_NumPoints = DimVar()
-"""DimVar denoting number of points"""
+Jacobian: TypeAlias = ShapedNDArray[DimSpace, DimSpace]
+JacobianSet: TypeAlias = ShapedNDArray[NumPoints, DimSpace, DimSpace]
+
+
+class LearnableEndomorphicMappingProtocol(Protocol[DimSpace]):
+    """A generic learnable mapping interface denoting `R^DimSpace -> R^DimSpace`."""
+
+    def fit(
+        self,
+        source_points: PointSet[NumPoints, DimSpace],
+        target_points: PointSet[NumPoints, DimSpace],
+        /,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any: ...
+
+    def predict(
+        self, points: PointSet[NumPoints, DimSpace], /, *args: Any, **kwargs: Any
+    ) -> PointSet[NumPoints, DimSpace]: ...
+
+    def jacobian(
+        self, points: PointSet[NumPoints, DimSpace], /, *args: Any, **kwargs: Any
+    ) -> JacobianSet[NumPoints, DimSpace]: ...

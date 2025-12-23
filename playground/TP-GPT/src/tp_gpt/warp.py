@@ -8,22 +8,18 @@ from typing import Generic, Sequence
 
 import numpy as np
 
-from tp_gpt.core.spaces import Point, PointSet, SpaceCollection
 from tp_gpt.core.transportation import NonLinearTransform, PolicyTransportation
-from tp_gpt.core.typings import DimSpace, NumPoints, ThreeD, TwoD
+from tp_gpt.core.typings import DimSpace, Point, PointSet, ThreeD, TwoD
 from tp_gpt.curve import Curve
 from tp_gpt.obstacle import Obstacle
 
 
-class ObstacleAvoidanceWarp(
-    Generic[NumPoints, DimSpace, NonLinearTransform],
-    SpaceCollection[NumPoints, DimSpace],
-):
+class ObstacleAvoidanceWarp(Generic[NonLinearTransform, DimSpace]):
     def __init__(
         self,
-        transportation: PolicyTransportation[NumPoints, DimSpace, NonLinearTransform],
-        obstacles: Sequence[Obstacle[NumPoints, DimSpace]],
-        curve: Curve[NumPoints, DimSpace],
+        transportation: PolicyTransportation[NonLinearTransform, DimSpace],
+        obstacles: Sequence[Obstacle[int, DimSpace]],
+        curve: Curve[int, DimSpace],
     ) -> None:
         self.transportation = transportation
         self.obstacles = obstacles
@@ -31,18 +27,22 @@ class ObstacleAvoidanceWarp(
 
     def _make_keypoints(
         self, target_end_point: Point[DimSpace]
-    ) -> tuple[PointSet[NumPoints, DimSpace], PointSet[NumPoints, DimSpace]]:
-        obs_pts = self._PointSet(np.vstack([o.boundary_points for o in self.obstacles]))
-        obs_centers = self._PointSet(np.vstack([o.center_tile for o in self.obstacles]))
-        target_points = self._PointSet(
+    ) -> tuple[PointSet[int, DimSpace], PointSet[int, DimSpace]]:
+        obs_pts = PointSet[int, DimSpace](
+            np.vstack([o.boundary_points for o in self.obstacles])
+        )
+        obs_centers = PointSet[int, DimSpace](
+            np.vstack([o.center_tile for o in self.obstacles])
+        )
+        target_points = PointSet[int, DimSpace](
             np.vstack((self.curve.start_pt, obs_pts, target_end_point))
         )
-        source_points = self._PointSet(
+        source_points = PointSet[int, DimSpace](
             np.vstack((self.curve.start_pt, obs_centers, self.curve.end_pt))
         )
         return source_points, target_points
 
-    def warp_curve(self) -> Curve[NumPoints, DimSpace]:
+    def warp_curve(self) -> Curve[int, DimSpace]:
         warped = self.transportation.transport_positions(self.curve.points)
         return type(self.curve)(points=warped)
 
@@ -51,11 +51,7 @@ class ObstacleAvoidanceWarp(
         self.transportation.fit(source_points, target_points)
 
 
-class ObstacleAvoidanceWarp2D(
-    ObstacleAvoidanceWarp[NumPoints, TwoD, NonLinearTransform]
-): ...
+class ObstacleAvoidanceWarp2D(ObstacleAvoidanceWarp[NonLinearTransform, TwoD]): ...
 
 
-class ObstacleAvoidanceWarp3D(
-    ObstacleAvoidanceWarp[NumPoints, ThreeD, NonLinearTransform]
-): ...
+class ObstacleAvoidanceWarp3D(ObstacleAvoidanceWarp[NonLinearTransform, ThreeD]): ...

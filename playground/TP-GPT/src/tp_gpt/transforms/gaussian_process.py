@@ -4,7 +4,7 @@ Gaussian Process Transform
 src/tp_gpt/transforms/gaussian_process.py
 """
 
-from typing import Any, Callable, Literal, NoReturn, overload
+from typing import Any, Callable, Generic, Literal, NoReturn, overload
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -12,13 +12,15 @@ from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import Kernel
 from typed_numpy._typed.helpers import Array2D, Array3D, Array4D
 
-from tp_gpt.core.mappings import (
-    EndomorphicMappingCollection,
+from tp_gpt.core.typings import (
+    DimSpace,
     JacobianSet,
     LearnableEndomorphicMappingProtocol,
+    NumPoints,
+    PointSet,
+    ThreeD,
+    TwoD,
 )
-from tp_gpt.core.spaces import PointSet
-from tp_gpt.core.typings import DimSpace, NumPoints, ThreeD, TwoD
 
 
 class GaussianProcess:
@@ -138,9 +140,7 @@ class GaussianProcess:
 
 
 class GaussianProcessTransform(
-    GaussianProcess,
-    EndomorphicMappingCollection[NumPoints, DimSpace],
-    LearnableEndomorphicMappingProtocol[NumPoints, DimSpace],
+    GaussianProcess, Generic[DimSpace], LearnableEndomorphicMappingProtocol[DimSpace]
 ):
     def jacobian(
         self, points: PointSet[NumPoints, DimSpace], /
@@ -148,7 +148,7 @@ class GaussianProcessTransform(
         raise NotImplementedError
 
 
-class GaussianProcessTransform2D(GaussianProcessTransform[NumPoints, TwoD]): ...
+class GaussianProcessTransform2D(GaussianProcessTransform[TwoD]): ...
 
 
-class GaussianProcessTransform3D(GaussianProcessTransform[NumPoints, ThreeD]): ...
+class GaussianProcessTransform3D(GaussianProcessTransform[ThreeD]): ...

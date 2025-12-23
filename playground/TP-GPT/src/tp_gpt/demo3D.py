@@ -8,9 +8,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel
 
-from tp_gpt.core.spaces import Point
 from tp_gpt.core.transportation import PolicyTransportation3D
-from tp_gpt.core.typings import ThreeD
+from tp_gpt.core.typings import Point, ThreeD
 from tp_gpt.curve import Curve3D
 from tp_gpt.obstacle import SphericalObstacle
 from tp_gpt.plotting import set_axes_equal

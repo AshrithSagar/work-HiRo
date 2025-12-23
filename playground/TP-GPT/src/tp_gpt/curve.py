@@ -4,25 +4,32 @@ Curve utils
 src/tp_gpt/curve.py
 """
 
-from typing import Self
+from typing import Generic, Self
 
 import numpy as np
 from matplotlib.axes import Axes
 from numpy.typing import ArrayLike
 
-from tp_gpt.core.spaces import Point, ScalarArray, SpaceCollection
-from tp_gpt.core.typings import DimSpace, NumPoints, ThreeD, TwoD
+from tp_gpt.core.typings import (
+    DimSpace,
+    NumPoints,
+    Point,
+    PointSet,
+    ScalarArray,
+    ThreeD,
+    TwoD,
+)
 
 
-class Curve(SpaceCollection[NumPoints, DimSpace]):
+class Curve(Generic[NumPoints, DimSpace]):
     """Represents a general curve defined in a general space."""
 
     def __init__(self, points: ArrayLike) -> None:
-        self.points = self._PointSet(points)
+        self.points = PointSet[NumPoints, DimSpace](points)
         self.n_points, self.dim = self.points.shape
 
     def __getitem__(self, idx: int) -> Point[DimSpace]:
-        return self._Point(self.points[idx])
+        return Point[DimSpace](self.points[idx])
 
     def __len__(self) -> int:
         return self.n_points
@@ -42,7 +49,7 @@ class Curve(SpaceCollection[NumPoints, DimSpace]):
         """Return one coordinate component by axis index."""
         if not 0 <= axis < self.dim:
             raise IndexError(f"Axis {axis} out of bounds for dim={self.dim}")
-        return self._ScalarArray(self.points[:, axis])
+        return ScalarArray[NumPoints](self.points[:, axis])
 
     @property
     def components(self) -> tuple[ScalarArray[NumPoints], ...]:

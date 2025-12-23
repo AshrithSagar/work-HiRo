@@ -8,13 +8,15 @@ from typing import Any, Generic, Optional, TypeVar
 
 import numpy as np
 
-from tp_gpt.core.mappings import (
-    EndomorphicMappingCollection,
+from tp_gpt.core.typings import (
+    DimSpace,
     JacobianSet,
     LearnableEndomorphicMappingProtocol,
+    NumPoints,
+    PointSet,
+    ThreeD,
+    TwoD,
 )
-from tp_gpt.core.spaces import PointSet
-from tp_gpt.core.typings import DimSpace, NumPoints, ThreeD, TwoD
 from tp_gpt.transforms import AffineTransform
 
 NonLinearTransform = TypeVar(
@@ -23,14 +25,14 @@ NonLinearTransform = TypeVar(
 
 
 class PolicyTransportation(
-    Generic[NumPoints, DimSpace, NonLinearTransform],
-    EndomorphicMappingCollection[NumPoints, DimSpace],
-    LearnableEndomorphicMappingProtocol[NumPoints, DimSpace],
+    Generic[NonLinearTransform, DimSpace], LearnableEndomorphicMappingProtocol[DimSpace]
 ):
     def __init__(
         self,
         nonlinear_transform: Optional[NonLinearTransform] = None,
-        affine_transform: AffineTransform = AffineTransform(scale=False, rotate=True),
+        affine_transform: AffineTransform[DimSpace] = AffineTransform[DimSpace](
+            scale=False, rotate=True
+        ),
         *,
         use_residuals: bool = True,
     ):
@@ -49,7 +51,9 @@ class PolicyTransportation(
 
         if self.nonlinear_transform is not None:
             if self.use_residuals:
-                residuals = self._PointSet(target_points - source_points_transformed)
+                residuals = PointSet[NumPoints, DimSpace](
+                    target_points - source_points_transformed
+                )
                 self.nonlinear_transform.fit(source_points_transformed, residuals)
             else:
                 self.nonlinear_transform.fit(source_points_transformed, target_points)
@@ -57,13 +61,17 @@ class PolicyTransportation(
     def predict(
         self, points: PointSet[NumPoints, DimSpace], /
     ) -> PointSet[NumPoints, DimSpace]:
-        points_transformed = self._PointSet(self.affine_transform.predict(points))
+        points_transformed = PointSet[NumPoints, DimSpace](
+            self.affine_transform.predict(points)
+        )
         if self.nonlinear_transform is not None:
-            residuals = self._PointSet(
+            residuals = PointSet[NumPoints, DimSpace](
                 self.nonlinear_transform.predict(points_transformed)
             )
             if self.use_residuals:
-                points_transported = self._PointSet(points_transformed + residuals)
+                points_transported = PointSet[NumPoints, DimSpace](
+                    points_transformed + residuals
+                )
                 return points_transported
             else:
                 return residuals
@@ -76,16 +84,16 @@ class PolicyTransportation(
         points_transformed = self.affine_transform.predict(points)
         J_gamma = self.affine_transform.jacobian(points)
         if self.nonlinear_transform is not None:
-            J_psi = self._JacobianSet(
+            J_psi = JacobianSet[NumPoints, DimSpace](
                 self.nonlinear_transform.jacobian(points_transformed)
             )
             if self.use_residuals:
                 J_phi = J_gamma + J_psi @ J_gamma
             else:
                 J_phi = J_psi @ J_gamma
-            return self._JacobianSet(J_phi)
+            return JacobianSet[NumPoints, DimSpace](J_phi)
         else:
-            return self._JacobianSet(J_gamma)
+            return JacobianSet[NumPoints, DimSpace](J_gamma)
 
     def transport_positions(
         self, positions: PointSet[NumPoints, DimSpace], /
@@ -98,19 +106,17 @@ class PolicyTransportation(
         velocities: PointSet[NumPoints, DimSpace],
     ) -> PointSet[NumPoints, DimSpace]:
         J_phi = self.jacobian(positions)
-        velocities_transported = self._PointSet(
+        velocities_transported = PointSet[NumPoints, DimSpace](
             np.einsum("nij,nj->ni", J_phi, velocities)
         )
         return velocities_transported
 
 
 class PolicyTransportation2D(
-    Generic[NumPoints, NonLinearTransform],
-    PolicyTransportation[NumPoints, TwoD, NonLinearTransform],
+    Generic[NonLinearTransform], PolicyTransportation[NonLinearTransform, TwoD]
 ): ...
 
 
 class PolicyTransportation3D(
-    Generic[NumPoints, NonLinearTransform],
-    PolicyTransportation[NumPoints, ThreeD, NonLinearTransform],
+    Generic[NonLinearTransform], PolicyTransportation[NonLinearTransform, ThreeD]
 ): ...
