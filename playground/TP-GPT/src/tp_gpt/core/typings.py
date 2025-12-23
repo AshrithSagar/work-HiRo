@@ -6,7 +6,7 @@ src/tp_gpt/core/typings.py
 
 from typing import Any, Protocol, TypeAlias, TypeVar
 
-from typed_numpy._typed import ShapedNDArray
+from typed_numpy._typed import TypedNDArray
 from typed_numpy._typed.shapes import THREE, TWO
 
 DimSpace = TypeVar("DimSpace", bound=int, default=int)
@@ -18,15 +18,15 @@ NumPoints = TypeVar("NumPoints", bound=int, default=int)
 TwoD: TypeAlias = TWO
 ThreeD: TypeAlias = THREE
 
-Point: TypeAlias = ShapedNDArray[DimSpace]
-Vector: TypeAlias = ShapedNDArray[DimSpace]
-RotationMatrix: TypeAlias = ShapedNDArray[DimSpace, DimSpace]
+Point: TypeAlias = TypedNDArray[tuple[DimSpace]]
+Vector: TypeAlias = TypedNDArray[tuple[DimSpace]]
+RotationMatrix: TypeAlias = TypedNDArray[tuple[DimSpace, DimSpace]]
 
-ScalarArray: TypeAlias = ShapedNDArray[NumPoints]
-PointSet: TypeAlias = ShapedNDArray[NumPoints, DimSpace]
+ScalarArray: TypeAlias = TypedNDArray[tuple[NumPoints]]
+PointSet: TypeAlias = TypedNDArray[tuple[NumPoints, DimSpace]]
 
-Jacobian: TypeAlias = ShapedNDArray[DimSpace, DimSpace]
-JacobianSet: TypeAlias = ShapedNDArray[NumPoints, DimSpace, DimSpace]
+Jacobian: TypeAlias = TypedNDArray[tuple[DimSpace, DimSpace]]
+JacobianSet: TypeAlias = TypedNDArray[tuple[NumPoints, DimSpace, DimSpace]]
 
 
 class LearnableEndomorphicMappingProtocol(Protocol[DimSpace]):
