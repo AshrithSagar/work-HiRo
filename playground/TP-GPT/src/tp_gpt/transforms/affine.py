@@ -40,7 +40,7 @@ class AffineTransform(Generic[DimSpace], LearnableEndomorphicMappingProtocol[Dim
         /,
     ) -> None:
         assert len(source_points) == len(target_points)
-        dim: int = source_points.shape[1]
+        dim: DimSpace = source_points.shape[1]
 
         self.source_centroid = Point[DimSpace](np.mean(source_points, axis=0))
         self.target_centroid = Point[DimSpace](np.mean(target_points, axis=0))
