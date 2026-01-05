@@ -14,7 +14,15 @@ from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel
 from typed_numpy._typed import TypedNDArray
 
 from tp_gpt.core.transportation import PolicyTransportation3D
-from tp_gpt.core.typings import DimSpace, NumPoints, Point, PointSet, ThreeD, TwoD
+from tp_gpt.core.typings import (
+    DimSpace,
+    NumPoints,
+    Point,
+    PointSet,
+    ScalarArray,
+    ThreeD,
+    TwoD,
+)
 from tp_gpt.curve import Curve3D
 from tp_gpt.obstacle import SphericalObstacle
 from tp_gpt.transforms import AffineTransform3D, GaussianProcessTransform3D
@@ -45,8 +53,8 @@ def make_grid_lines_3d(
     ylim: tuple[float, float] = (0, 2),
     zlim: tuple[float, float] = (-1, 1),
     nx: int = 10,
-    ny: int = 6,
-    nz: int = 4,
+    ny: int = 10,
+    nz: int = 10,
 ) -> list[PointSet[int, ThreeD]]:
     xs = np.linspace(*xlim, nx)
     ys = np.linspace(*ylim, ny)
@@ -76,14 +84,27 @@ def make_grid_lines_3d(
     return lines
 
 
-def build_line_segments(
+def build_warped_segments(
     lines: list[PointSet[NumPoints, ThreeD]],
-) -> PointSetStack[NumPoints, ThreeD]:
-    segs = list[list[Point[ThreeD]]]()
-    for pts in lines:
-        for i in range(len(pts) - 1):
-            segs.append([pts[i], pts[i + 1]])
-    return PointSetStack[NumPoints, ThreeD](segs)
+    warped_lines: list[PointSet[NumPoints, ThreeD]],
+) -> tuple[PointSetStack[NumPoints, ThreeD], PointSetStack[NumPoints, ThreeD]]:
+    disp = ScalarArray[NumPoints](
+        np.linalg.norm(np.vstack(warped_lines) - np.vstack(lines), axis=1)
+    )
+    dmin, dmax = float(disp.min()), float(disp.max())
+    idx = int(0)
+    _segments = list[list[Point[ThreeD]]]()
+    _colors = list[list[tuple[int, int, int]]]()
+    for line, warped in zip(lines, warped_lines):
+        for i in range(len(line) - 1):
+            p0, p1 = warped[i], warped[i + 1]
+            color = displacement_to_color(disp[idx], dmin, dmax)
+            _segments.append([p0, p1])
+            _colors.append([color, color])
+            idx += 1
+    segments = PointSetStack[NumPoints, ThreeD](_segments)
+    colors = PointSetStack[NumPoints, ThreeD](_colors)
+    return segments, colors
 
 
 def displacement_to_color(d: float, dmin: float, dmax: float) -> tuple[int, int, int]:
@@ -161,18 +182,9 @@ def main() -> None:
                 warped_lines.append(warped)
                 disps.append(np.linalg.norm(warped - line, axis=1).mean())
 
-            dmin, dmax = min(disps), max(disps)
-            segments = build_line_segments(warped_lines)
-            colors = []
-            for disp, line in zip(disps, warped_lines):
-                c = np.asarray(displacement_to_color(disp, dmin, dmax))
-                for _ in range(len(line) - 1):
-                    colors.append([c, c])
+            segments, colors = build_warped_segments(grid_lines, warped_lines)
             server.scene.add_line_segments(
-                "/grid_warped",
-                points=segments,
-                colors=np.asarray(colors),
-                line_width=0.5,
+                "/grid_warped", points=segments, colors=colors, line_width=0.4
             )
 
             status.value = "Warp computed"
