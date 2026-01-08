@@ -3,27 +3,28 @@ name = "tp-gpt"
 version = "0.1.0"
 description = "Task-parameterised Gaussian Process Transportation"
 readme = "README.md"
-authors = [{ name = "Ashrith Sagar", email = "ashrithy@iisc.ac.in" }]
 requires-python = ">=3.14"
+authors = [{ name = "Ashrith Sagar", email = "ashrithy@iisc.ac.in" }]
 dependencies = [
     "matplotlib>=3.10.8",
     "microsoft-python-type-stubs",
     "numpy>=2.4.0",
     "rich>=14.2.0",
     "scikit-learn>=1.8.0",
-    "scipy>=1.17.0rc2",
-    "scipy-stubs>=1.17.0.0",
+    "scipy>=1.16.3",
+    "scipy-stubs>=1.16.3.3",
     "typed-numpy",
     "viser>=1.0.16",
 ]
 
+[dependency-groups]
+lint = ["ruff>=0.14.10"]
+notebook = ["jupyter>=1.1.1", "nbdime>=4.0.2", "nbstripout>=0.8.2"]
+typecheck = ["basedpyright>=1.37.0", "mypy>=1.19.1", "pyright>=1.1.408"]
+
 [build-system]
 requires = ["uv_build>=0.9.22,<0.10.0"]
 build-backend = "uv_build"
-
-[dependency-groups]
-dev = ["mypy>=1.19.1", "ruff>=0.14.10"]
-notebook = ["jupyter>=1.1.1", "nbdime>=4.0.2", "nbstripout>=0.8.2"]
 
 [tool.uv.sources]
 microsoft-python-type-stubs = { git = "https://github.com/microsoft/python-type-stubs.git" }
