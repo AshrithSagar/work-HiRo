@@ -18,9 +18,9 @@ dependencies = [
 ]
 
 [dependency-groups]
-lint = ["ruff>=0.14.10"]
+lint = ["ruff>=0.14.11"]
 notebook = ["jupyter>=1.1.1", "nbdime>=4.0.2", "nbstripout>=0.8.2"]
-typecheck = ["basedpyright>=1.37.0", "mypy>=1.19.1", "pyright>=1.1.408"]
+typecheck = ["basedpyright>=1.37.1", "mypy>=1.19.1", "pyright>=1.1.408"]
 
 [build-system]
 requires = ["uv_build>=0.9.22,<0.10.0"]
