@@ -1,7 +1,7 @@
 """
 Demo3D Viser
 =======
-src/tp_gpt/demo3D_viser_2.py
+src/gpto/demo3D_viser_2.py
 - Space warp
 """
 
@@ -13,8 +13,8 @@ import viser
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel
 from typed_numpy._typed import TypedNDArray
 
-from tp_gpt.core.transportation import PolicyTransportation3D
-from tp_gpt.core.typings import (
+from gpto.core.transportation import PolicyTransportation3D
+from gpto.core.typings import (
     DimSpace,
     NumPoints,
     Point,
@@ -23,10 +23,10 @@ from tp_gpt.core.typings import (
     ThreeD,
     TwoD,
 )
-from tp_gpt.curve import Curve3D
-from tp_gpt.obstacle import SphericalObstacle
-from tp_gpt.transforms import AffineTransform3D, GaussianProcessTransform3D
-from tp_gpt.warp import ObstacleAvoidanceWarp3D
+from gpto.curve import Curve3D
+from gpto.obstacle import SphericalObstacle
+from gpto.transforms import AffineTransform3D, GaussianProcessTransform3D
+from gpto.warp import ObstacleAvoidanceWarp3D
 
 PointSetStack: TypeAlias = TypedNDArray[tuple[NumPoints, TwoD, DimSpace]]
 

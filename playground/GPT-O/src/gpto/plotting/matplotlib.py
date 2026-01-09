@@ -1,7 +1,7 @@
 """
 Plotting:matplotlib
 =======
-src/tp_gpt/plotting/matplotlib.py
+src/gpto/plotting/matplotlib.py
 """
 
 from typing import (
@@ -28,9 +28,9 @@ from matplotlib.patches import Circle
 from mpl_toolkits.mplot3d import Axes3D  # type: ignore[import-untyped]
 from typed_numpy._typed.helpers import Array2
 
-from tp_gpt.core.typings import DimSpace, NumPoints, ThreeD, TwoD
-from tp_gpt.curve import Curve
-from tp_gpt.obstacle import CircularObstacle, SphericalObstacle
+from gpto.core.typings import DimSpace, NumPoints, ThreeD, TwoD
+from gpto.curve import Curve
+from gpto.obstacle import CircularObstacle, SphericalObstacle
 
 AxesT = TypeVar("AxesT", bound=Axes, default=Axes)
 

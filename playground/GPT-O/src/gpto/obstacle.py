@@ -1,7 +1,7 @@
 """
 Obstacles
 =======
-src/tp_gpt/obstacle.py
+src/gpto/obstacle.py
 """
 
 from abc import ABC, abstractmethod
@@ -11,7 +11,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 from typed_numpy._typed.helpers import Array1D, Array2D
 
-from tp_gpt.core.typings import DimSpace, NumPoints, Point, PointSet, ThreeD, TwoD
+from gpto.core.typings import DimSpace, NumPoints, Point, PointSet, ThreeD, TwoD
 
 
 class Obstacle(Generic[NumPoints, DimSpace], ABC):

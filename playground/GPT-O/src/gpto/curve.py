@@ -1,7 +1,7 @@
 """
 Curve utils
 =======
-src/tp_gpt/curve.py
+src/gpto/curve.py
 """
 
 from typing import Generic, Self
@@ -9,7 +9,7 @@ from typing import Generic, Self
 import numpy as np
 from numpy.typing import ArrayLike
 
-from tp_gpt.core.typings import (
+from gpto.core.typings import (
     DimSpace,
     NumPoints,
     Point,

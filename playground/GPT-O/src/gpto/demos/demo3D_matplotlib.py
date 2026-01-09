@@ -1,20 +1,20 @@
 """
 Demo3D
 =======
-src/tp_gpt/demo3D.py
+src/gpto/demo3D.py
 """
 
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel
 
-from tp_gpt.core.transportation import PolicyTransportation3D
-from tp_gpt.core.typings import Point, ThreeD
-from tp_gpt.curve import Curve3D
-from tp_gpt.obstacle import SphericalObstacle
-from tp_gpt.plotting.matplotlib import Plot3D, set_axes_equal
-from tp_gpt.transforms import AffineTransform3D, GaussianProcessTransform3D
-from tp_gpt.warp import ObstacleAvoidanceWarp3D
+from gpto.core.transportation import PolicyTransportation3D
+from gpto.core.typings import Point, ThreeD
+from gpto.curve import Curve3D
+from gpto.obstacle import SphericalObstacle
+from gpto.plotting.matplotlib import Plot3D, set_axes_equal
+from gpto.transforms import AffineTransform3D, GaussianProcessTransform3D
+from gpto.warp import ObstacleAvoidanceWarp3D
 
 
 def make_demo_curve_3D(n_points: int = 200) -> Curve3D:

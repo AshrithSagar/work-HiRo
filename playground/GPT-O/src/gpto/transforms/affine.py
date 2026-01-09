@@ -1,14 +1,14 @@
 """
 Affine Transform
 =======
-src/tp_gpt/transforms/affine.py
+src/gpto/transforms/affine.py
 """
 
 from typing import Generic
 
 import numpy as np
 
-from tp_gpt.core.typings import (
+from gpto.core.typings import (
     DimSpace,
     JacobianSet,
     LearnableEndomorphicMappingProtocol,

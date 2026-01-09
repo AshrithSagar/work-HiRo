@@ -1,14 +1,14 @@
 """
 Policy transportation
 =======
-src/tp_gpt/core/transportation.py
+src/gpto/core/transportation.py
 """
 
 from typing import Any, Generic, Optional, TypeVar
 
 import numpy as np
 
-from tp_gpt.core.typings import (
+from gpto.core.typings import (
     DimSpace,
     JacobianSet,
     LearnableEndomorphicMappingProtocol,
@@ -17,7 +17,7 @@ from tp_gpt.core.typings import (
     ThreeD,
     TwoD,
 )
-from tp_gpt.transforms import AffineTransform
+from gpto.transforms import AffineTransform
 
 NonLinearTransform = TypeVar(
     "NonLinearTransform", bound=LearnableEndomorphicMappingProtocol, default=Any

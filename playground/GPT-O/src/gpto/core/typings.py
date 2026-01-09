@@ -1,7 +1,7 @@
 """
 Typing utils
 =======
-src/tp_gpt/core/typings.py
+src/gpto/core/typings.py
 """
 
 from typing import Any, Protocol, TypeAlias, TypeVar

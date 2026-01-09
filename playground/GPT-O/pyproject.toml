@@ -1,7 +1,7 @@
 [project]
-name = "tp-gpt"
+name = "gpto"
 version = "0.1.0"
-description = "Task-parameterised Gaussian Process Transportation"
+description = "Task-parameterised Gaussian Process Transportation with Obstacles"
 readme = "README.md"
 requires-python = ">=3.14"
 authors = [{ name = "Ashrith Sagar", email = "ashrithy@iisc.ac.in" }]

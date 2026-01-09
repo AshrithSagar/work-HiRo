@@ -1,17 +1,17 @@
 """
 Warp utils
 =======
-src/tp_gpt/warp.py
+src/gpto/warp.py
 """
 
 from typing import Generic, Sequence
 
 import numpy as np
 
-from tp_gpt.core.transportation import NonLinearTransform, PolicyTransportation
-from tp_gpt.core.typings import DimSpace, Point, PointSet, ThreeD, TwoD
-from tp_gpt.curve import Curve
-from tp_gpt.obstacle import Obstacle
+from gpto.core.transportation import NonLinearTransform, PolicyTransportation
+from gpto.core.typings import DimSpace, Point, PointSet, ThreeD, TwoD
+from gpto.curve import Curve
+from gpto.obstacle import Obstacle
 
 
 class ObstacleAvoidanceWarp(Generic[NonLinearTransform, DimSpace]):

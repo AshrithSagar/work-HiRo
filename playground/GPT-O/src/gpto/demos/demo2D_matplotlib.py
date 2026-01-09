@@ -1,7 +1,7 @@
 """
 Demo
 =======
-src/tp_gpt/demo.py
+src/gpto/demo.py
 """
 
 import matplotlib.pyplot as plt
@@ -9,18 +9,18 @@ import numpy as np
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel
 from typed_numpy._typed.helpers import Array2D
 
-from tp_gpt.core.transportation import PolicyTransportation2D
-from tp_gpt.core.typings import Point, TwoD
-from tp_gpt.curve import Curve2D
-from tp_gpt.obstacle import CircularObstacle
-from tp_gpt.plotting.matplotlib import (
+from gpto.core.transportation import PolicyTransportation2D
+from gpto.core.typings import Point, TwoD
+from gpto.curve import Curve2D
+from gpto.obstacle import CircularObstacle
+from gpto.plotting.matplotlib import (
     InteractiveCircularObstacle,
     Plot2D,
     PlotInteractive2D,
     PlotSession,
 )
-from tp_gpt.transforms import AffineTransform2D, GaussianProcessTransform2D
-from tp_gpt.warp import ObstacleAvoidanceWarp2D
+from gpto.transforms import AffineTransform2D, GaussianProcessTransform2D
+from gpto.warp import ObstacleAvoidanceWarp2D
 
 
 def make_demo_curve_2D(n_points: int = 200) -> Curve2D:

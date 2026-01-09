@@ -1,7 +1,7 @@
 """
 Gaussian Process Transform
 =======
-src/tp_gpt/transforms/gaussian_process.py
+src/gpto/transforms/gaussian_process.py
 """
 
 from typing import Any, Callable, Generic, Literal, NoReturn, overload
@@ -12,7 +12,7 @@ from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import Kernel
 from typed_numpy._typed.helpers import Array2D, Array3D, Array4D
 
-from tp_gpt.core.typings import (
+from gpto.core.typings import (
     DimSpace,
     JacobianSet,
     LearnableEndomorphicMappingProtocol,
