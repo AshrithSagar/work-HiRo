@@ -13,7 +13,12 @@ from tp_gpt.core.transportation import PolicyTransportation2D
 from tp_gpt.core.typings import Point, TwoD
 from tp_gpt.curve import Curve2D
 from tp_gpt.obstacle import CircularObstacle
-from tp_gpt.plotting import InteractiveCircularObstacle, PlotSession
+from tp_gpt.plotting.matplotlib import (
+    InteractiveCircularObstacle,
+    Plot2D,
+    PlotInteractive2D,
+    PlotSession,
+)
 from tp_gpt.transforms import AffineTransform2D, GaussianProcessTransform2D
 from tp_gpt.warp import ObstacleAvoidanceWarp2D
 
@@ -47,15 +52,16 @@ def plot_single_obstacle_2D() -> None:
     circle_obs = CircularObstacle(center=(2.0, 0.6), radius=0.15, n_theta=20)
 
     ps = PlotSession(title="Obstacle avoidance")
+    plot = Plot2D(ax=ps.ax)
     colors = Array2D(plt.get_cmap("plasma")(np.linspace(0, 1, end_targets.n_points)))
-    curve.plot(ps.ax, color="gray", linestyle="--", zorder=3, label="Source curve")
-    circle_obs.plot(ps.ax, "k--", zorder=2, label="Obstacle keypoints")
+    plot.curve(curve, color="gray", linestyle="--", zorder=3, label="Source curve")
+    plot.obstacle(circle_obs, "k--", zorder=2, label="Obstacle keypoints")
 
     for idx, end_pt in enumerate(end_targets.points):
         warper = ObstacleAvoidanceWarp2D(transport, [circle_obs], curve)
         warper.fit(Point[TwoD](end_pt))
         warped_curve = warper.warp_curve()
-        warped_curve.plot(ps.ax, color=colors[idx], linewidth=1.4, zorder=1)
+        plot.curve(warped_curve, color=colors[idx], linewidth=1.4, zorder=1)
     ps.show()
 
 
@@ -66,9 +72,10 @@ def plot_single_obstacle_interactive_2D() -> None:
     circle_obs = InteractiveCircularObstacle(center=(2.0, 0.6), radius=0.15, n_theta=20)
 
     ps = PlotSession(title="Obstacle avoidance", render_during_drag=True)
-    curve.plot(ps.ax, color="gray", linestyle="--", zorder=3, label="Source curve")
-    circle_obs.plot(
-        ps.ax, fill=False, zorder=2, ec="k", ls="--", label="Obstacle keypoints"
+    plot = PlotInteractive2D(ax=ps.ax)
+    plot.curve(curve, color="gray", linestyle="--", zorder=3, label="Source curve")
+    plot.obstacle(
+        circle_obs, fill=False, zorder=2, ec="k", ls="--", label="Obstacle keypoints"
     )
     warp_lines = ps.make_lines(
         end_targets.n_points, colormap="plasma", linewidth=1.4, zorder=1
@@ -96,15 +103,16 @@ def plot_multiple_obstacles_2D() -> None:
     ]
 
     ps = PlotSession(title="Obstacle avoidance — Multiple obstacles")
+    plot = Plot2D(ax=ps.ax)
     colors = Array2D(plt.get_cmap("plasma")(np.linspace(0, 1, end_targets.n_points)))
-    curve.plot(ps.ax, "k--", label="Source curve", zorder=3)
+    plot.curve(curve, "k--", label="Source curve", zorder=3)
     for obs in obstacles:
-        obs.plot(ps.ax, "k--", zorder=2)
+        plot.obstacle(obs, "k--", zorder=2)
     for idx, end_pt in enumerate(end_targets.points):
         warper = ObstacleAvoidanceWarp2D(transport, obstacles, curve)
         warper.fit(Point[TwoD](end_pt))
         warped_curve = warper.warp_curve()
-        warped_curve.plot(ps.ax, color=colors[idx], linewidth=1.4, zorder=1)
+        plot.curve(warped_curve, color=colors[idx], linewidth=1.4, zorder=1)
     ps.show()
 
 
@@ -122,9 +130,10 @@ def plot_multiple_obstacles_interactive_2D() -> None:
         title="Obstacle avoidance — Multiple interactive obstacles",
         render_during_drag=True,
     )
-    curve.plot(ps.ax, "k--", zorder=3, label="Source curve")
+    plot = PlotInteractive2D(ax=ps.ax)
+    plot.curve(curve, "k--", zorder=3, label="Source curve")
     for obs in obstacles:
-        obs.plot(ps.ax, fill=False, ec="k", ls="--", zorder=2)
+        plot.obstacle(obs, fill=False, ec="k", ls="--", zorder=2)
     warp_lines = ps.make_lines(
         end_targets.n_points, colormap="plasma", linewidth=1.4, zorder=1
     )

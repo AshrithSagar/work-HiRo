@@ -12,7 +12,7 @@ from tp_gpt.core.transportation import PolicyTransportation3D
 from tp_gpt.core.typings import Point, ThreeD
 from tp_gpt.curve import Curve3D
 from tp_gpt.obstacle import SphericalObstacle
-from tp_gpt.plotting import set_axes_equal
+from tp_gpt.plotting.matplotlib import Plot3D, set_axes_equal
 from tp_gpt.transforms import AffineTransform3D, GaussianProcessTransform3D
 from tp_gpt.warp import ObstacleAvoidanceWarp3D
 
@@ -46,17 +46,22 @@ def plot_single_obstacle_3D() -> None:
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
     ax.set_zlabel("Z")
+    plot = Plot3D(ax=ax)
 
-    curve.plot(ax, color="black", label="Source curve")
-    obstacle.plot(
-        ax, mode="scatter", color="gray", linewidth=0.1, label="Obstacle keypoints"
+    plot.curve(curve, color="black", label="Source curve")
+    plot.obstacle(
+        obstacle,
+        mode="scatter",
+        color="gray",
+        linewidth=0.1,
+        label="Obstacle keypoints",
     )
 
     end_pt = Point[ThreeD](curve.end_pt + (-1.0, -1.0, -1.0))
     warper = ObstacleAvoidanceWarp3D(transport, [obstacle], curve)
     warper.fit(end_pt)
     warped = warper.warp_curve()
-    warped.plot(ax, color="crimson", label="Warped curve")
+    plot.curve(warped, color="crimson", label="Warped curve")
 
     set_axes_equal(ax)
     ax.legend()

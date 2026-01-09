@@ -7,7 +7,6 @@ src/tp_gpt/curve.py
 from typing import Generic, Self
 
 import numpy as np
-from matplotlib.axes import Axes
 from numpy.typing import ArrayLike
 
 from tp_gpt.core.typings import (
@@ -59,11 +58,6 @@ class Curve(Generic[NumPoints, DimSpace]):
     @classmethod
     def from_components(cls, *components: ArrayLike) -> Self:
         return cls(np.column_stack(components))
-
-    def plot(self, ax: Axes, *args, **kwargs) -> None:
-        """Plot the curve on the given `Axes`."""
-        assert 2 <= self.dim <= 3, "Base implementation only supports 2D / 3D plots."
-        ax.plot(*self.components, *args, **kwargs)
 
 
 class Curve2D(Curve[NumPoints, TwoD]):

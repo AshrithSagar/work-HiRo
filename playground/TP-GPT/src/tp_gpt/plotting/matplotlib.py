@@ -1,10 +1,21 @@
 """
-Plotting utils
+Ploting:matplotlib
 =======
-src/tp_gpt/plotting.py
+src/tp_gpt/ploting/matplotlib.py
 """
 
-from typing import Any, Callable, Iterable, Optional, Protocol, cast, runtime_checkable
+from typing import (
+    Any,
+    Callable,
+    Generic,
+    Iterable,
+    Literal,
+    Optional,
+    Protocol,
+    TypeVar,
+    cast,
+    runtime_checkable,
+)
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -17,7 +28,11 @@ from matplotlib.patches import Circle
 from mpl_toolkits.mplot3d import Axes3D  # type: ignore[import-untyped]
 from typed_numpy._typed.helpers import Array2
 
-from tp_gpt.obstacle import CircularObstacle
+from tp_gpt.core.typings import DimSpace, NumPoints, ThreeD, TwoD
+from tp_gpt.curve import Curve
+from tp_gpt.obstacle import CircularObstacle, SphericalObstacle
+
+AxesT = TypeVar("AxesT", bound=Axes, default=Axes)
 
 OnUpdateCallback = Callable[[], Any]
 
@@ -93,12 +108,9 @@ class InteractionManager:
         self.fig.canvas.draw_idle()
 
 
-class InteractiveCircularObstacle(CircularObstacle):
+class InteractiveCircularObstacle(CircularObstacle[NumPoints], Draggable):
+    patch: Circle
     dragging: bool = False
-
-    def plot(self, ax: Axes, **kwargs):
-        self.patch = Circle((self.center[0], self.center[1]), self.radius, **kwargs)
-        ax.add_patch(self.patch)
 
     def contains(self, event: MouseEvent):
         if event.xdata is None or event.ydata is None:
@@ -204,3 +216,53 @@ def set_axes_equal(ax: Axes3D):
     ax.set_xlim([x_middle - max_range / 2, x_middle + max_range / 2])
     ax.set_ylim([y_middle - max_range / 2, y_middle + max_range / 2])
     ax.set_zlim([z_middle - max_range / 2, z_middle + max_range / 2])
+
+
+class Plot(Generic[AxesT, DimSpace]):
+    def __init__(self, ax: AxesT) -> None:
+        self.ax: AxesT = ax
+
+    def curve(
+        self, curve: Curve[NumPoints, DimSpace], *args: Any, **kwargs: Any
+    ) -> None:
+        assert 2 <= curve.dim <= 3, "Base implementation only supports 2D / 3D plots."
+        self.ax.plot(*curve.components, *args, **kwargs)
+
+
+class Plot2D(Plot[Axes, TwoD]):
+    def obstacle(
+        self, obstacle: CircularObstacle[NumPoints], *args: Any, **kwargs: Any
+    ) -> None:
+        pts = obstacle.boundary_points
+        self.ax.plot(pts[:, 0], pts[:, 1], *args, **kwargs)
+
+
+class Plot3D(Plot[Axes3D, ThreeD]):
+    def obstacle(
+        self,
+        obstacle: SphericalObstacle[NumPoints],
+        mode: Literal["scatter", "surface", "wireframe"],
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
+        match mode:
+            case "scatter":
+                pts = obstacle.boundary_points
+                self.ax.scatter(pts[:, 0], pts[:, 1], pts[:, 2], *args, **kwargs)  # type: ignore
+            case "surface":
+                X, Y, Z = obstacle._spherical_mesh()
+                self.ax.plot_surface(X, Y, Z, *args, **kwargs)
+            case "wireframe":
+                X, Y, Z = obstacle._spherical_mesh()
+                self.ax.plot_wireframe(X, Y, Z, *args, **kwargs)
+
+
+class PlotInteractive(Plot[AxesT, DimSpace]): ...
+
+
+class PlotInteractive2D(PlotInteractive[Axes, TwoD]):
+    def obstacle(self, obstacle: InteractiveCircularObstacle[NumPoints], **kwargs: Any):
+        obstacle.patch = Circle(
+            (obstacle.center[0], obstacle.center[1]), obstacle.radius, **kwargs
+        )
+        self.ax.add_patch(obstacle.patch)

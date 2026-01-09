@@ -5,11 +5,9 @@ src/tp_gpt/obstacle.py
 """
 
 from abc import ABC, abstractmethod
-from typing import Generic, Literal
+from typing import Generic
 
 import numpy as np
-from matplotlib.axes import Axes
-from mpl_toolkits.mplot3d import Axes3D  # type: ignore[import-untyped]
 from numpy.typing import ArrayLike
 from typed_numpy._typed.helpers import Array1D, Array2D
 
@@ -42,16 +40,6 @@ class Obstacle(Generic[NumPoints, DimSpace], ABC):
     @property
     def center_tile(self) -> PointSet[NumPoints, DimSpace]:
         return PointSet[NumPoints, DimSpace](np.tile(self.center, (self.n_points, 1)))
-
-    def plot(self, ax: Axes, *args, **kwargs) -> None:
-        """Plot the obstacle on the given `Axes`."""
-        pts = self.boundary_points
-        if pts.shape[1] == 2:
-            ax.plot(pts[:, 0], pts[:, 1], *args, **kwargs)
-        elif pts.shape[1] == 3:
-            ax.plot(pts[:, 0], pts[:, 1], pts[:, 2], *args, **kwargs)
-        else:
-            raise ValueError("Unsupported obstacle dimensionality")
 
 
 class BallObstacle(Obstacle[NumPoints, DimSpace], ABC):
@@ -91,10 +79,6 @@ class CircularObstacle(BallObstacle[NumPoints, TwoD]):
 
         return PointSet[NumPoints, TwoD](np.column_stack((xs, ys)))
 
-    def plot(self, ax: Axes, *args, **kwargs) -> None:
-        pts = self.boundary_points
-        ax.plot(pts[:, 0], pts[:, 1], *args, **kwargs)
-
 
 class SphericalObstacle(BallObstacle[NumPoints, ThreeD]):
     """A 3D Spherical Obstacle"""
@@ -133,21 +117,3 @@ class SphericalObstacle(BallObstacle[NumPoints, ThreeD]):
         return PointSet[NumPoints, ThreeD](
             np.column_stack((X.ravel(), Y.ravel(), Z.ravel()))
         )
-
-    def plot(
-        self,
-        ax: Axes3D,
-        mode: Literal["scatter", "surface", "wireframe"],
-        *args,
-        **kwargs,
-    ) -> None:
-        match mode:
-            case "scatter":
-                pts = self.boundary_points
-                ax.scatter(pts[:, 0], pts[:, 1], pts[:, 2], *args, **kwargs)  # type: ignore
-            case "surface":
-                X, Y, Z = self._spherical_mesh()
-                ax.plot_surface(X, Y, Z, *args, **kwargs)
-            case "wireframe":
-                X, Y, Z = self._spherical_mesh()
-                ax.plot_wireframe(X, Y, Z, *args, **kwargs)
