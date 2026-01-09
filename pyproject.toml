@@ -1,0 +1,11 @@
+[project]
+name = "work-hiro"
+version = "0.1.0"
+description = "work-HiRo"
+readme = "README.md"
+authors = [{ name = "Ashrith Sagar", email = "ashrithy@iisc.ac.in" }]
+requires-python = ">=3.14"
+dependencies = []
+
+[dependency-groups]
+dev = ["jupyter>=1.1.1", "nbdime>=4.0.2", "nbstripout>=0.8.2"]
