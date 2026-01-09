@@ -1,7 +1,7 @@
 """
-Ploting:matplotlib
+Plotting:matplotlib
 =======
-src/tp_gpt/ploting/matplotlib.py
+src/tp_gpt/plotting/matplotlib.py
 """
 
 from typing import (

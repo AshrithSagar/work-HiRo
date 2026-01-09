@@ -1,5 +1,5 @@
 """
-Ploting:viser
+Plotting:viser
 =======
-src/tp_gpt/ploting/viser.py
+src/tp_gpt/plotting/viser.py
 """

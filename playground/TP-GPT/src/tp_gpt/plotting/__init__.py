@@ -1,5 +1,5 @@
 """
-Ploting module
+Plotting module
 =======
-src/tp_gpt/ploting/__init__.py
+src/tp_gpt/plotting/__init__.py
 """
