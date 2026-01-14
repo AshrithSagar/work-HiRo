@@ -135,11 +135,11 @@ def main() -> None:
     endpt_ctrls = list[viser.TransformControlsHandle]()
 
     # GUI
+    status = server.gui.add_text("Status", initial_value="Ready", disabled=True)
     with server.gui.add_folder("Scene"):
         add_obstacle_btn = server.gui.add_button("Add obstacle")
         add_endpt_btn = server.gui.add_button("Add endpoint")
         compute_btn = server.gui.add_button("Compute space warp")
-    status = server.gui.add_text("Status", initial_value="Ready", disabled=True)
 
     # Helpers
     def sync_obstacles() -> None:

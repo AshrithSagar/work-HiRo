@@ -45,17 +45,17 @@ def main() -> None:
         "/source_curve", points=curve.points, line_width=5.0
     )
 
-    obstacles: list[SphericalObstacle] = []
-    obstacle_ctrls: list[viser.TransformControlsHandle] = []
-    endpt_ctrls: list[viser.TransformControlsHandle] = []
-    warped_curves: list[Curve3D] = []
+    obstacles = list[SphericalObstacle]()
+    obstacle_ctrls = list[viser.TransformControlsHandle]()
+    endpt_ctrls = list[viser.TransformControlsHandle]()
+    warped_curves = list[Curve3D]()
 
     ## GUI
+    status = server.gui.add_text("Status", initial_value="Ready", disabled=True)
     with server.gui.add_folder("Scene"):
         add_obstacle_btn = server.gui.add_button("Add obstacle")
         add_endpt_btn = server.gui.add_button("Add endpoint")
         compute_btn = server.gui.add_button("Compute warps")
-    status = server.gui.add_text("Status", initial_value="Ready", disabled=True)
 
     def sync_obstacles_from_scene() -> None:
         for obs, ctrl in zip(obstacles, obstacle_ctrls):
