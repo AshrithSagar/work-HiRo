@@ -1,0 +1,12 @@
+[project]
+name = "emp"
+version = "0.1.0"
+description = "Elastic Motion Policy"
+readme = "README.md"
+authors = [{ name = "Ashrith Sagar", email = "ashrithy@iisc.ac.in" }]
+requires-python = ">=3.14"
+dependencies = []
+
+[build-system]
+requires = ["uv_build>=0.9.26,<0.10.0"]
+build-backend = "uv_build"
