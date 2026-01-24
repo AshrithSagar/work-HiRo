@@ -8,6 +8,7 @@ requires-python = ">=3.14"
 dependencies = [
     "matplotlib>=3.10.8",
     "numpy>=2.4.1",
+    "optype[numpy]>=0.15.0",
     "rich>=14.2.0",
     "scikit-learn>=1.8.0",
     "scipy>=1.17.0",
@@ -15,7 +16,11 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["microsoft-python-type-stubs", "scipy-stubs>=1.17.0.1"]
+dev = [
+    "microsoft-python-type-stubs",
+    "numtype>=2.4.0.0a1",
+    "scipy-stubs>=1.17.0.1",
+]
 lint = ["ruff>=0.14.11"]
 typecheck = ["basedpyright>=1.37.1", "mypy>=1.19.1", "pyright>=1.1.408"]
 

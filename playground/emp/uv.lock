@@ -63,6 +63,7 @@ source = { editable = "." }
 dependencies = [
     { name = "matplotlib" },
     { name = "numpy" },
+    { name = "optype", extra = ["numpy"] },
     { name = "rich" },
     { name = "scikit-learn" },
     { name = "scipy" },
@@ -72,6 +73,7 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "microsoft-python-type-stubs" },
+    { name = "numtype" },
     { name = "scipy-stubs" },
 ]
 lint = [
@@ -87,6 +89,7 @@ typecheck = [
 requires-dist = [
     { name = "matplotlib", specifier = ">=3.10.8" },
     { name = "numpy", specifier = ">=2.4.1" },
+    { name = "optype", extras = ["numpy"], specifier = ">=0.15.0" },
     { name = "rich", specifier = ">=14.2.0" },
     { name = "scikit-learn", specifier = ">=1.8.0" },
     { name = "scipy", specifier = ">=1.17.0" },
@@ -96,6 +99,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "microsoft-python-type-stubs", git = "https://github.com/microsoft/python-type-stubs.git" },
+    { name = "numtype", specifier = ">=2.4.0.0a1" },
     { name = "scipy-stubs", specifier = ">=1.17.0.1" },
 ]
 lint = [{ name = "ruff", specifier = ">=0.14.11" }]
@@ -356,6 +360,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/42/5f/29fd5f29b0a5d96e2def96ecba3112fc330ecd16e8c97c2b332563c5e201/numpy_typing_compat-20251206.2.4.tar.gz", hash = "sha256:59882d23aaff054a2536da80564012cdce33487657be4d79c5925bb8705fcabc", size = 5011, upload-time = "2025-12-06T20:02:04.942Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/63/7c/5c2892e6bc0628a2ccf4e938e1e2db22794657ccb374672d66e20d73839e/numpy_typing_compat-20251206.2.4-py3-none-any.whl", hash = "sha256:a82e723bd20efaa4cf2886709d4264c144f1f2b609bda83d1545113b7e47a5b5", size = 6300, upload-time = "2025-12-06T20:01:57.578Z" },
+]
+
+[[package]]
+name = "numtype"
+version = "2.4.0.0a1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/da/f3/fa66963851ebb26aa0f220193f69fdcdfdb4116412ffc77407e473230d32/numtype-2.4.0.0a1.tar.gz", hash = "sha256:37dfa35f2303513219e4394d846818af8ada61aa6982487abcb8a90b98c88633", size = 204658, upload-time = "2025-12-31T16:51:50.693Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/55/b8/90d270a8b9ca4940de0e6e6608cc3b5cfca3dc397fdfe905e990de85a9e8/numtype-2.4.0.0a1-py3-none-any.whl", hash = "sha256:4db169883b5fef720de919b5a548b5d8cde8a45399957be41d4a78ef1f2a2ee9", size = 264541, upload-time = "2025-12-31T16:51:49.361Z" },
 ]
 
 [[package]]
