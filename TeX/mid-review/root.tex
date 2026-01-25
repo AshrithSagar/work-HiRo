@@ -7,6 +7,7 @@
 \usepackage{subfig, url}
 \usepackage{amsfonts, amsmath, amssymb, bm, cancel, interval, latexsym, mathptmx, mathtools, mathptmx}
 \usepackage[colorlinks=true]{hyperref}
+\usepackage[ruled,linesnumbered]{algorithm2e}
 
 \title{
     \LARGE \bf
@@ -114,7 +115,37 @@ It focuses on practical implementation in contact-rich tasks, providing guidance
 
 These techniques are comprehensively surveyed in~\cite{celemin2022interactive}, highlighting their role in bridging demonstration and reinforcement learning for adaptive robotics.
 
+\section{BACKGROUND}
+
+\subsection{Kabsch Algorithm}
+
+The Kabsch algorithm is a method for finding the optimal rotation matrix that aligns two sets of points in Euclidean space, minimizing the root mean square deviation (RMSD).
+It is widely used in structural biology for superimposing molecular structures and in robotics for aligning point clouds or keypoints.
+
+Given two sets of points \(\mathbf{P}\) and \(\mathbf{Q}\) (each with \(n\) points in \(d\)-dimensions), the algorithm proceeds as follows:
+\begin{itemize}
+    \item Compute the centroids \(\mathbf{c}_P = \frac{1}{n} \sum \mathbf{p}_i\) and \(\mathbf{c}_Q = \frac{1}{n} \sum \mathbf{q}_i\).
+    \item Center the points: \(\mathbf{P}' = \mathbf{P} - \mathbf{c}_P\), \(\mathbf{Q}' = \mathbf{Q} - \mathbf{c}_Q\).
+    \item Compute the covariance matrix \(\mathbf{H} = \mathbf{P}'^T \mathbf{Q}'\).
+    \item Perform singular value decomposition: \(\mathbf{H} = \mathbf{U} \boldsymbol{\Sigma} \mathbf{V}^T\).
+    \item The optimal rotation \(\mathbf{R} = \mathbf{V} \mathbf{D} \mathbf{U}^T\), where \(\mathbf{D}\) is a diagonal matrix with 1's and possibly a (-1) to ensure positive determinant (for proper rotation).
+    \item The translation is \(\mathbf{t} = \mathbf{c}_Q - \mathbf{R} \mathbf{c}_P\).
+\end{itemize}
+
+In GPT-O, the Kabsch algorithm is used in the affine transform to align source and target keypoints, providing the linear component of the transportation map.
+
+\subsection{Gaussian Processes}
+
+Gaussian Processes (GPs) are a non-parametric probabilistic model for regression and function approximation.
+A GP defines a distribution over functions \(f(\mathbf{x}) \sim \mathcal{GP}(m(\mathbf{x}), k(\mathbf{x}, \mathbf{x}'))\), where \(m\) is the mean function (often zero) and \(k\) is the kernel function specifying covariance.
+GPs can model complex nonlinear functions without fixed basis.
+The posterior provides not just predictions but also variance, quantifying confidence.
+For a test point \(\mathbf{x}_*\), the predictive distribution is Gaussian with mean \(\bar{f}_* = \mathbf{k}_*^T {(\mathbf{K} + \sigma^2 \mathbf{I})}^{-1} \mathbf{y}\) and variance \(\text{var}(f_*) = k(\mathbf{x}_*, \mathbf{x}_*) - \mathbf{k}_*^T {(\mathbf{K} + \sigma^2 \mathbf{I})}^{-1} \mathbf{k}_*\), where \(\mathbf{K}\) is the kernel matrix on training points.
+
+In GPT-O, GPs model the nonlinear residual in the transportation map, fitting residuals after affine alignment. The uncertainty helps in handling noisy keypoints, and the Jacobian of the GP (via derivatives) enables velocity transport while preserving stability.
+
 \section{METHODOLOGY}
+
 The GPT-O framework builds upon the policy transportation approach described in~\cite{lee2024generalizable}, extending it to incorporate obstacle avoidance through space warping.
 In the original paper, tasks are parameterized using ordered sets of keypoints in source and target configurations.
 The transportation map \(\phi: \mathbb{R}^d \to \mathbb{R}^d\) is a diffeomorphism that maps source keypoints \(\mathcal{S}\) to target keypoints \(\mathcal{T}\).
@@ -132,8 +163,34 @@ Keypoints are constructed as:
 The transportation map is fitted on these keypoints, and the source curve (demonstration trajectory) is warped by applying \(\phi\) to positions and \(J_\phi\) to velocities.
 
 \subsection{Dynamical Systems Integration}
+
 The warped trajectories serve as generalized motions in dynamical systems \(\dot{x} = f(x)\), fitted using methods like DMPs or GPs. Stability is preserved if \(\det(J_\phi) > 0\), ensuring the attractor dynamics remain intact in the target space.
 Compared to the original paper, GPT-O adds obstacle keypoints to the parameterization, enabling collision-free generalization without modifying the base policy learning.
+
+\begin{algorithm}
+    \caption{GPT-O warping}
+    \SetAlgoLined{}
+
+    \KwIn{Source curve points $\mathbf{P}$, velocities $\mathbf{V}$, source keypoints $\mathcal{S}$, target keypoints $\mathcal{T}$ (including obstacle boundary points), affine options (scale, rotate)}
+
+    \KwOut{Warped curve $\hat{\mathbf{P}}$, warped velocities $\hat{\mathbf{V}}$}
+
+    Fit affine transform $\gamma$ on $\mathcal{S}$ and $\mathcal{T}$ using Kabsch algorithm\;
+
+    Compute residuals: $\mathbf{R} \gets \mathcal{T} - \gamma(\mathcal{S})$\;
+
+    Fit Gaussian Process $\psi$ on transformed points $\gamma(\mathcal{S})$ with targets $\mathbf{R}$\;
+
+    Define transportation map: $\phi(\mathbf{x}) \gets \gamma(\mathbf{x}) + \psi(\gamma(\mathbf{x}))$\;
+
+    $\hat{\mathbf{P}} \gets \phi(\mathbf{P})$\tcp*{Warp positions}
+
+    Compute Jacobian matrix $J_\phi$ of $\phi$ at points $\mathbf{P}$\;
+
+    $\hat{\mathbf{V}} \gets J_\phi \mathbf{V}$\tcp*{Transport velocities}
+
+    \Return{$\hat{\mathbf{P}}, \hat{\mathbf{V}}$}
+\end{algorithm}
 
 \section{PRELIMINARY RESULTS \& DISCUSSIONS}
 
