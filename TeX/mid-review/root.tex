@@ -92,35 +92,99 @@ These techniques are comprehensively surveyed in~\cite{celemin2022interactive}, 
 \section{METHODOLOGY}
 
 The proposed methodology follows from the TPGP framework for learning multi-reference frame skills from demonstrations.
-The core idea is to encode relative dynamics in local reference frames and use a self-supervised approach to determine frame relevance during execution.
+The core idea is to transform demonstration data to local reference frames to encode relative dynamics, and then use a self-supervised approach to train a frame relevance predictor that selects the most relevant frame during execution. A diagram showing the main steps is illustrated in Fig. 2 of the original paper.
 
 \subsection{Demonstration Recording}
+During the recording of a demonstration, the 2D/3D position of the agent (e.g., robot end-effector) is recorded. Each recorded position is augmented with a progress value $\varphi \in [0, 1]$, calculated as the index of that datapoint divided by the total number of datapoints for that demonstration.
 
-Demonstrations are recorded as sequences of 2D/3D positions of the agent (e.g., robot end-effector), augmented with a progress value $\varphi \in [0, 1]$.
-The state $x = [\xi, \varphi]$, where $\xi$ is the Cartesian position.
-A demonstration $d_n = \{x_{n,0}, \dots, x_{n,l}\}$, and the set of demonstrations is $D^{(0)}$ in the global frame.
-Positions and orientations of $M$ relevant frames are recorded before each demonstration, allowing transformation to local frames $D^{(1)}, \dots, D^{(M)}$ using homogeneous transformations.
+The state $x$ is composed of the Cartesian position $\xi$ (2D or 3D) and the progress value $\varphi$, i.e., $x := [\xi, \varphi]$. A demonstration $d_n = \{x_{n,0}, \dots, x_{n,l}\}$, where $n$ denotes the $n$-th demonstration. The set of all training demonstrations is $D^{(0)} = \{d_0, \dots, d_N\}$, in the global (0th) frame.
+
+Before each demonstration, positions and orientations of relevant frames (relative to the global frame) are recorded. For frame $m$, a translation vector $^m t$ and rotation matrix $^m R$ are constructed, transforming any datapoint $x_{n,i}$ from frame 0 to frame $m$ using:
+
+\[
+    ^m H =
+    \begin{bmatrix} ^m R & 0 \\ 0 & 1
+    \end{bmatrix},
+\]
+
+\[
+    ^m x_{n,i} =
+    \begin{bmatrix} ^m t \\ 0
+    \end{bmatrix} + ^m H \, x_{n,i}.
+\]
+
+The progress variable $\varphi$ is not transformed. This yields $M$ transformed demonstration sets $D^{(1)}, \dots, D^{(M)}$. The policy takes current positions relative to each frame and $\varphi$, outputting $\Delta x$.
 
 \subsection{Alignment of Demonstrations}
+To use the progress value effectively, demonstrations are aligned using a modified Dynamic Time Warping (DTW). The assumption is that in each local frame, the closest point in space occurs at the same normalized time.
 
-Demonstrations are aligned using a modified Dynamic Time Warping (DTW) approach.
-For each frame $m$, keypoints are identified as the median progress values of closest points across demonstrations.
-Demonstrations are resampled to align these keypoints, yielding aligned sets $D^{(0*)}, \dots, D^{(M*)}$.
+For each $i$-th demonstration in set $D^{(m)}$, the index $h$ of the closest point $^m x_{i,h}$ to elements of other demonstrations $^m x_{j,:}$ is found:
+
+\[
+    ^m A_{ij} = \arg\min_h \| ^m x_{i,h} - ^m x_{j,:} \|,
+\]
+
+\[
+    ^m B_{ij} = \varphi_{i, A_{ij}}.
+\]
+
+The keypoint progress for demonstration $i$ in frame $m$ is:
+
+\[
+    P_{im} = \operatorname{median}{(^m B_{i,:})}.
+\]
+
+Demonstrations are resampled to align keypoints, yielding aligned sets $D^{(0*)}, \dots, D^{(M*)}$. Fig. 3 illustrates keypoints and alignment for example demonstrations.
 
 \subsection{Training the Local Policies}
+Local policies are encoded as dynamical systems:
 
-Local policies are modeled as dynamical systems $\Delta x = f(x)$, where $f(x) \sim \mathcal{GP}(0, k(x, x'))$ with a Mat\'{e}rn kernel.
-Variational Gaussian Processes approximate the posterior for scalability.
-Predictions include mean $\mu$ and variance $\sigma^2$.
-A variance minimization term $\Delta\xi^{\text{risk}} = -2 \sigma_i(x) \frac{\nabla_i \sigma^2(x)}{\|\nabla \sigma^2(x)\|}$ is added to stabilize dynamics and reject disturbances.
+\[
+    \Delta x = f(x),
+\]
+
+where $x = [\xi, \varphi]$. Using only position could avoid time misalignment but introduces ambiguity in overlapping trajectories and prevents teaching stopping behaviors. Thus, progress $\varphi$ is included.
+
+The function is modeled as $f(x) \sim \mathcal{GP}(0, k(x, x'))$ with a Matérn kernel and zero mean prior. For large datasets, a variational approximation $q(u) = \mathcal{N}(u | m, S)$ with inducing variables at $Z$ is used, optimized via ELBO.
+
+The predictive distribution at test point $X_*$ is:
+
+\[
+    p(f_*) = \mathcal{N}(A m, K(X_*, X_*) + A (S - K(Z, Z)) A^T),
+\]
+
+where $A = K(X_*, Z) K(Z, Z)^{-1}$. For multi-output, $p(\Delta x_i) = \mathcal{N}(\mu_i, \sigma_i^2)$, with total variance $\sigma^2(x) = \sum_i \sigma_i^2(x)$.
+
+A risk-minimizing term is added:
+
+\[
+    \Delta \xi^{\text{risk}} = -\beta \sigma_i(x) \frac{\nabla_i \sigma^2(x)}{\| \nabla \sigma^2(x) \|},
+\]
+
+with $\beta = 2$ for calibration to the prior std, attracting to low-uncertainty regions. This stabilizes dynamics and rejects disturbances, as shown in Fig. 4 for the LASA dataset.
 
 \subsection{Self-Supervised Training of the Frame Relevance GP}
+Frame relevance $\alpha \sim \mathcal{GP}(0, k(\varphi, \varphi'))$ is regressed on progress $\varphi$. It is trained self-supervised on held-out demonstrations not used for local GPs.
 
-Frame relevance $\alpha_m \sim \mathcal{GP}(0, k(\varphi, \varphi'))$ is learned self-supervised on held-out demonstrations.
-Local predictions are transformed to the global frame and weighted by $\alpha_m$.
-The softmax likelihood maximizes the probability of observed transitions, preferring confident local policies.
+Local predictions are transformed to global frame using inverse $^m H^{-1}$ and weighted by $\alpha_m$. The combined prediction is Gaussian:
 
-The policy outputs $\Delta x$ by weighting local predictions with learned relevances, enabling adaptation to new frame configurations.
+\[
+    \theta \mu_i = \sum_{m=1}^M \, ^m \alpha_i \, ^m H^{-1} \, ^m \mu_i (^m x_i),
+\]
+
+\[
+    \theta \Sigma_i = \sum_{m=1}^M \, ^m \alpha_i \, ^m H^{-1} \, ^m \Sigma_i (^m x_i) \, ^m H^{-T}.
+\]
+
+A softmax likelihood ensures weights sum to 1. The likelihood of observed $\Delta x$ is maximized:
+
+\[
+    p(\Delta x | f) = \prod_i p(\Delta x_i | f_i),
+\]
+
+optimizing to match means while minimizing uncertainty, selecting confident local policies.
+
+The final policy superimposes stabilized local dynamics weighted by relevances for new configurations.
 
 \section{RESULTS \& DISCUSSIONS}
 
