@@ -4,7 +4,7 @@
 \IEEEoverridecommandlockouts{}
 \overrideIEEEmargins{}
 
-\usepackage{graphics, epsfig, url}
+\usepackage{subfig, url}
 \usepackage{amsfonts, amsmath, amssymb, bm, cancel, interval, latexsym, mathptmx, mathtools, mathptmx}
 \usepackage[colorlinks=true]{hyperref}
 
@@ -151,7 +151,39 @@ Simulations demonstrate GPT-O's effectiveness in generalizing motions while avoi
     \item \textbf{3D Interactive Space Warp Demo}: Using Viser, grid lines are warped in real-time with movable obstacles and endpoints, demonstrating space deformation for intuitive understanding.
 \end{itemize}
 
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{figs/1.jpeg}
+    \caption{
+        Single obstacle 2D demo
+    }\label{fig:2d-demo-single}
+\end{figure}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{figs/2.jpeg}
+    \caption{
+        Multiple obstacles 2D demo
+    }\label{fig:2d-demo-multiple}
+\end{figure}
+
 These results confirm GPT-O's ability to generalize DS motions in obstructed environments, outperforming baseline transportation without obstacles (e.g., direct affine/GP fits, which collide). Future metrics include Fréchet distance and collision rates.
+
+\begin{figure}[tbp]
+    \centering
+    \includegraphics[width=\linewidth]{figs/3.jpeg}
+    \caption{
+        Single obstacle 3D demo
+    }\label{fig:3d-demo-matplotlib}
+\end{figure}
+
+\begin{figure}[tbp]
+    \centering
+    \includegraphics[width=\linewidth]{figs/5.jpeg}
+    \caption{
+        Single obstacle in 3D space with corresponding warping shown
+    }\label{fig:3d-demo-viser}
+\end{figure}
 
 \section{CONCLUSIONS}
 
