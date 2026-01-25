@@ -250,19 +250,19 @@ In GPT-O, Jacobians are evaluated point-wise for curve points, preserving local 
 
 \section{PRELIMINARY RESULTS \& DISCUSSIONS}
 
-Simulations demonstrate GPT-O's effectiveness in generalising motions while avoiding obstacles:
+Simulations demonstrate GPT-O's effectiveness in generalizing motions while avoiding obstacles:
 
 \begin{itemize}
-    \item \textbf{2D Single Obstacle Demo}: A cubic source curve (200 points) is transported to 100 varying endpoints around a circular obstacle (center at (2.0, 0.6), radius 0.15). Warped trajectories, visualised with plasma colormap, avoid collisions and converge smoothly. Interactive mode (Matplotlib) enables real-time obstacle dragging, updating warps instantly for dynamic testing.
+    \item \textbf{2D Single Obstacle Demo (Fig.~\ref{fig:2d-demo-single})}: A cubic source curve (200 points) is transported to 100 varying endpoints around a circular obstacle (center at (2.0, 0.6), radius 0.15). Warped trajectories, visualized with plasma colormap indicating different target endpoints, successfully avoid collisions and converge smoothly to their respective goals. An interactive mode using Matplotlib enables real-time obstacle dragging, with warps updating instantly to demonstrate dynamic adaptation capabilities.
 
-    \item \textbf{2D Multiple Obstacles Demo}: Extended to three obstacles (centers at (1.5, 0.4), (2.0, 0.6), (2.8, 0.3); radius 0.15 each). Warped curves adapt to cluttered spaces, maintaining stability.
+    \item \textbf{2D Multiple Obstacles Demo (Fig.~\ref{fig:2d-demo-multiple})}: Extended to three circular obstacles (centers at (1.5, 0.4), (2.0, 0.6), (2.8, 0.3); radius 0.15 each). Warped curves successfully navigate the cluttered environment, adapting to multiple constraint regions while maintaining trajectory smoothness and goal convergence.
 
-    \item \textbf{3D Single Obstacle Demo}: A helical source curve (200 points) is warped around a spherical obstacle (center at (2.0, 0.6, 0.0), radius 0.1) to a new endpoint. Visualisations (Matplotlib) show deformed space via grid lines, with color-coded displacements highlighting warp effects.
+    \item \textbf{3D Single Obstacle Demo (Fig.~\ref{fig:3d-demo-matplotlib})}: A helical source curve (200 points with sinusoidal z-component) is warped around a spherical obstacle (center at (2.0, 0.6, 0.0), radius 0.1) to reach a new endpoint displaced from the original. The visualization confirms successful 3D obstacle avoidance with smooth trajectory deformation.
 
-    \item \textbf{3D Interactive Space Warp Demo}: Using Viser, grid lines are warped in real-time with movable obstacles and endpoints, demonstrating space deformation for intuitive understanding.
+    \item \textbf{3D Interactive Space Warp Demo (Fig.~\ref{fig:3d-demo-viser})}: Using the Viser framework, a 3D grid visualization demonstrates the space deformation induced by the transportation map. Grid lines are warped in real-time with movable obstacles and endpoints, with colors indicating displacement magnitude. This provides intuitive insight into how the transportation map modifies the ambient space to route trajectories around obstacles.
 \end{itemize}
 
-These results confirm GPT-O's ability to generalise DS motions in obstructed environments, outperforming baseline transportation without obstacles (e.g., direct affine/GP fits, which collide).
+These preliminary results confirm GPT-O's ability to generalize DS motions in obstructed environments. Compared to baseline transportation without obstacle consideration (i.e., direct affine and GP fits using only start and end keypoints), GPT-O successfully avoids collisions that would occur with naive generalization, demonstrating the effectiveness of the obstacle boundary keypoint approach.
 
 \section{LIMITATIONS \& FUTURE WORK}
 
