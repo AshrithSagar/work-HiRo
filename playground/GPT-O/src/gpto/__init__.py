@@ -1,5 +1,5 @@
 """
-TP-GPT
+GPT-O
 =======
 src/gpto/__init__.py
 """
