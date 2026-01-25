@@ -4,8 +4,9 @@
 \IEEEoverridecommandlockouts{}
 \overrideIEEEmargins{}
 
-\usepackage{graphics, epsfig}
+\usepackage{graphics, epsfig, url}
 \usepackage{amsmath, amssymb, mathptmx}
+\usepackage[colorlinks=true]{hyperref}
 
 \title{
     \LARGE \bf
@@ -37,6 +38,17 @@ However, a major challenge is generalizing these learned policies to novel situa
 
 \section{RELATED WORK}
 
+Movement primitives (MPs) provide compact, reusable representations of robotic motions, enabling efficient imitation learning, generalization, and adaptation.
+Dynamic Movement Primitives (DMPs), introduced by Ijspeert et al.~\cite{Ijspeert2013}, model both discrete and rhythmic behaviors as autonomous dynamical systems.
+A DMP consists of a canonical linear system generating a phase variable and a transformation system (second-order spring-damper) driven by a learned nonlinear forcing term approximated via locally weighted regression on basis functions.
+Demonstrations are encoded into weights, allowing straightforward modulation of amplitude, goal, duration, and coupling with external forces or other primitives—making DMPs a cornerstone for trajectory generation in imitation learning.
+
+Probabilistic Movement Primitives (ProMPs) by Paraschos et al.~\cite{10.5555/2999792.2999904} extend DMPs into a fully probabilistic framework.
+Trajectories are represented as a linear combination of radial basis functions whose weights follow a multivariate Gaussian distribution learned from multiple demonstrations.
+This captures movement variability, supports stochastic execution, and enables conditioning on via-points or final states through closed-form Bayesian updates.
+Kernelized Movement Primitives (KMPs), proposed by Huang et al.~\cite{Huang2019}, replace fixed basis functions with kernel ridge regression, yielding a non-parametric representation.
+KMPs naturally handle multiple via-point constraints, obstacle avoidance, and fusion of primitives without explicit phase alignment, offering superior flexibility for complex task adaptation in interactive imitation scenarios.
+
 \section{METHODOLOGY}
 
 \section{RESULTS \& DISCUSSIONS}
@@ -48,5 +60,8 @@ However, a major challenge is generalizing these learned policies to novel situa
 \section*{APPENDIX}
 
 \section*{ACKNOWLEDGMENT}
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
 
 \end{document}
