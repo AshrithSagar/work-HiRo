@@ -31,8 +31,8 @@
     Robot learning from demonstrations (LfD) is a promising approach for teaching complex skills to robots without explicit programming.
     However, generalising these skills to novel situations remains a challenge.
     This report outlines progress in developing motion generalisation techniques for dynamical systems in robotics, with a primary focus on the GPT-O (Gaussian Process Transportation with Obstacles) framework.
-    GPT-O extends policy transportation methods to incorporate obstacle avoidance through space warping, enabling robust adaptation of learned motions to new environments.
-    By leveraging keypoints from demonstrations and obstacles, combined with affine and Gaussian process transforms, GPT-O ensures stable, collision-free trajectory generalisation.
+    GPT-O extends the policy transportation methods of Lee et al.~\cite{lee2024generalizable} to incorporate obstacle avoidance through space warping, enabling robust adaptation of learned motions to new environments.
+    By leveraging keypoints from demonstrations and treating obstacle boundaries as additional keypoints, combined with affine and Gaussian process transforms, GPT-O facilitates collision-aware trajectory generalisation.
     Preliminary demonstrations in 2D and 3D validate its efficacy for tasks like reaching and navigation in cluttered spaces.
 \end{abstract}
 
