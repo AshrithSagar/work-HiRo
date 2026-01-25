@@ -39,7 +39,9 @@ However, a major challenge is generalizing these learned policies to novel situa
 
 To address generalization, task-parameterized models have been developed to adapt skills based on external parameters, such as reference frames representing objects or goals.
 For instance, Task-Parameterized Gaussian Mixture Models (TP-GMM) encode demonstrations in multiple frames and combine them probabilistically for new configurations.
-Building on this, Task-Parameterized Gaussian Processes (TPGP) leverage Gaussian Processes (GPs) for modeling local policies relative to each frame, with self-supervised learning of frame relevance using uncertainty quantification to improve stability and performance in multi-frame tasks, as demonstrated in simulation and robotic re-shelving experiments.
+Building on this, Task-Parameterized Gaussian Processes (TPGP)~\cite{ramirez2024learning} leverage Gaussian Processes (GPs) for modeling local policies relative to each frame, with self-supervised learning of frame relevance using uncertainty quantification to improve stability and performance in multi-frame tasks, as demonstrated in simulation and robotic re-shelving experiments.
+
+Recent advancements further enhance adaptability; for example, generalizable motion policies through keypoint parameterization~\cite{lee2024generalizable} enable robust skill transfer across varying environments by parameterizing motions with keypoints and transportation maps. Similarly, Elastic Motion Policies (EMP)~\cite{li2025elastic} provide a dynamical system for one-shot imitation learning, allowing real-time adaptation via Laplacian editing and Lyapunov functions, ensuring convergence in dynamic settings.
 
 Interactive imitation learning algorithms, such as DAgger (Dataset Aggregation), iteratively collect expert corrections to mitigate distribution shift in behavioral cloning.
 Variants like HG-DAgger (Human-Gated DAgger) incorporate human oversight to decide when interventions are needed, reducing expert burden in real-world settings.
@@ -72,6 +74,8 @@ Local GP policies model dynamics relative to each frame, incorporating progress 
 Frame relevance is learned self-supervised via another GP, optimizing likelihood on held-out demonstrations.
 Evaluated on multi-frame tasks, TPGP outperforms TP-GMM in goal proximity and Fréchet distance metrics, demonstrating robust generalization in simulation and real-world robotic re-shelving.
 
+Recent works like Lee et al.~\cite{lee2024generalizable} propose keypoint-parameterized motion policies with transportation maps for generalizable skill learning, enabling adaptation to new scenes without retraining. Elastic Motion Policies~\cite{li2025elastic} introduce a dynamical system for one-shot imitation, adapting via Laplacian editing and online Lyapunov learning for robust performance in dynamic environments.
+
 \subsection{Interactive Imitation Learning}
 
 Interactive imitation learning enhances standard LfD by allowing online expert feedback to correct learner errors.
@@ -86,6 +90,37 @@ It focuses on practical implementation in contact-rich tasks, providing guidance
 These techniques are comprehensively surveyed in~\cite{celemin2022interactive}, highlighting their role in bridging demonstration and reinforcement learning for adaptive robotics.
 
 \section{METHODOLOGY}
+
+The proposed methodology follows from the TPGP framework for learning multi-reference frame skills from demonstrations.
+The core idea is to encode relative dynamics in local reference frames and use a self-supervised approach to determine frame relevance during execution.
+
+\subsection{Demonstration Recording}
+
+Demonstrations are recorded as sequences of 2D/3D positions of the agent (e.g., robot end-effector), augmented with a progress value $\varphi \in [0, 1]$.
+The state $x = [\xi, \varphi]$, where $\xi$ is the Cartesian position.
+A demonstration $d_n = \{x_{n,0}, \dots, x_{n,l}\}$, and the set of demonstrations is $D^{(0)}$ in the global frame.
+Positions and orientations of $M$ relevant frames are recorded before each demonstration, allowing transformation to local frames $D^{(1)}, \dots, D^{(M)}$ using homogeneous transformations.
+
+\subsection{Alignment of Demonstrations}
+
+Demonstrations are aligned using a modified Dynamic Time Warping (DTW) approach.
+For each frame $m$, keypoints are identified as the median progress values of closest points across demonstrations.
+Demonstrations are resampled to align these keypoints, yielding aligned sets $D^{(0*)}, \dots, D^{(M*)}$.
+
+\subsection{Training the Local Policies}
+
+Local policies are modeled as dynamical systems $\Delta x = f(x)$, where $f(x) \sim \mathcal{GP}(0, k(x, x'))$ with a Mat\'{e}rn kernel.
+Variational Gaussian Processes approximate the posterior for scalability.
+Predictions include mean $\mu$ and variance $\sigma^2$.
+A variance minimization term $\Delta\xi^{\text{risk}} = -2 \sigma_i(x) \frac{\nabla_i \sigma^2(x)}{\|\nabla \sigma^2(x)\|}$ is added to stabilize dynamics and reject disturbances.
+
+\subsection{Self-Supervised Training of the Frame Relevance GP}
+
+Frame relevance $\alpha_m \sim \mathcal{GP}(0, k(\varphi, \varphi'))$ is learned self-supervised on held-out demonstrations.
+Local predictions are transformed to the global frame and weighted by $\alpha_m$.
+The softmax likelihood maximizes the probability of observed transitions, preferring confident local policies.
+
+The policy outputs $\Delta x$ by weighting local predictions with learned relevances, enabling adaptation to new frame configurations.
 
 \section{RESULTS \& DISCUSSIONS}
 
@@ -122,6 +157,12 @@ These techniques are comprehensively surveyed in~\cite{celemin2022interactive}, 
 
     \bibitem{celemin2022interactive}
     C. Celemin, et al., ``Interactive Imitation Learning in Robotics: A Survey'' \emph{Foundations and Trends in Robotics}, vol. 10, no. 1--2, pp. 1--197, 2022.
+
+    \bibitem{lee2024generalizable}
+    S. Lee, et al., ``Generalizable Motion Policies through Keypoint Parameterization and Transportation Maps'' arXiv preprint arXiv:2404.13458, 2024.
+
+    \bibitem{li2025elastic}
+    T. Li, S. Sun, S. S. Aditya, and N. Figueroa, ``Elastic Motion Policy: An Adaptive Dynamical System for Robust and Efficient One-Shot Imitation Learning'' arXiv preprint arXiv:2503.08029, 2025.
 
 \end{thebibliography}
 
