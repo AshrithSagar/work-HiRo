@@ -156,6 +156,22 @@ For example, in residual fitting, the GP posterior mean provides the correction 
 
 \section{METHODOLOGY}
 
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{figs/1.jpeg}
+    \caption{
+        Single obstacle 2D demo
+    }\label{fig:2d-demo-single}
+\end{figure}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{figs/2.jpeg}
+    \caption{
+        Multiple obstacles 2D demo
+    }\label{fig:2d-demo-multiple}
+\end{figure}
+
 The GPT-O framework builds upon the policy transportation approach described in~\cite{lee2024generalizable}, extending it to incorporate obstacle avoidance through space warping.
 In the original paper, tasks are parameterized using ordered sets of keypoints in source and target configurations.
 The transportation map \(\phi: \mathbb{R}^d \to \mathbb{R}^d\) is a diffeomorphism that maps source keypoints \(\mathcal{S}\) to target keypoints \(\mathcal{T}\).
@@ -176,6 +192,36 @@ The transportation map is fitted on these keypoints, and the source curve (demon
 
 The warped trajectories serve as generalized motions in dynamical systems \(\dot{x} = f(x)\), fitted using methods like DMPs or GPs. Stability is preserved if \(\det(J_\phi) > 0\), ensuring the attractor dynamics remain intact in the target space.
 Compared to the original paper, GPT-O adds obstacle keypoints to the parameterization, enabling collision-free generalization without modifying the base policy learning.
+
+\begin{figure}[tbp]
+    \centering
+    \includegraphics[width=\linewidth]{figs/3.jpeg}
+    \caption{
+        Single obstacle 3D demo
+    }\label{fig:3d-demo-matplotlib}
+\end{figure}
+
+\begin{figure}[tbp]
+    \centering
+    \includegraphics[width=\linewidth]{figs/5.jpeg}
+    \caption{
+        Single obstacle in 3D space with corresponding warping shown
+    }\label{fig:3d-demo-viser}
+\end{figure}
+
+\subsection{Jacobian Computation}
+
+The Jacobian \(J_\phi\) of the transportation map \(\phi\) is essential for transporting velocities and ensuring the stability of the dynamical system.
+It is computed as the derivative \(J_\phi(\mathbf{x}) = \frac{\partial \phi}{\partial \mathbf{x}}\).
+Since \(\phi(\mathbf{x}) = \gamma(\mathbf{x}) + \psi(\gamma(\mathbf{x}))\), the chain rule yields \(J_\phi = J_\gamma + J_\psi \cdot J_\gamma\), where \(J_\gamma\) is the constant affine matrix (including rotation and optional scale), and \(J_\psi\) is the Jacobian of the GP at the transformed points \(\gamma(\mathbf{x})\).
+
+For the GP \(\psi\), assuming a differentiable kernel like RBF \(k(\mathbf{x}, \mathbf{x}') = \sigma^2 \exp\left(-\frac{\|\mathbf{x} - \mathbf{x}'\|^2}{2l^2}\right)\), the predictive mean for a test point \(\mathbf{x}_*\) is \(\bar{\psi}(\mathbf{x}_*) = \mathbf{k}_*^T {(\mathbf{K} + \alpha \mathbf{I})}^{-1} \mathbf{R}\), where \(\mathbf{k}_*\) is the kernel vector between \(\mathbf{x}_*\) and training points, \(\mathbf{K}\) is the training kernel matrix, \(\alpha\) is noise, and \(\mathbf{R}\) are residuals.
+
+The Jacobian \(J_\psi(\mathbf{x}_*)\) (a \(d \times d\) matrix for \(d\)-dimensional space) has entries derived from kernel gradients: \(\frac{\partial \bar{\psi}_i}{\partial x_{*j}} = \sum_m {\left( \frac{\partial k_*^{(m)}}{\partial x_{*j}} \right)}^T {(\mathbf{K} + \alpha \mathbf{I})}^{-1} \mathbf{R}_i\), where \(i\) indexes output dimensions, \(j\) input dimensions, and \(m\) training points.
+For RBF, \(\frac{\partial k(\mathbf{x}_*, \mathbf{x}^{(m)})}{\partial x_{*j}} = -\frac{(x_{*j} - x^{(m)}_j)}{l^2} k(\mathbf{x}_*, \mathbf{x}^{(m)})\).
+
+This analytical computation is efficient for moderate keypoint sets (e.g., tens to hundreds) and ensures smooth velocity transport.
+In GPT-O, Jacobians are evaluated point-wise for curve points, preserving local differential structure and enabling stable DS generalization even with nonlinear warps.
 
 \begin{algorithm}
     \caption{GPT-O warping}
@@ -216,39 +262,7 @@ Simulations demonstrate GPT-O's effectiveness in generalizing motions while avoi
     \item \textbf{3D Interactive Space Warp Demo}: Using Viser, grid lines are warped in real-time with movable obstacles and endpoints, demonstrating space deformation for intuitive understanding.
 \end{itemize}
 
-\begin{figure}[t]
-    \centering
-    \includegraphics[width=\linewidth]{figs/1.jpeg}
-    \caption{
-        Single obstacle 2D demo
-    }\label{fig:2d-demo-single}
-\end{figure}
-
-\begin{figure}[t]
-    \centering
-    \includegraphics[width=\linewidth]{figs/2.jpeg}
-    \caption{
-        Multiple obstacles 2D demo
-    }\label{fig:2d-demo-multiple}
-\end{figure}
-
 These results confirm GPT-O's ability to generalize DS motions in obstructed environments, outperforming baseline transportation without obstacles (e.g., direct affine/GP fits, which collide).
-
-\begin{figure}[tbp]
-    \centering
-    \includegraphics[width=\linewidth]{figs/3.jpeg}
-    \caption{
-        Single obstacle 3D demo
-    }\label{fig:3d-demo-matplotlib}
-\end{figure}
-
-\begin{figure}[tbp]
-    \centering
-    \includegraphics[width=\linewidth]{figs/5.jpeg}
-    \caption{
-        Single obstacle in 3D space with corresponding warping shown
-    }\label{fig:3d-demo-viser}
-\end{figure}
 
 \section{CONCLUSIONS}
 
