@@ -36,6 +36,17 @@ Robot learning from demonstrations (LfD) has emerged as a powerful paradigm for 
 In interactive LfD, non-expert users can kinesthetically guide the robot to perform tasks like pick-and-place, dressing, or cleaning.
 However, a major challenge is generalizing these learned policies to novel situations, such as varying object positions, arm postures, or surface geometries.
 
+To address generalization, task-parameterized models have been developed to adapt skills based on external parameters, such as reference frames representing objects or goals.
+For instance, Task-Parameterized Gaussian Mixture Models (TP-GMM) encode demonstrations in multiple frames and combine them probabilistically for new configurations.
+Building on this, Task-Parameterized Gaussian Processes (TPGP) leverage Gaussian Processes (GPs) for modeling local policies relative to each frame, with self-supervised learning of frame relevance using uncertainty quantification to improve stability and performance in multi-frame tasks, as demonstrated in simulation and robotic re-shelving experiments.
+
+Interactive imitation learning algorithms, such as DAgger (Dataset Aggregation), iteratively collect expert corrections to mitigate distribution shift in behavioral cloning.
+Variants like HG-DAgger (Human-Gated DAgger) incorporate human oversight to decide when interventions are needed, reducing expert burden in real-world settings.
+Compliant Residual DAgger (CR-DAgger) extends this by using residual policies for compliant control, enabling safer and more adaptive learning from converging supervisors.
+These methods, surveyed in~\cite{celemin2022interactive}, enhance LfD by combining demonstration with online feedback.
+
+This midterm report explores TPGP for task-parameterized skill learning, integrating insights from interactive imitation techniques to improve generalization in robotic manipulation.
+
 \section{RELATED WORK}
 
 Movement primitives (MPs) provide compact, reusable representations of robotic motions, enabling efficient imitation learning, generalization, and adaptation.
@@ -48,6 +59,32 @@ Trajectories are represented as a linear combination of radial basis functions w
 This captures movement variability, supports stochastic execution, and enables conditioning on via-points or final states through closed-form Bayesian updates.
 Kernelized Movement Primitives (KMPs), proposed by Huang et al.~\cite{Huang2019}, replace fixed basis functions with kernel ridge regression, yielding a non-parametric representation.
 KMPs naturally handle multiple via-point constraints, obstacle avoidance, and fusion of primitives without explicit phase alignment, offering superior flexibility for complex task adaptation in interactive imitation scenarios.
+
+\subsection{Task-Parameterized Models}
+
+Task-parameterized models address generalization by encoding skills relative to task parameters, such as coordinate frames.
+Task-Parameterized Gaussian Mixture Models (TP-GMM), introduced by Calinon~\cite{calinon2016tutorial}, transform demonstrations into multiple reference frames and fit GMMs to each.
+At execution, the models are transformed to new frame configurations and combined via Gaussian product to generate adapted trajectories.
+This approach enables heuristic-free and segmentation-free learning of multi-frame skills, as shown in applications like manipulation and dressing assistance~\cite{pignat2017learning}.
+However, TP-GMM relies on discrete mixtures, which may limit handling of uncertainties.
+
+Task-Parameterized Gaussian Processes (TPGP), proposed by Ramírez Montero et al.~\cite{ramirez2024learning}, extend this framework using GPs.
+Local GP policies model dynamics relative to each frame, incorporating progress variables and variance minimization for stability.
+Frame relevance is learned self-supervised via another GP, optimizing likelihood on held-out demonstrations.
+Evaluated on multi-frame tasks, TPGP outperforms TP-GMM in goal proximity and Fréchet distance metrics, demonstrating robust generalization in simulation and real-world robotic re-shelving.
+
+\subsection{Interactive Imitation Learning}
+
+Interactive imitation learning enhances standard LfD by allowing online expert feedback to correct learner errors.
+DAgger (Dataset Aggregation), by Ross et al.~\cite{ross2011reduction}, iteratively trains a policy on an aggregated dataset of states visited by the learner and actions provided by the expert, addressing covariate shift in behavioral cloning.
+This no-regret online learning reduction provides strong performance guarantees.
+
+HG-DAgger (Human-Gated DAgger), introduced by Kelly et al.~\cite{kelly2019hg}, modifies DAgger for human experts by gating interventions based on estimated risk or uncertainty, reducing supervision time while maintaining safety in real-world systems like robotics.
+
+Compliant Residual DAgger (CR-DAgger) builds on DAgger with residual policies for compliant control, enabling learning from converging supervisors~\cite{balakrishna2019imitation}.
+It focuses on practical implementation in contact-rich tasks, providing guidance for effective data collection and human corrections in real-world robot learning.
+
+These techniques are comprehensively surveyed in~\cite{celemin2022interactive}, highlighting their role in bridging demonstration and reinforcement learning for adaptive robotics.
 
 \section{METHODOLOGY}
 
@@ -63,5 +100,30 @@ KMPs naturally handle multiple via-point constraints, obstacle avoidance, and fu
 
 \bibliographystyle{IEEEtran}
 \bibliography{references}
+
+\begin{thebibliography}{1}
+
+    \bibitem{calinon2016tutorial}
+    S. Calinon, ``A tutorial on task-parameterized movement learning and retrieval'' \emph{Intelligent Service Robotics}, vol. 9, no. 1, pp. 1--29, 2016.
+
+    \bibitem{pignat2017learning}
+    E. Pignat and S. Calinon, ``Learning adaptive dressing assistance from human demonstration'' \emph{Robotics and Autonomous Systems}, vol. 93, pp. 61--75, 2017.
+
+    \bibitem{ramirez2024learning}
+    M. Ramírez Montero, G. Franzese, J. Kober, and C. Della Santina, ``Learning Multi-Reference Frame Skills from Demonstration with Task-Parameterized Gaussian Processes'' in \emph{2024 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)}, 2024.
+
+    \bibitem{ross2011reduction}
+    S. Ross, G. J. Gordon, and D. Bagnell, ``A reduction of imitation learning and structured prediction to no-regret online learning'' in \emph{Proceedings of the Fourteenth International Conference on Artificial Intelligence and Statistics}, 2011, pp. 627--635.
+
+    \bibitem{kelly2019hg}
+    M. Kelly, C. Sidrane, C. Finn, M. Balakrishna, and Z. Erickson, ``HG-DAgger: Interactive Imitation Learning with Human Experts'' in \emph{2019 International Conference on Robotics and Automation (ICRA)}, 2019.
+
+    \bibitem{balakrishna2019imitation}
+    A. Balakrishna, et al., ``On-Policy Robot Imitation Learning from a Converging Supervisor'' in \emph{Conference on Robot Learning (CoRL)}, 2019.
+
+    \bibitem{celemin2022interactive}
+    C. Celemin, et al., ``Interactive Imitation Learning in Robotics: A Survey'' \emph{Foundations and Trends in Robotics}, vol. 10, no. 1--2, pp. 1--197, 2022.
+
+\end{thebibliography}
 
 \end{document}
