@@ -190,6 +190,19 @@ The final policy superimposes stabilized local dynamics weighted by relevances f
 
 \section{CONCLUSIONS}
 
+We have explored the Task-Parameterized Gaussian Processes (TPGP) framework for learning multi-reference frame skills from demonstrations.
+TPGP addresses key challenges in Learning from Demonstration (LfD) by encoding local dynamics relative to task frames using Gaussian Processes and determining frame relevance in a self-supervised manner, without relying on heuristics or manual labeling.
+By incorporating progress variables, variance minimization for stability, and probabilistic weighting, TPGP achieves robust generalization to novel configurations, as evidenced by superior performance over Task-Parameterized Gaussian Mixture Models (TP-GMM) in metrics such as goal proximity and Fréchet distance in both simulated multi-frame tasks and real-world robotic re-shelving experiments.
+
+Insights from related works, including interactive imitation learning algorithms like DAgger, HG-DAgger, and CR-DAgger, as well as recent advancements in adaptive motion policies such as keypoint parameterization~\cite{lee2024generalizable} and Elastic Motion Policies~\cite{li2025elastic}, highlight opportunities for enhancing TPGP's adaptability and efficiency in dynamic environments.
+
+A primary limitation of TPGP, shared with TP-GMM, is its dependence on diverse demonstrations for effective generalization.
+Similar frame configurations across demonstrations can hinder adaptation to new scenarios.
+Future work will focus on integrating TPGP into an incremental learning framework to allow easy incorporation of additional data.
+Additionally, incorporating active learning mechanisms, leveraging GP uncertainty quantification, could enable the system to request targeted demonstrations, improving sample efficiency.
+Real-robot validations on more complex manipulation tasks, such as compliant interactions or multi-object scenarios, will further assess TPGP's practical utility.
+Overall, TPGP represents a promising step toward flexible, user-friendly robot skill acquisition.
+
 \addtolength{\textheight}{-12cm}
 
 \section*{APPENDIX}
