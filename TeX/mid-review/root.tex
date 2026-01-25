@@ -267,8 +267,11 @@ These results confirm GPT-O's ability to generalise DS motions in obstructed env
 \section{CONCLUSIONS}
 
 GPT-O advances motion generalisation in DS by integrating obstacle-aware warping with policy transportation, enabling adaptable robot behaviors.
-Future work includes real-robot experiments (e.g., UR5 manipulator for simple reaching tasks), multi-modal policies (position + orientation via quaternions), and integration with full DS controllers for closed-loop control.
-Additionally, exploring combinations with EMP for elastic deformations and online adaptation could further improve performance in dynamic scenarios, such as by incorporating graph-based editing into the warping process.
+By treating obstacle boundaries as additional keypoints in the transportation map, GPT-O enables collision-aware trajectory adaptation while preserving the stability properties of the underlying DS.\@
+Preliminary 2D and 3D demonstrations validate the approach for tasks involving reaching and navigation in cluttered environments.
+The modular design allows GPT-O to work with various DS representations, providing a flexible foundation for adaptive robot behaviors in obstacle-rich scenarios.
+
+Future work would include expanding over performing one-shot imitation learning as explored in the Elastic Motion Policy paper~\cite{li2025elastic}.
 
 \addtolength{\textheight}{-12cm}
 
