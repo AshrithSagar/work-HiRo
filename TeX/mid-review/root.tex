@@ -4,7 +4,7 @@
 \IEEEoverridecommandlockouts{}
 \overrideIEEEmargins{}
 
-\usepackage{subfig, url}
+\usepackage{subfig, booktabs, url}
 \usepackage{amsfonts, amsmath, amssymb, bm, cancel, interval, latexsym, mathptmx, mathtools, mathptmx}
 \usepackage[colorlinks=true]{hyperref}
 \usepackage[ruled,linesnumbered]{algorithm2e}
@@ -272,10 +272,44 @@ Additionally, exploring combinations with EMP for elastic deformations and onlin
 
 \addtolength{\textheight}{-12cm}
 
+\section*{APPENDIX}
+
+\subsection{Notation Summary}
+
+Table~\ref{tab:notation} summarizes key notations used throughout.
+
+\begin{table}[h]
+    \centering
+    \caption{
+        Key Notations
+    }\label{tab:notation}
+    \begin{tabular}{cl}
+        \toprule
+        Symbol & Description \\
+        \midrule
+        \(\mathbf{P}\), \(\mathbf{V}\) & Source curve points and velocities \\
+        \(\mathcal{S}\), \(\mathcal{T}\) & Source and target keypoints \\
+        \(\gamma\) & Affine transformation (Kabsch-fitted) \\
+        \(\psi\) & Gaussian Process residual model \\
+        \(\phi\) & Full transportation map \(\phi = \gamma + \psi \circ \gamma\) \\
+        \(J_\phi\) & Jacobian of \(\phi\) \\
+        \(\hat{\mathbf{P}}\), \(\hat{\mathbf{V}}\) & Warped points and velocities \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Example Keypoint Construction}
+
+For a single circular obstacle in 2D with center \(\mathbf{c} = (2.0, 0.6)\) and radius 0.15, boundary points are sampled as \(\mathbf{b}_i = \mathbf{c} + r (\cos \theta_i, \sin \theta_i)\) for \(\theta_i = 2\pi i / n\), \(i=0\dots n-1\) (e.g., \(n=20\)).
+Source keypoints tile \(\mathbf{c}\) \(n\) times; targets use \(\mathbf{b}_i\).
+
+\appendix
+
 \section*{ACKNOWLEDGMENT}
 
 I would like to thank my guide, Dr.~Ravi Prakash, for his guidance, insights and support, and for providing me with the opportunity to work on this project. I also thank my colleage, Mr.~Shreyas Kumar from HiRo Lab for his support in helping me get started with the project.
 
+\newpage
 \begin{thebibliography}{1}
 
     \bibitem{calinon2016tutorial}
