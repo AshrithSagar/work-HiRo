@@ -92,7 +92,14 @@ Local GP policies model dynamics relative to each frame, incorporating progress 
 Frame relevance is learned self-supervised via another GP, optimizing likelihood on held-out demonstrations.
 Evaluated on multi-frame tasks, TPGP outperforms TP-GMM in goal proximity and Fréchet distance metrics, demonstrating robust generalization in simulation and real-world robotic re-shelving.
 
-Recent works like Lee et al.~\cite{lee2024generalizable} propose keypoint-parameterized motion policies with transportation maps for generalizable skill learning, enabling adaptation to new scenes without retraining. Elastic Motion Policies~\cite{li2025elastic} introduce a dynamical system for one-shot imitation, adapting via Laplacian editing and online Lyapunov learning for robust performance in dynamic environments.
+Recent works like Lee et al.~\cite{lee2024generalizable} propose keypoint-parameterized motion policies with transportation maps for generalizable skill learning.
+In this paper, the authors introduce a flexible methodology to generalize robot motion policies using keypoint-based representations and transportation maps.
+Tasks are parameterized by manually defined keypoints, and transportation maps are estimated to align source and target keypoint configurations.
+The transportation map is composed of an affine transformation followed by a nonlinear Gaussian Process residual, preserving geometric relationships.
+This allows generating new motions for novel task configurations while maintaining policy structure.
+The approach is validated on tasks like peg insertion and bag opening, showing generalization across geometric variations in robot and task setups.
+It enables data-efficient learning and can be integrated with downstream policy methods.
+Elastic Motion Policies (EMP)~\cite{li2025elastic} introduce a dynamical system for one-shot imitation learning, adapting via Laplacian editing and online Lyapunov learning for robust performance in dynamic environments.
 
 \subsection{Interactive Imitation Learning}
 
@@ -108,21 +115,12 @@ It focuses on practical implementation in contact-rich tasks, providing guidance
 These techniques are comprehensively surveyed in~\cite{celemin2022interactive}, highlighting their role in bridging demonstration and reinforcement learning for adaptive robotics.
 
 \section{METHODOLOGY}
-
-The GPT-O framework builds upon the policy transportation approach described in~\cite{lee2024generalizable}, extending it to incorporate obstacle avoidance through space warping. The core idea is to parameterize tasks using keypoints and deform the motion space via a transportation map that aligns source keypoints to target keypoints, while treating obstacles as additional keypoints to ensure collision-free paths.
-
-\subsection{Keypoint Parameterization and Transportation Maps}
-
-Tasks are parameterized by ordered sets of keypoints in the source configuration \(\bm{\mathcal{S}}\) and target configuration \(\bm{\mathcal{T}}\), typically in \(\mathbb{R}^2\) or \(\mathbb{R}^3\).
-These keypoints can represent start/end points, via-points, or obstacle-related features. The transportation map \(\bm{\phi}: \mathbb{R}^d \to \mathbb{R}^d\) (where \(d\) is the space dimension) is a \(C^1\) diffeomorphism that maps \(\bm{\mathcal{S}}\) to \(\bm{\mathcal{T}}\).
-
-The map is composed as \(\bm{\phi}(\bm{x}) = \bm{\gamma}(\bm{x}) + \bm{\psi}(\bm{\gamma}(\bm{x}))\), where:
-- \(\bm{\gamma}\) is an affine transformation (rotation, scaling, translation) fitted using the Kabsch algorithm (SVD-based) on the keypoints.
-- \(\bm{\psi}\) is a nonlinear residual transformation, implemented as a Gaussian Process Regressor (GPR) with a RBF kernel plus white noise for handling uncertainties.
-
-The GPR is fitted on the residuals after affine transformation, ensuring \(\bm{\phi}(\bm{\mathcal{S}}) = \bm{\mathcal{T}}\). The Jacobian \(\bm{J}(\bm{x}) = \frac{\partial \bm{\phi}}{\partial \bm{x}}\) is computed analytically for transporting velocities: \(\bm{\dot{\hat{x}}} = \bm{J}(\bm{x}) \bm{\dot{x}}\).
-
-\subsection{Incorporating Obstacles}
+The GPT-O framework builds upon the policy transportation approach described in~\cite{lee2024generalizable}, extending it to incorporate obstacle avoidance through space warping.
+In the original paper, tasks are parameterized using ordered sets of keypoints in source and target configurations.
+The transportation map \(\phi: \mathbb{R}^d \to \mathbb{R}^d\) is a diffeomorphism that maps source keypoints \(\mathcal{S}\) to target keypoints \(\mathcal{T}\).
+It is composed as \(\phi(x) = \gamma(x) + \psi(\gamma(x))\), where \(\gamma\) is an affine transform fitted via Kabsch algorithm, and \(\psi\) is a Gaussian Process for nonlinear residuals.
+The Jacobian \(J_\phi\) is used to transport velocities: \(\dot{\hat{x}} = J_\phi(x) \dot{x}\).
+This preserves the structure of the dynamical system policy, ensuring stability if \(\det(J_\phi) > 0\).
 
 To handle obstacles, GPT-O treats them as circular (2D) or spherical (3D) entities. For each obstacle, its center is replicated in the source keypoints (tiled to match the number of boundary points), while the boundary points (sampled uniformly on the circumference/surface) serve as corresponding target keypoints.
 This setup effectively ``expands'' the obstacle in the warped space, creating a deformation that pushes trajectories away from the obstacle while preserving convergence to the target.
@@ -131,11 +129,11 @@ Keypoints are constructed as:
 - Source: [start point, tiled obstacle centers, source end point]
 - Target: [start point, obstacle boundary points, target end point]
 
-The transportation map is fitted on these keypoints, and the source curve (demonstration trajectory) is warped by applying \(\bm{\phi}\) to positions and \(\bm{J}\) to velocities.
+The transportation map is fitted on these keypoints, and the source curve (demonstration trajectory) is warped by applying \(\phi\) to positions and \(J_\phi\) to velocities.
 
 \subsection{Dynamical Systems Integration}
-
-The warped trajectories serve as generalized motions in dynamical systems \(\dot{x} = f(x)\), fitted using methods like DMPs or GPs. Stability is preserved if \(\det(\bm{J}) > 0\), ensuring the attractor dynamics remain intact in the target space.
+The warped trajectories serve as generalized motions in dynamical systems \(\dot{x} = f(x)\), fitted using methods like DMPs or GPs. Stability is preserved if \(\det(J_\phi) > 0\), ensuring the attractor dynamics remain intact in the target space.
+Compared to the original paper, GPT-O adds obstacle keypoints to the parameterization, enabling collision-free generalization without modifying the base policy learning.
 
 \section{PRELIMINARY RESULTS \& DISCUSSIONS}
 
@@ -189,6 +187,7 @@ These results confirm GPT-O's ability to generalize DS motions in obstructed env
 
 GPT-O advances motion generalization in DS by integrating obstacle-aware warping with policy transportation, enabling adaptable robot behaviors.
 Future work includes real-robot experiments (e.g., UR5 manipulator), multi-modal policies (position + orientation), and integration with full DS controllers for closed-loop control.
+Additionally, exploring combinations with EMP for elastic deformations and online adaptation could further improve performance in dynamic scenarios.
 
 \addtolength{\textheight}{-12cm}
 
