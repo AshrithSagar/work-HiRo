@@ -5,7 +5,7 @@
 \overrideIEEEmargins{}
 
 \usepackage{graphics, epsfig, url}
-\usepackage{amsmath, amssymb, mathptmx}
+\usepackage{amsfonts, amsmath, amssymb, bm, cancel, interval, latexsym, mathptmx, mathtools, mathptmx}
 \usepackage[colorlinks=true]{hyperref}
 
 \title{
@@ -109,21 +109,51 @@ These techniques are comprehensively surveyed in~\cite{celemin2022interactive}, 
 
 \section{METHODOLOGY}
 
+The GPT-O framework builds upon the policy transportation approach described in~\cite{lee2024generalizable}, extending it to incorporate obstacle avoidance through space warping. The core idea is to parameterize tasks using keypoints and deform the motion space via a transportation map that aligns source keypoints to target keypoints, while treating obstacles as additional keypoints to ensure collision-free paths.
+
+\subsection{Keypoint Parameterization and Transportation Maps}
+
+Tasks are parameterized by ordered sets of keypoints in the source configuration \(\bm{\mathcal{S}}\) and target configuration \(\bm{\mathcal{T}}\), typically in \(\mathbb{R}^2\) or \(\mathbb{R}^3\).
+These keypoints can represent start/end points, via-points, or obstacle-related features. The transportation map \(\bm{\phi}: \mathbb{R}^d \to \mathbb{R}^d\) (where \(d\) is the space dimension) is a \(C^1\) diffeomorphism that maps \(\bm{\mathcal{S}}\) to \(\bm{\mathcal{T}}\).
+
+The map is composed as \(\bm{\phi}(\bm{x}) = \bm{\gamma}(\bm{x}) + \bm{\psi}(\bm{\gamma}(\bm{x}))\), where:
+- \(\bm{\gamma}\) is an affine transformation (rotation, scaling, translation) fitted using the Kabsch algorithm (SVD-based) on the keypoints.
+- \(\bm{\psi}\) is a nonlinear residual transformation, implemented as a Gaussian Process Regressor (GPR) with a RBF kernel plus white noise for handling uncertainties.
+
+The GPR is fitted on the residuals after affine transformation, ensuring \(\bm{\phi}(\bm{\mathcal{S}}) = \bm{\mathcal{T}}\). The Jacobian \(\bm{J}(\bm{x}) = \frac{\partial \bm{\phi}}{\partial \bm{x}}\) is computed analytically for transporting velocities: \(\bm{\dot{\hat{x}}} = \bm{J}(\bm{x}) \bm{\dot{x}}\).
+
+\subsection{Incorporating Obstacles}
+
+To handle obstacles, GPT-O treats them as circular (2D) or spherical (3D) entities. For each obstacle, its center is replicated in the source keypoints (tiled to match the number of boundary points), while the boundary points (sampled uniformly on the circumference/surface) serve as corresponding target keypoints.
+This setup effectively ``expands'' the obstacle in the warped space, creating a deformation that pushes trajectories away from the obstacle while preserving convergence to the target.
+
+Keypoints are constructed as:
+- Source: [start point, tiled obstacle centers, source end point]
+- Target: [start point, obstacle boundary points, target end point]
+
+The transportation map is fitted on these keypoints, and the source curve (demonstration trajectory) is warped by applying \(\bm{\phi}\) to positions and \(\bm{J}\) to velocities.
+
+\subsection{Dynamical Systems Integration}
+
+The warped trajectories serve as generalized motions in dynamical systems \(\dot{x} = f(x)\), fitted using methods like DMPs or GPs. Stability is preserved if \(\det(\bm{J}) > 0\), ensuring the attractor dynamics remain intact in the target space.
+
+The implementation supports 2D/3D curves, interactive visualizations (Matplotlib, Viser), and residuals for nonlinear fitting.
+
 \section{PRELIMINARY RESULTS \& DISCUSSIONS}
 
-Simulations demonstrate GPT-O's effectiveness:
+Simulations demonstrate GPT-O's effectiveness in generalizing motions while avoiding obstacles:
 
 \begin{itemize}
-    \item 2D Demo: A cubic curve is transported to varying endpoints around circular obstacles.
-        Warped trajectories avoid collisions while converging.
-        Interactive mode allows real-time obstacle dragging, updating warps instantly.
+    \item \textbf{2D Single Obstacle Demo}: A cubic source curve (200 points) is transported to 100 varying endpoints around a circular obstacle (center at (2.0, 0.6), radius 0.15). Warped trajectories, visualized with plasma colormap, avoid collisions and converge smoothly. Interactive mode (Matplotlib) enables real-time obstacle dragging, updating warps instantly for dynamic testing.
 
-    \item 3D Demo: Helical curve warped around spherical obstacles to new endpoints.
-        Visualizations show space deformation via grid lines, with color-coded displacement highlighting warp effects.
+    \item \textbf{2D Multiple Obstacles Demo}: Extended to three obstacles (centers at (1.5, 0.4), (2.0, 0.6), (2.8, 0.3); radius 0.15 each). Warped curves adapt to cluttered spaces, maintaining stability.
+
+    \item \textbf{3D Single Obstacle Demo}: A helical source curve (200 points) is warped around a spherical obstacle (center at (2.0, 0.6, 0.0), radius 0.1) to a new endpoint. Visualizations (Matplotlib) show deformed space via grid lines, with color-coded displacements highlighting warp effects.
+
+    \item \textbf{3D Interactive Space Warp Demo}: Using Viser, grid lines are warped in real-time with movable obstacles and endpoints, demonstrating space deformation for intuitive understanding.
 \end{itemize}
 
-These results confirm GPT-O's ability to generalize DS
-motions in obstructed environments.
+These results confirm GPT-O's ability to generalize DS motions in obstructed environments, outperforming baseline transportation without obstacles (e.g., direct affine/GP fits, which collide). Future metrics include Fréchet distance and collision rates.
 
 \section{CONCLUSIONS}
 
@@ -135,9 +165,6 @@ Future work includes real-robot experiments (e.g., UR5 manipulator), multi-modal
 \section*{APPENDIX}
 
 \section*{ACKNOWLEDGMENT}
-
-\bibliographystyle{IEEEtran}
-\bibliography{references}
 
 \begin{thebibliography}{1}
 
@@ -167,6 +194,15 @@ Future work includes real-robot experiments (e.g., UR5 manipulator), multi-modal
 
     \bibitem{li2025elastic}
     T. Li, S. Sun, S. S. Aditya, and N. Figueroa, ``Elastic Motion Policy: An Adaptive Dynamical System for Robust and Efficient One-Shot Imitation Learning'' arXiv preprint arXiv:2503.08029, 2025.
+
+    \bibitem{Ijspeert2013}
+    A. J. Ijspeert, J. Nakanishi, H. Hoffmann, P. Pastor, and S. Schaal, ``Dynamical Movement Primitives: Learning Attractor Models for Motor Behaviors'' \emph{Neural Computation}, vol. 25, no. 2, pp. 328--373, Feb. 2013.
+
+    \bibitem{10.5555/2999792.2999904}
+    A. Paraschos, C. Daniel, J. Peters, and G. Neumann, ``Probabilistic Movement Primitives'' in \emph{Proceedings of the 27th International Conference on Neural Information Processing Systems --- Volume 2}, Curran Associates Inc., 2013, pp. 2616--2624.
+
+    \bibitem{Huang2019}
+    Y. Huang, L. Rozo, J. Silvério, and D. G. Caldwell, ``Kernelized movement primitives'' \emph{The International Journal of Robotics Research}, vol. 38, no. 7, pp. 833--852, May 2019.
 
 \end{thebibliography}
 
