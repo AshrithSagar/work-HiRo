@@ -264,6 +264,26 @@ Simulations demonstrate GPT-O's effectiveness in generalising motions while avoi
 
 These results confirm GPT-O's ability to generalise DS motions in obstructed environments, outperforming baseline transportation without obstacles (e.g., direct affine/GP fits, which collide).
 
+\section{LIMITATIONS \& FUTURE WORK}
+
+While GPT-O shows promise, several limitations should be noted.
+The approach provides heuristic obstacle avoidance through keypoint-based warping but lacks formal collision-free guarantees.
+The effectiveness depends on sufficient boundary point sampling and appropriate GP kernel parameters.
+
+Current implementation assumes circular/spherical obstacles. Extension to arbitrary convex or non-convex shapes would require different boundary sampling strategies.
+
+With multiple obstacles and dense boundary sampling, the keypoint set grows linearly, increasing GP training and inference costs.
+Scalability to environments with many obstacles may require sparse approximations.
+
+Future work could include:
+\begin{itemize}
+    \item Real-robot experiments on platforms like the UR5 manipulator for reaching tasks in cluttered workspaces
+    \item Extension to $SE(3)$ for full pose generalization (position + orientation via quaternions or rotation matrices)
+    \item Integration with complete DS controllers (e.g., DMP, GP-based DS) for closed-loop execution and online replanning
+    \item Exploration of combinations with adaptive methods like EMP~\cite{li2025elastic} for handling dynamic obstacle motion, allowing for one-shot imitation learning.
+    \item Quantitative evaluation metrics including collision rates, path efficiency, and computation time benchmarks
+\end{itemize}
+
 \section{CONCLUSIONS}
 
 GPT-O advances motion generalisation in DS by integrating obstacle-aware warping with policy transportation, enabling adaptable robot behaviors.
@@ -271,48 +291,13 @@ By treating obstacle boundaries as additional keypoints in the transportation ma
 Preliminary 2D and 3D demonstrations validate the approach for tasks involving reaching and navigation in cluttered environments.
 The modular design allows GPT-O to work with various DS representations, providing a flexible foundation for adaptive robot behaviors in obstacle-rich scenarios.
 
-Future work would include expanding over performing one-shot imitation learning as explored in the Elastic Motion Policy paper~\cite{li2025elastic}.
-
 \addtolength{\textheight}{-12cm}
-
-\section*{APPENDIX}
-
-\subsection{Notation Summary}
-
-Table~\ref{tab:notation} summarises key notations used throughout.
-
-\begin{table}[h]
-    \centering
-    \caption{
-        Key Notations
-    }\label{tab:notation}
-    \begin{tabular}{cl}
-        \toprule
-        Symbol & Description \\
-        \midrule
-        \(\mathbf{P}\), \(\mathbf{V}\) & Source curve points and velocities \\
-        \(\mathcal{S}\), \(\mathcal{T}\) & Source and target keypoints \\
-        \(\gamma\) & Affine transformation (Kabsch-fitted) \\
-        \(\psi\) & Gaussian Process residual model \\
-        \(\phi\) & Full transportation map \(\phi = \gamma + \psi \circ \gamma\) \\
-        \(J_\phi\) & Jacobian of \(\phi\) \\
-        \(\hat{\mathbf{P}}\), \(\hat{\mathbf{V}}\) & Warped points and velocities \\
-        \bottomrule
-    \end{tabular}
-\end{table}
-
-\subsection{Example Keypoint Construction}
-
-For a single circular obstacle in 2D with center \(\mathbf{c} = (2.0, 0.6)\) and radius 0.15, boundary points are sampled as \(\mathbf{b}_i = \mathbf{c} + r (\cos \theta_i, \sin \theta_i)\) for \(\theta_i = 2\pi i / n\), \(i=0\dots n-1\) (e.g., \(n=20\)).
-Source keypoints tile \(\mathbf{c}\) \(n\) times; targets use \(\mathbf{b}_i\).
-
-\appendix
 
 \section*{ACKNOWLEDGMENT}
 
 I would like to thank my guide, Dr.~Ravi Prakash, for his guidance, insights and support, and for providing me with the opportunity to work on this project. I also thank my colleage, Mr.~Shreyas Kumar from HiRo Lab for his support in helping me get started with the project.
+I would also like to thank Grok and Claude for helping me to proof-read the writing.
 
-\newpage
 \begin{thebibliography}{1}
 
     \bibitem{calinon2016tutorial}
