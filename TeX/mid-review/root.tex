@@ -10,7 +10,7 @@
 
 \title{
     \LARGE \bf
-    Task-parameterised Gaussian Processes
+    Motion Generalisation for Dynamical Systems
     \\ [0.5em]
     \large MTech Project MidTerm Report
 }
@@ -29,6 +29,10 @@
 \begin{abstract}
     Robot learning from demonstrations (LfD) is a promising approach for teaching complex skills to robots without explicit programming.
     However, generalizing these skills to novel situations remains a challenge.
+    This report outlines progress in developing motion generalization techniques for dynamical systems in robotics, with a primary focus on the GPT-O (Gaussian Process Transportation with Obstacles) framework.
+    GPT-O extends policy transportation methods to incorporate obstacle avoidance through space warping, enabling robust adaptation of learned motions to new environments.
+    By leveraging keypoints from demonstrations and obstacles, combined with affine and Gaussian process transforms, GPT-O ensures stable, collision-free trajectory generalization.
+    Preliminary demonstrations in 2D and 3D validate its efficacy for tasks like reaching and navigation in cluttered spaces.
 \end{abstract}
 
 \section{INTRODUCTION}
@@ -47,6 +51,10 @@ Interactive imitation learning algorithms, such as DAgger (Dataset Aggregation),
 Variants like HG-DAgger (Human-Gated DAgger) incorporate human oversight to decide when interventions are needed, reducing expert burden in real-world settings.
 Compliant Residual DAgger (CR-DAgger) extends this by using residual policies for compliant control, enabling safer and more adaptive learning from converging supervisors.
 These methods, surveyed in~\cite{celemin2022interactive}, enhance LfD by combining demonstration with online feedback.
+
+Dynamical systems (DS) model robot motions as stable attractors, facilitating goal convergence and adaptability to perturbations. Motion generalization in DS involves extrapolating learned policies (e.g., trajectories from demonstrations) to novel scenarios, including varying endpoints and environmental constraints such as obstacles. This work emphasizes obstacle-aware generalization, addressing limitations in traditional DS where static policies fail in dynamic settings.
+
+The core contribution is GPT-O, an implementation that builds on policy transportation via Gaussian processes (GPs) and affine transforms, integrated with obstacle modulation. Inspired by keypoint parameterization, GPT-O treats obstacle boundaries as additional keypoints to warp the motion space, preserving DS stability while avoiding collisions. This approach is detailed in the associated codebase, supporting both 2D and 3D applications.
 
 \section{RELATED WORK}
 
@@ -186,7 +194,21 @@ optimizing to match means while minimizing uncertainty, selecting confident loca
 
 The final policy superimposes stabilized local dynamics weighted by relevances for new configurations.
 
-\section{RESULTS \& DISCUSSIONS}
+\section{PRELIMINARY RESULTS \& DISCUSSIONS}
+
+Simulations demonstrate GPT-O's effectiveness:
+
+\begin{itemize}
+    \item 2D Demo: A cubic curve is transported to varying endpoints around circular obstacles.
+        Warped trajectories avoid collisions while converging.
+        Interactive mode allows real-time obstacle dragging, updating warps instantly.
+
+    \item 3D Demo: Helical curve warped around spherical obstacles to new endpoints.
+        Visualizations show space deformation via grid lines, with color-coded displacement highlighting warp effects.
+\end{itemize}
+
+These results confirm GPT-O's ability to generalize DS
+motions in obstructed environments.
 
 \section{CONCLUSIONS}
 
@@ -202,6 +224,9 @@ Future work will focus on integrating TPGP into an incremental learning framewor
 Additionally, incorporating active learning mechanisms, leveraging GP uncertainty quantification, could enable the system to request targeted demonstrations, improving sample efficiency.
 Real-robot validations on more complex manipulation tasks, such as compliant interactions or multi-object scenarios, will further assess TPGP's practical utility.
 Overall, TPGP represents a promising step toward flexible, user-friendly robot skill acquisition.
+
+GPT-O advances motion generalization in DS by integrating obstacle-aware warping with policy transportation, enabling adaptable robot behaviors.
+Future work includes real-robot experiments (e.g., UR5 manipulator), multi-modal policies (position + orientation), and integration with full DS controllers for closed-loop control.
 
 \addtolength{\textheight}{-12cm}
 
