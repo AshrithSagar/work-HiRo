@@ -29,15 +29,15 @@
 
 \begin{abstract}
     Robot learning from demonstrations (LfD) is a promising approach for teaching complex skills to robots without explicit programming.
-    However, generalizing these skills to novel situations remains a challenge.
-    This report outlines progress in developing motion generalization techniques for dynamical systems in robotics, with a primary focus on the GPT-O (Gaussian Process Transportation with Obstacles) framework.
+    However, generalising these skills to novel situations remains a challenge.
+    This report outlines progress in developing motion generalisation techniques for dynamical systems in robotics, with a primary focus on the GPT-O (Gaussian Process Transportation with Obstacles) framework.
     GPT-O extends policy transportation methods to incorporate obstacle avoidance through space warping, enabling robust adaptation of learned motions to new environments.
-    By leveraging keypoints from demonstrations and obstacles, combined with affine and Gaussian process transforms, GPT-O ensures stable, collision-free trajectory generalization.
+    By leveraging keypoints from demonstrations and obstacles, combined with affine and Gaussian process transforms, GPT-O ensures stable, collision-free trajectory generalisation.
     Preliminary demonstrations in 2D and 3D validate its efficacy for tasks like reaching and navigation in cluttered spaces.
 \end{abstract}
 
 \begin{keywords}
-    Motion generalization,
+    Motion generalisation,
     Gaussian processes,
     Policy transportation,
     Obstacle avoidance.
@@ -47,13 +47,13 @@
 
 Robot learning from demonstrations (LfD) has emerged as a powerful paradigm for teaching robots complex tasks without explicit programming.
 In interactive LfD, non-expert users can kinesthetically guide the robot to perform tasks like pick-and-place, dressing, or cleaning.
-However, a major challenge is generalizing these learned policies to novel situations, such as varying object positions, arm postures, or surface geometries.
+However, a major challenge is generalising these learned policies to novel situations, such as varying object positions, arm postures, or surface geometries.
 
-To address generalization, task-parameterized models have been developed to adapt skills based on external parameters, such as reference frames representing objects or goals.
-For instance, Task-Parameterized Gaussian Mixture Models (TP-GMM) encode demonstrations in multiple frames and combine them probabilistically for new configurations.
-Building on this, Task-Parameterized Gaussian Processes (TPGP)~\cite{ramirez2024learning} leverage Gaussian Processes (GPs) for modeling local policies relative to each frame, with self-supervised learning of frame relevance using uncertainty quantification to improve stability and performance in multi-frame tasks, as demonstrated in simulation and robotic re-shelving experiments.
+To address generalisation, task-parameterised models have been developed to adapt skills based on external parameters, such as reference frames representing objects or goals.
+For instance, Task-Parameterised Gaussian Mixture Models (TP-GMM) encode demonstrations in multiple frames and combine them probabilistically for new configurations.
+Building on this, Task-Parameterised Gaussian Processes (TPGP)~\cite{ramirez2024learning} leverage Gaussian Processes (GPs) for modeling local policies relative to each frame, with self-supervised learning of frame relevance using uncertainty quantification to improve stability and performance in multi-frame tasks, as demonstrated in simulation and robotic re-shelving experiments.
 
-Recent advancements further enhance adaptability; for example, generalizable motion policies through keypoint parameterization~\cite{lee2024generalizable} enable robust skill transfer across varying environments by parameterizing motions with keypoints and transportation maps. Similarly, Elastic Motion Policies (EMP)~\cite{li2025elastic} provide a dynamical system for one-shot imitation learning, allowing real-time adaptation via Laplacian editing and Lyapunov functions, ensuring convergence in dynamic settings.
+Recent advancements further enhance adaptability; for example, generalizable motion policies through keypoint parameterisation~\cite{lee2024generalizable} enable robust skill transfer across varying environments by parameterising motions with keypoints and transportation maps. Similarly, Elastic Motion Policies (EMP)~\cite{li2025elastic} provide a dynamical system for one-shot imitation learning, allowing real-time adaptation via Laplacian editing and Lyapunov functions, ensuring convergence in dynamic settings.
 
 Interactive imitation learning algorithms, such as DAgger (Dataset Aggregation), iteratively collect expert corrections to mitigate distribution shift in behavioral cloning.
 Variants like HG-DAgger (Human-Gated DAgger) incorporate human oversight to decide when interventions are needed, reducing expert burden in real-world settings.
@@ -61,15 +61,15 @@ Compliant Residual DAgger (CR-DAgger) extends this by using residual policies fo
 These methods, surveyed in~\cite{celemin2022interactive}, enhance LfD by combining demonstration with online feedback.
 
 Dynamical systems (DS) model robot motions as stable attractors, facilitating goal convergence and adaptability to perturbations.
-Motion generalization in DS involves extrapolating learned policies (e.g., trajectories from demonstrations) to novel scenarios, including varying endpoints and environmental constraints such as obstacles.
-This work emphasizes obstacle-aware generalization, addressing limitations in traditional DS where static policies fail in dynamic settings.
+Motion generalisation in DS involves extrapolating learned policies (e.g., trajectories from demonstrations) to novel scenarios, including varying endpoints and environmental constraints such as obstacles.
+This work emphasises obstacle-aware generalisation, addressing limitations in traditional DS where static policies fail in dynamic settings.
 
 The core contribution is GPT-O, an implementation that builds on policy transportation via Gaussian processes (GPs) and affine transforms, integrated with obstacle modulation.
-Inspired by keypoint parameterization, GPT-O treats obstacle boundaries as additional keypoints to warp the motion space, preserving DS stability while avoiding collisions.
+Inspired by keypoint parameterisation, GPT-O treats obstacle boundaries as additional keypoints to warp the motion space, preserving DS stability while avoiding collisions.
 
 \section{RELATED WORK}
 
-Movement primitives (MPs) provide compact, reusable representations of robotic motions, enabling efficient imitation learning, generalization, and adaptation.
+Movement primitives (MPs) provide compact, reusable representations of robotic motions, enabling efficient imitation learning, generalisation, and adaptation.
 Dynamic Movement Primitives (DMPs), introduced by Ijspeert et al.~\cite{Ijspeert2013}, model both discrete and rhythmic behaviors as autonomous dynamical systems.
 A DMP consists of a canonical linear system generating a phase variable and a transformation system (second-order spring-damper) driven by a learned nonlinear forcing term approximated via locally weighted regression on basis functions.
 Demonstrations are encoded into weights, allowing straightforward modulation of amplitude, goal, duration, and coupling with external forces or other primitives—making DMPs a cornerstone for trajectory generation in imitation learning.
@@ -77,35 +77,35 @@ Demonstrations are encoded into weights, allowing straightforward modulation of 
 Probabilistic Movement Primitives (ProMPs) by Paraschos et al.~\cite{10.5555/2999792.2999904} extend DMPs into a fully probabilistic framework.
 Trajectories are represented as a linear combination of radial basis functions whose weights follow a multivariate Gaussian distribution learned from multiple demonstrations.
 This captures movement variability, supports stochastic execution, and enables conditioning on via-points or final states through closed-form Bayesian updates.
-Kernelized Movement Primitives (KMPs), proposed by Huang et al.~\cite{Huang2019}, replace fixed basis functions with kernel ridge regression, yielding a non-parametric representation.
+Kernelised Movement Primitives (KMPs), proposed by Huang et al.~\cite{Huang2019}, replace fixed basis functions with kernel ridge regression, yielding a non-parametric representation.
 KMPs naturally handle multiple via-point constraints, obstacle avoidance, and fusion of primitives without explicit phase alignment, offering superior flexibility for complex task adaptation in interactive imitation scenarios.
 
-\subsection{Task-Parameterized Models}
+\subsection{Task-Parameterised Models}
 
-Task-parameterized models address generalization by encoding skills relative to task parameters, such as coordinate frames.
-Task-Parameterized Gaussian Mixture Models (TP-GMM), introduced by Calinon~\cite{calinon2016tutorial}, transform demonstrations into multiple reference frames and fit GMMs to each.
+Task-parameterised models address generalisation by encoding skills relative to task parameters, such as coordinate frames.
+Task-Parameterised Gaussian Mixture Models (TP-GMM), introduced by Calinon~\cite{calinon2016tutorial}, transform demonstrations into multiple reference frames and fit GMMs to each.
 At execution, the models are transformed to new frame configurations and combined via Gaussian product to generate adapted trajectories.
 This approach enables heuristic-free and segmentation-free learning of multi-frame skills, as shown in applications like manipulation and dressing assistance~\cite{pignat2017learning}.
 However, TP-GMM relies on discrete mixtures, which may limit handling of uncertainties.
 
-Task-Parameterized Gaussian Processes (TPGP), proposed by Ramírez Montero et al.~\cite{ramirez2024learning}, extend this framework using GPs.
-Local GP policies model dynamics relative to each frame, incorporating progress variables and variance minimization for stability.
-Frame relevance is learned self-supervised via another GP, optimizing likelihood on held-out demonstrations.
-Evaluated on multi-frame tasks, TPGP outperforms TP-GMM in goal proximity and Fréchet distance metrics, demonstrating robust generalization in simulation and real-world robotic re-shelving.
+Task-Parameterised Gaussian Processes (TPGP), proposed by Ramírez Montero et al.~\cite{ramirez2024learning}, extend this framework using GPs.
+Local GP policies model dynamics relative to each frame, incorporating progress variables and variance minimisation for stability.
+Frame relevance is learned self-supervised via another GP, optimising likelihood on held-out demonstrations.
+Evaluated on multi-frame tasks, TPGP outperforms TP-GMM in goal proximity and Fréchet distance metrics, demonstrating robust generalisation in simulation and real-world robotic re-shelving.
 
-Recent works like Lee et al.~\cite{lee2024generalizable} propose keypoint-parameterized motion policies with transportation maps for generalizable skill learning.
-In this paper, the authors introduce a flexible methodology to generalize robot motion policies using keypoint-based representations and transportation maps.
-Tasks are parameterized by manually defined keypoints, and transportation maps are estimated to align source and target keypoint configurations.
+Recent works like Lee et al.~\cite{lee2024generalizable} propose keypoint-parameterised motion policies with transportation maps for generalizable skill learning.
+In this paper, the authors introduce a flexible methodology to generalise robot motion policies using keypoint-based representations and transportation maps.
+Tasks are parameterised by manually defined keypoints, and transportation maps are estimated to align source and target keypoint configurations.
 The transportation map is composed of an affine transformation followed by a nonlinear Gaussian Process residual, preserving geometric relationships.
 This allows generating new motions for novel task configurations while maintaining policy structure.
-The approach is validated on tasks like peg insertion and bag opening, showing generalization across geometric variations in robot and task setups.
+The approach is validated on tasks like peg insertion and bag opening, showing generalisation across geometric variations in robot and task setups.
 It enables data-efficient learning and can be integrated with downstream policy methods.
 Elastic Motion Policies (EMP)~\cite{li2025elastic} introduce a dynamical system for one-shot imitation learning, adapting via Laplacian editing and online Lyapunov learning for robust performance in dynamic environments.
 EMP represents demonstrations as a mesh graph, where nodes are sampled points along the trajectory, and edges connect nearby points to encode local geometry.
-Deformations are achieved through Laplacian editing, which minimizes changes to relative positions while satisfying new constraints like altered start/goal points or via-points.
+Deformations are achieved through Laplacian editing, which minimises changes to relative positions while satisfying new constraints like altered start/goal points or via-points.
 Stability is ensured by learning a Lyapunov function online, guaranteeing convergence to the target attractor even under perturbations.
 This approach excels in tasks requiring elasticity, such as cloth manipulation or obstacle avoidance, and outperforms baselines in metrics like success rate and trajectory smoothness in simulated and real-robot experiments.
-Compared to keypoint-based methods like GPT-O, EMP emphasizes graph-based flexibility over explicit transportation maps, potentially offering complementary strengths in handling complex deformations.
+Compared to keypoint-based methods like GPT-O, EMP emphasises graph-based flexibility over explicit transportation maps, potentially offering complementary strengths in handling complex deformations.
 
 \subsection{Interactive Imitation Learning}
 
@@ -124,7 +124,7 @@ These techniques are comprehensively surveyed in~\cite{celemin2022interactive}, 
 
 \subsection{Kabsch Algorithm}
 
-The Kabsch algorithm is a method for finding the optimal rotation matrix that aligns two sets of points in Euclidean space, minimizing the root mean square deviation (RMSD).
+The Kabsch algorithm is a method for finding the optimal rotation matrix that aligns two sets of points in Euclidean space, minimising the root mean square deviation (RMSD).
 It is widely used in structural biology for superimposing molecular structures and in robotics for aligning point clouds or keypoints.
 
 Given two sets of points \(\mathbf{P}\) and \(\mathbf{Q}\) (each with \(n\) points in \(d\)-dimensions), the algorithm proceeds as follows:
@@ -173,7 +173,7 @@ For example, in residual fitting, the GP posterior mean provides the correction 
 \end{figure}
 
 The GPT-O framework builds upon the policy transportation approach described in~\cite{lee2024generalizable}, extending it to incorporate obstacle avoidance through space warping.
-In the original paper, tasks are parameterized using ordered sets of keypoints in source and target configurations.
+In the original paper, tasks are parameterised using ordered sets of keypoints in source and target configurations.
 The transportation map \(\phi: \mathbb{R}^d \to \mathbb{R}^d\) is a diffeomorphism that maps source keypoints \(\mathcal{S}\) to target keypoints \(\mathcal{T}\).
 It is composed as \(\phi(x) = \gamma(x) + \psi(\gamma(x))\), where \(\gamma\) is an affine transform fitted via Kabsch algorithm, and \(\psi\) is a Gaussian Process for nonlinear residuals.
 The Jacobian \(J_\phi\) is used to transport velocities: \(\dot{\hat{x}} = J_\phi(x) \dot{x}\).
@@ -190,8 +190,8 @@ The transportation map is fitted on these keypoints, and the source curve (demon
 
 \subsection{Dynamical Systems Integration}
 
-The warped trajectories serve as generalized motions in dynamical systems \(\dot{x} = f(x)\), fitted using methods like DMPs or GPs. Stability is preserved if \(\det(J_\phi) > 0\), ensuring the attractor dynamics remain intact in the target space.
-Compared to the original paper, GPT-O adds obstacle keypoints to the parameterization, enabling collision-free generalization without modifying the base policy learning.
+The warped trajectories serve as generalised motions in dynamical systems \(\dot{x} = f(x)\), fitted using methods like DMPs or GPs. Stability is preserved if \(\det(J_\phi) > 0\), ensuring the attractor dynamics remain intact in the target space.
+Compared to the original paper, GPT-O adds obstacle keypoints to the parameterisation, enabling collision-free generalisation without modifying the base policy learning.
 
 \begin{figure}[tbp]
     \centering
@@ -221,7 +221,7 @@ The Jacobian \(J_\psi(\mathbf{x}_*)\) (a \(d \times d\) matrix for \(d\)-dimensi
 For RBF, \(\frac{\partial k(\mathbf{x}_*, \mathbf{x}^{(m)})}{\partial x_{*j}} = -\frac{(x_{*j} - x^{(m)}_j)}{l^2} k(\mathbf{x}_*, \mathbf{x}^{(m)})\).
 
 This analytical computation is efficient for moderate keypoint sets (e.g., tens to hundreds) and ensures smooth velocity transport.
-In GPT-O, Jacobians are evaluated point-wise for curve points, preserving local differential structure and enabling stable DS generalization even with nonlinear warps.
+In GPT-O, Jacobians are evaluated point-wise for curve points, preserving local differential structure and enabling stable DS generalisation even with nonlinear warps.
 
 \begin{algorithm}
     \caption{GPT-O warping}
@@ -250,23 +250,23 @@ In GPT-O, Jacobians are evaluated point-wise for curve points, preserving local 
 
 \section{PRELIMINARY RESULTS \& DISCUSSIONS}
 
-Simulations demonstrate GPT-O's effectiveness in generalizing motions while avoiding obstacles:
+Simulations demonstrate GPT-O's effectiveness in generalising motions while avoiding obstacles:
 
 \begin{itemize}
-    \item \textbf{2D Single Obstacle Demo}: A cubic source curve (200 points) is transported to 100 varying endpoints around a circular obstacle (center at (2.0, 0.6), radius 0.15). Warped trajectories, visualized with plasma colormap, avoid collisions and converge smoothly. Interactive mode (Matplotlib) enables real-time obstacle dragging, updating warps instantly for dynamic testing.
+    \item \textbf{2D Single Obstacle Demo}: A cubic source curve (200 points) is transported to 100 varying endpoints around a circular obstacle (center at (2.0, 0.6), radius 0.15). Warped trajectories, visualised with plasma colormap, avoid collisions and converge smoothly. Interactive mode (Matplotlib) enables real-time obstacle dragging, updating warps instantly for dynamic testing.
 
     \item \textbf{2D Multiple Obstacles Demo}: Extended to three obstacles (centers at (1.5, 0.4), (2.0, 0.6), (2.8, 0.3); radius 0.15 each). Warped curves adapt to cluttered spaces, maintaining stability.
 
-    \item \textbf{3D Single Obstacle Demo}: A helical source curve (200 points) is warped around a spherical obstacle (center at (2.0, 0.6, 0.0), radius 0.1) to a new endpoint. Visualizations (Matplotlib) show deformed space via grid lines, with color-coded displacements highlighting warp effects.
+    \item \textbf{3D Single Obstacle Demo}: A helical source curve (200 points) is warped around a spherical obstacle (center at (2.0, 0.6, 0.0), radius 0.1) to a new endpoint. Visualisations (Matplotlib) show deformed space via grid lines, with color-coded displacements highlighting warp effects.
 
     \item \textbf{3D Interactive Space Warp Demo}: Using Viser, grid lines are warped in real-time with movable obstacles and endpoints, demonstrating space deformation for intuitive understanding.
 \end{itemize}
 
-These results confirm GPT-O's ability to generalize DS motions in obstructed environments, outperforming baseline transportation without obstacles (e.g., direct affine/GP fits, which collide).
+These results confirm GPT-O's ability to generalise DS motions in obstructed environments, outperforming baseline transportation without obstacles (e.g., direct affine/GP fits, which collide).
 
 \section{CONCLUSIONS}
 
-GPT-O advances motion generalization in DS by integrating obstacle-aware warping with policy transportation, enabling adaptable robot behaviors.
+GPT-O advances motion generalisation in DS by integrating obstacle-aware warping with policy transportation, enabling adaptable robot behaviors.
 Future work includes real-robot experiments (e.g., UR5 manipulator for simple reaching tasks), multi-modal policies (position + orientation via quaternions), and integration with full DS controllers for closed-loop control.
 Additionally, exploring combinations with EMP for elastic deformations and online adaptation could further improve performance in dynamic scenarios, such as by incorporating graph-based editing into the warping process.
 
@@ -276,7 +276,7 @@ Additionally, exploring combinations with EMP for elastic deformations and onlin
 
 \subsection{Notation Summary}
 
-Table~\ref{tab:notation} summarizes key notations used throughout.
+Table~\ref{tab:notation} summarises key notations used throughout.
 
 \begin{table}[h]
     \centering
