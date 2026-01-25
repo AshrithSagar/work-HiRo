@@ -101,6 +101,11 @@ This allows generating new motions for novel task configurations while maintaini
 The approach is validated on tasks like peg insertion and bag opening, showing generalization across geometric variations in robot and task setups.
 It enables data-efficient learning and can be integrated with downstream policy methods.
 Elastic Motion Policies (EMP)~\cite{li2025elastic} introduce a dynamical system for one-shot imitation learning, adapting via Laplacian editing and online Lyapunov learning for robust performance in dynamic environments.
+EMP represents demonstrations as a mesh graph, where nodes are sampled points along the trajectory, and edges connect nearby points to encode local geometry.
+Deformations are achieved through Laplacian editing, which minimizes changes to relative positions while satisfying new constraints like altered start/goal points or via-points.
+Stability is ensured by learning a Lyapunov function online, guaranteeing convergence to the target attractor even under perturbations.
+This approach excels in tasks requiring elasticity, such as cloth manipulation or obstacle avoidance, and outperforms baselines in metrics like success rate and trajectory smoothness in simulated and real-robot experiments.
+Compared to keypoint-based methods like GPT-O, EMP emphasizes graph-based flexibility over explicit transportation maps, potentially offering complementary strengths in handling complex deformations.
 
 \subsection{Interactive Imitation Learning}
 
@@ -142,7 +147,12 @@ GPs can model complex nonlinear functions without fixed basis.
 The posterior provides not just predictions but also variance, quantifying confidence.
 For a test point \(\mathbf{x}_*\), the predictive distribution is Gaussian with mean \(\bar{f}_* = \mathbf{k}_*^T {(\mathbf{K} + \sigma^2 \mathbf{I})}^{-1} \mathbf{y}\) and variance \(\text{var}(f_*) = k(\mathbf{x}_*, \mathbf{x}_*) - \mathbf{k}_*^T {(\mathbf{K} + \sigma^2 \mathbf{I})}^{-1} \mathbf{k}_*\), where \(\mathbf{K}\) is the kernel matrix on training points.
 
+Common kernels like the radial basis function (RBF) \(k(\mathbf{x}, \mathbf{x}') = \exp\left(-\frac{\|\mathbf{x} - \mathbf{x}'\|^2}{2l^2}\right)\) control smoothness via the lengthscale \(l\).
+This uncertainty estimation is crucial for handling noisy data or sparse observations, as higher variance indicates regions where the model is less confident.
+In policy transportation, GPs can interpolate smoothly between keypoints while providing derivative information for Jacobians.
+
 In GPT-O, GPs model the nonlinear residual in the transportation map, fitting residuals after affine alignment. The uncertainty helps in handling noisy keypoints, and the Jacobian of the GP (via derivatives) enables velocity transport while preserving stability.
+For example, in residual fitting, the GP posterior mean provides the correction term, and its covariance can inform robustness to keypoint perturbations.
 
 \section{METHODOLOGY}
 
@@ -222,7 +232,7 @@ Simulations demonstrate GPT-O's effectiveness in generalizing motions while avoi
     }\label{fig:2d-demo-multiple}
 \end{figure}
 
-These results confirm GPT-O's ability to generalize DS motions in obstructed environments, outperforming baseline transportation without obstacles (e.g., direct affine/GP fits, which collide). Future metrics include Fréchet distance and collision rates.
+These results confirm GPT-O's ability to generalize DS motions in obstructed environments, outperforming baseline transportation without obstacles (e.g., direct affine/GP fits, which collide).
 
 \begin{figure}[tbp]
     \centering
@@ -243,8 +253,8 @@ These results confirm GPT-O's ability to generalize DS motions in obstructed env
 \section{CONCLUSIONS}
 
 GPT-O advances motion generalization in DS by integrating obstacle-aware warping with policy transportation, enabling adaptable robot behaviors.
-Future work includes real-robot experiments (e.g., UR5 manipulator), multi-modal policies (position + orientation), and integration with full DS controllers for closed-loop control.
-Additionally, exploring combinations with EMP for elastic deformations and online adaptation could further improve performance in dynamic scenarios.
+Future work includes real-robot experiments (e.g., UR5 manipulator for simple reaching tasks), multi-modal policies (position + orientation via quaternions), and integration with full DS controllers for closed-loop control.
+Additionally, exploring combinations with EMP for elastic deformations and online adaptation could further improve performance in dynamic scenarios, such as by incorporating graph-based editing into the warping process.
 
 \addtolength{\textheight}{-12cm}
 
