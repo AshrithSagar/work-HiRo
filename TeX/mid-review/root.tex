@@ -160,7 +160,7 @@ For example, in residual fitting, the GP posterior mean provides the correction 
     \centering
     \includegraphics[width=\linewidth]{figs/1.jpeg}
     \caption{
-        Single obstacle 2D demo
+        Single obstacle 2D demonstration. A source trajectory (gray dashed line) is warped to multiple target endpoints (shown in plasma colormap from blue to yellow) while avoiding a circular obstacle. The warped trajectories successfully navigate around the obstacle boundary while maintaining smooth convergence to their respective goals.
     }\label{fig:2d-demo-single}
 \end{figure}
 
@@ -168,36 +168,45 @@ For example, in residual fitting, the GP posterior mean provides the correction 
     \centering
     \includegraphics[width=\linewidth]{figs/2.jpeg}
     \caption{
-        Multiple obstacles 2D demo
+        Multiple obstacles 2D demonstration. The source curve is generalized to avoid three circular obstacles simultaneously, with warped trajectories adapting to the cluttered environment while preserving smoothness and goal convergence.
     }\label{fig:2d-demo-multiple}
 \end{figure}
 
-The GPT-O framework builds upon the policy transportation approach described in~\cite{lee2024generalizable}, extending it to incorporate obstacle avoidance through space warping.
-In the original paper, tasks are parameterised using ordered sets of keypoints in source and target configurations.
+The GPT-O framework extends the policy transportation approach described in~\cite{lee2024generalizable} by incorporating obstacle avoidance through space warping—a novel contribution of this work.
+In the original paper, tasks are parameterized using ordered sets of keypoints in source and target configurations.
 The transportation map \(\phi: \mathbb{R}^d \to \mathbb{R}^d\) is a diffeomorphism that maps source keypoints \(\mathcal{S}\) to target keypoints \(\mathcal{T}\).
-It is composed as \(\phi(x) = \gamma(x) + \psi(\gamma(x))\), where \(\gamma\) is an affine transform fitted via Kabsch algorithm, and \(\psi\) is a Gaussian Process for nonlinear residuals.
+It is composed as \(\phi(x) = \gamma(x) + \psi(\gamma(x))\), where \(\gamma\) is an affine transform fitted via Kabsch algorithm, and \(\psi\) is a Gaussian Process modeling nonlinear residuals.
 The Jacobian \(J_\phi\) is used to transport velocities: \(\dot{\hat{x}} = J_\phi(x) \dot{x}\).
-This preserves the structure of the dynamical system policy, ensuring stability if \(\det(J_\phi) > 0\).
+This preserves the structure of the dynamical system policy, with stability maintained when \(\det(J_\phi) > 0\).
 
-To handle obstacles, GPT-O treats them as circular (2D) or spherical (3D) entities. For each obstacle, its center is replicated in the source keypoints (tiled to match the number of boundary points), while the boundary points (sampled uniformly on the circumference/surface) serve as corresponding target keypoints.
-This setup effectively ``expands'' the obstacle in the warped space, creating a deformation that pushes trajectories away from the obstacle while preserving convergence to the target.
+Our extension to handle obstacles treats them as circular (2D) or spherical (3D) entities represented through their boundary points. For each obstacle with center \(\mathbf{c}\) and radius \(r\), we sample \(n\) boundary points uniformly on the circumference or surface.
+In the source keypoint set, the obstacle center is replicated \(n\) times (once for each boundary point), while in the target keypoint set, the actual boundary points are used.
+This asymmetric keypoint construction effectively creates a local expansion in the warped space, pushing trajectories away from the obstacle region.
 
-Keypoints are constructed as:
-- Source: [start point, tiled obstacle centers, source end point]
-- Target: [start point, obstacle boundary points, target end point]
+Concretely, for a single obstacle with \(n\) boundary points \(\{\mathbf{b}_1, \mathbf{b}_2, \ldots, \mathbf{b}_n\}\) and center \(\mathbf{c}\), the keypoint sets are constructed as:
+\begin{align*}
+    \mathcal{S} &= [\mathbf{x}_{\text{start}}, \underbrace{\mathbf{c}, \mathbf{c}, \ldots, \mathbf{c}}_{n \text{ times}}, \mathbf{x}_{\text{end}}] \\
+    \mathcal{T} &= [\mathbf{x}_{\text{start}}, \mathbf{b}_1, \mathbf{b}_2, \ldots, \mathbf{b}_n, \mathbf{x}'_{\text{end}}]
+\end{align*}
+where \(\mathbf{x}_{\text{start}}\) is the demonstration start point (kept fixed in both source and target), \(\mathbf{x}_{\text{end}}\) is the original endpoint, and \(\mathbf{x}'_{\text{end}}\) is the desired new endpoint.
+For multiple obstacles, their respective center replications and boundary points are concatenated in the keypoint sequences.
 
-The transportation map is fitted on these keypoints, and the source curve (demonstration trajectory) is warped by applying \(\phi\) to positions and \(J_\phi\) to velocities.
+The transportation map is then fitted on these augmented keypoint sets, and the source curve (demonstration trajectory) is warped by applying \(\phi\) to positions.
+For complete DS generalization, velocities are transported using the Jacobian via point-wise multiplication: \(\hat{\mathbf{v}}_i = J_\phi(\mathbf{x}_i) \mathbf{v}_i\) for each point \(i\) along the trajectory.
 
 \subsection{Dynamical Systems Integration}
 
-The warped trajectories serve as generalised motions in dynamical systems \(\dot{x} = f(x)\), fitted using methods like DMPs or GPs. Stability is preserved if \(\det(J_\phi) > 0\), ensuring the attractor dynamics remain intact in the target space.
-Compared to the original paper, GPT-O adds obstacle keypoints to the parameterisation, enabling collision-free generalisation without modifying the base policy learning.
+The warped trajectories serve as generalized motions in dynamical systems \(\dot{x} = f(x)\), which can be fitted using methods like DMPs or GPs. The stability of the original DS is preserved in the warped space provided \(\det(J_\phi) > 0\) everywhere along the trajectory, ensuring that the attractor structure remains intact in the target configuration.
+Our implementation assumes this condition holds through careful GP kernel selection (e.g., smooth RBF kernels with appropriate lengthscales), though formal verification is left for future work.
+
+Compared to the original Lee et al.~framework, GPT-O adds obstacle boundary points to the keypoint parameterization, enabling collision-aware generalization without modifying the base policy learning or DS fitting procedures.
+This modular design allows GPT-O to work with any DS representation that can be transported via position and velocity mappings.
 
 \begin{figure}[tbp]
     \centering
     \includegraphics[width=\linewidth]{figs/3.jpeg}
     \caption{
-        Single obstacle 3D demo
+        Single obstacle 3D demonstration using Matplotlib. A helical source trajectory (black) is warped around a spherical obstacle (gray points) to reach a new endpoint, producing the crimson warped trajectory that successfully avoids collision.
     }\label{fig:3d-demo-matplotlib}
 \end{figure}
 
@@ -205,7 +214,7 @@ Compared to the original paper, GPT-O adds obstacle keypoints to the parameteris
     \centering
     \includegraphics[width=\linewidth]{figs/5.jpeg}
     \caption{
-        Single obstacle in 3D space with corresponding warping shown
+        3D space warp visualization using Viser. The deformation of 3D grid lines (colored by displacement magnitude) illustrates how the transportation map warps the space around the spherical obstacle, with the source curve (gray) and warped curve (orange) shown for reference.
     }\label{fig:3d-demo-viser}
 \end{figure}
 
