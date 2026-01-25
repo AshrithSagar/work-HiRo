@@ -211,17 +211,31 @@ Compared to the original paper, GPT-O adds obstacle keypoints to the parameteris
 
 \subsection{Jacobian Computation}
 
-The Jacobian \(J_\phi\) of the transportation map \(\phi\) is essential for transporting velocities and ensuring the stability of the dynamical system.
+The Jacobian \(J_\phi\) of the transportation map \(\phi\) is essential for transporting velocities and preserving the stability properties of the dynamical system.
 It is computed as the derivative \(J_\phi(\mathbf{x}) = \frac{\partial \phi}{\partial \mathbf{x}}\).
-Since \(\phi(\mathbf{x}) = \gamma(\mathbf{x}) + \psi(\gamma(\mathbf{x}))\), the chain rule yields \(J_\phi = J_\gamma + J_\psi \cdot J_\gamma\), where \(J_\gamma\) is the constant affine matrix (including rotation and optional scale), and \(J_\psi\) is the Jacobian of the GP at the transformed points \(\gamma(\mathbf{x})\).
+Since \(\phi(\mathbf{x}) = \gamma(\mathbf{x}) + \psi(\gamma(\mathbf{x}))\), applying the chain rule yields:
+\[
+    J_\phi(\mathbf{x}) = J_\gamma + J_\psi(\gamma(\mathbf{x})) \, J_\gamma
+\]
+where \(J_\gamma\) is the constant Jacobian of the affine transformation (the rotation matrix scaled by the scaling factor if scaling is enabled), and \(J_\psi(\gamma(\mathbf{x}))\) is the Jacobian of the Gaussian Process evaluated at the affine-transformed point \(\gamma(\mathbf{x})\).
 
-For the GP \(\psi\), assuming a differentiable kernel like RBF \(k(\mathbf{x}, \mathbf{x}') = \sigma^2 \exp\left(-\frac{\|\mathbf{x} - \mathbf{x}'\|^2}{2l^2}\right)\), the predictive mean for a test point \(\mathbf{x}_*\) is \(\bar{\psi}(\mathbf{x}_*) = \mathbf{k}_*^T {(\mathbf{K} + \alpha \mathbf{I})}^{-1} \mathbf{R}\), where \(\mathbf{k}_*\) is the kernel vector between \(\mathbf{x}_*\) and training points, \(\mathbf{K}\) is the training kernel matrix, \(\alpha\) is noise, and \(\mathbf{R}\) are residuals.
+For the GP \(\psi\), assuming a differentiable kernel such as the RBF kernel \(k(\mathbf{x}, \mathbf{x}') = \sigma^2 \exp\left(-\frac{\|\mathbf{x} - \mathbf{x}'\|^2}{2l^2}\right)\), the predictive mean at a test point \(\mathbf{x}_*\) is:
+\[
+    \bar{\psi}(\mathbf{x}_*) = \mathbf{k}_*^T {(\mathbf{K} + \alpha \mathbf{I})}^{-1} \mathbf{R}
+\]
+where \(\mathbf{k}_* \in \mathbb{R}^m\) is the vector of kernel evaluations between \(\mathbf{x}_*\) and the \(m\) training points, \(\mathbf{K} \in \mathbb{R}^{m \times m}\) is the kernel matrix on training data, \(\alpha\) is the noise parameter, and \(\mathbf{R} \in \mathbb{R}^{m \times d}\) are the residual targets for \(d\) output dimensions.
 
-The Jacobian \(J_\psi(\mathbf{x}_*)\) (a \(d \times d\) matrix for \(d\)-dimensional space) has entries derived from kernel gradients: \(\frac{\partial \bar{\psi}_i}{\partial x_{*j}} = \sum_m {\left( \frac{\partial k_*^{(m)}}{\partial x_{*j}} \right)}^T {(\mathbf{K} + \alpha \mathbf{I})}^{-1} \mathbf{R}_i\), where \(i\) indexes output dimensions, \(j\) input dimensions, and \(m\) training points.
-For RBF, \(\frac{\partial k(\mathbf{x}_*, \mathbf{x}^{(m)})}{\partial x_{*j}} = -\frac{(x_{*j} - x^{(m)}_j)}{l^2} k(\mathbf{x}_*, \mathbf{x}^{(m)})\).
+The Jacobian \(J_\psi(\mathbf{x}_*) \in \mathbb{R}^{d \times d}\) has entries derived from kernel gradients. For output dimension \(i\) and input dimension \(j\):
+\[
+    \frac{\partial \bar{\psi}_i(\mathbf{x}_*)}{\partial x_{*j}} = \sum_{k=1}^{m} \frac{\partial k(\mathbf{x}_*, \mathbf{x}^{(k)})}{\partial x_{*j}} {\left[ {(\mathbf{K} + \alpha \mathbf{I})}^{-1} \mathbf{R} \right]}_{k,i}
+\]
+where the kernel derivative for the RBF kernel is:
+\[
+    \frac{\partial k(\mathbf{x}_*, \mathbf{x}^{(k)})}{\partial x_{*j}} = -\frac{x_{*j} - x^{(k)}_j}{l^2} \, k(\mathbf{x}_*, \mathbf{x}^{(k)})
+\]
 
-This analytical computation is efficient for moderate keypoint sets (e.g., tens to hundreds) and ensures smooth velocity transport.
-In GPT-O, Jacobians are evaluated point-wise for curve points, preserving local differential structure and enabling stable DS generalisation even with nonlinear warps.
+This analytical computation is efficient for moderate keypoint sets and ensures smooth velocity transport.
+In GPT-O, Jacobians are evaluated point-wise for each trajectory point, preserving the local differential structure of the DS and enabling stable generalization even with nonlinear deformations introduced by obstacle avoidance.
 
 \begin{algorithm}
     \caption{GPT-O warping}
@@ -241,9 +255,11 @@ In GPT-O, Jacobians are evaluated point-wise for curve points, preserving local 
 
     $\hat{\mathbf{P}} \gets \phi(\mathbf{P})$\tcp*{Warp positions}
 
-    Compute Jacobian matrix $J_\phi$ of $\phi$ at points $\mathbf{P}$\;
+    Compute Jacobian $J_\phi(\mathbf{x}_i) = J_\gamma + J_\psi(\gamma(\mathbf{x}_i)) J_\gamma$ for each point $\mathbf{x}_i \in \mathbf{P}$\;
 
-    $\hat{\mathbf{V}} \gets J_\phi \mathbf{V}$\tcp*{Transport velocities}
+    $\hat{\mathbf{v}}_i \gets J_\phi(\mathbf{x}_i) \mathbf{v}_i$ for each $i$\tcp*{Point-wise velocity transport}
+
+    $\hat{\mathbf{V}} \gets {[\hat{\mathbf{v}}_1, \hat{\mathbf{v}}_2, \ldots]}^T$\;
 
     \Return{$\hat{\mathbf{P}}, \hat{\mathbf{V}}$}
 \end{algorithm}
