@@ -59,9 +59,12 @@ Variants like HG-DAgger (Human-Gated DAgger) incorporate human oversight to deci
 Compliant Residual DAgger (CR-DAgger) extends this by using residual policies for compliant control, enabling safer and more adaptive learning from converging supervisors.
 These methods, surveyed in~\cite{celemin2022interactive}, enhance LfD by combining demonstration with online feedback.
 
-Dynamical systems (DS) model robot motions as stable attractors, facilitating goal convergence and adaptability to perturbations. Motion generalization in DS involves extrapolating learned policies (e.g., trajectories from demonstrations) to novel scenarios, including varying endpoints and environmental constraints such as obstacles. This work emphasizes obstacle-aware generalization, addressing limitations in traditional DS where static policies fail in dynamic settings.
+Dynamical systems (DS) model robot motions as stable attractors, facilitating goal convergence and adaptability to perturbations.
+Motion generalization in DS involves extrapolating learned policies (e.g., trajectories from demonstrations) to novel scenarios, including varying endpoints and environmental constraints such as obstacles.
+This work emphasizes obstacle-aware generalization, addressing limitations in traditional DS where static policies fail in dynamic settings.
 
-The core contribution is GPT-O, an implementation that builds on policy transportation via Gaussian processes (GPs) and affine transforms, integrated with obstacle modulation. Inspired by keypoint parameterization, GPT-O treats obstacle boundaries as additional keypoints to warp the motion space, preserving DS stability while avoiding collisions. This approach is detailed in the associated codebase, supporting both 2D and 3D applications.
+The core contribution is GPT-O, an implementation that builds on policy transportation via Gaussian processes (GPs) and affine transforms, integrated with obstacle modulation.
+Inspired by keypoint parameterization, GPT-O treats obstacle boundaries as additional keypoints to warp the motion space, preserving DS stability while avoiding collisions.
 
 \section{RELATED WORK}
 
