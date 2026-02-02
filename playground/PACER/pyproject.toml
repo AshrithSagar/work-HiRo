@@ -5,8 +5,25 @@ description = "Progress-Aligned Curation for Error-Resilient Imitation Learning"
 readme = "README.md"
 authors = [{ name = "Ashrith Sagar", email = "ashrithy@iisc.ac.in" }]
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "matplotlib>=3.10.8",
+    "microsoft-python-type-stubs",
+    "numpy>=2.4.2",
+    "rich>=14.3.2",
+    "scikit-learn>=1.8.0",
+    "scipy>=1.17.0",
+    "scipy-stubs>=1.17.0.2",
+    "typed-numpy",
+]
+
+[dependency-groups]
+lint = ["ruff>=0.14.14"]
+typecheck = ["basedpyright>=1.37.3", "mypy>=1.19.1", "pyright>=1.1.408"]
 
 [build-system]
 requires = ["uv_build>=0.9.28,<0.10.0"]
 build-backend = "uv_build"
+
+[tool.uv.sources]
+microsoft-python-type-stubs = { git = "https://github.com/microsoft/python-type-stubs.git" }
+typed-numpy = { git = "https://github.com/AshrithSagar/typed-numpy.git", rev = "main" }
