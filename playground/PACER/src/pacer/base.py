@@ -1,7 +1,12 @@
 """
-Demonstration
+PACER Base
+=======
+Implementation follows the following paper from
+Shreyas Kumar & Ravi Prakash, CoRL 2025 Workshop on Robot Data:
+"PACER: Progress-Aligned Curation for Error-Resilient Imitation Learning"
+https://openreview.net/forum?id=gaYyBvP2Rz
 """
-# src/pacer/demonstration.py
+# src/pacer/base.py
 
 from dataclasses import dataclass
 from typing import Generic, Iterator, TypeAlias, TypeVar
