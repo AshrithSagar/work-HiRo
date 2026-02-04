@@ -13,15 +13,16 @@ from typing import Generic, Iterator, Literal, Sequence, TypeAlias, TypeVar
 
 import numpy as np
 import numpy.typing as npt
+import optype.numpy as onp
 import torch
 import torch.nn as nn
 from torch import Tensor
 from typed_numpy._typed import TypedNDArray
 from typed_numpy._typed.context import enforce_shapes  # type: ignore
 
-type DType = np.dtype[np.float32]
+DType: TypeAlias = np.float32
 N = TypeVar("N", bound=int, default=int)
-Array1D: TypeAlias = TypedNDArray[tuple[N], DType]
+Array1D: TypeAlias = TypedNDArray[tuple[N], np.dtype[DType]]
 
 DimState = TypeVar("DimState", bound=int, default=int)  # d_x
 DimAction = TypeVar("DimAction", bound=int, default=int)  # d_a
@@ -50,9 +51,9 @@ def median(
 
 
 def normalise(
-    vec: npt.ArrayLike, /, method: Literal["NORM", "MINMAX", "ZSCORE"]
+    vec: onp.ToArray1D, /, method: Literal["NORM", "MINMAX", "ZSCORE"]
 ) -> np.ndarray:
-    vec = np.asarray(vec)
+    vec = np.asarray(vec, dtype=DType)
     match method:
         case "NORM":
             norm = np.linalg.norm(vec)
@@ -175,7 +176,7 @@ class PhaseEstimator(Generic[DimState]):
                 states = torch.from_numpy(demo.states)  # type: ignore
                 states = states.float().to(self.device)
                 scores: Tensor = self.scorer(states)
-                _scores = State[DimState](scores.cpu().numpy())
+                _scores = scores.cpu().numpy()
                 normalised = Array1D(normalise(_scores, method="MINMAX"))
                 phases.append(normalised)
         return phases
