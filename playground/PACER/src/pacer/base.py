@@ -88,8 +88,8 @@ class Demonstration(Generic[DimState, DimAction]):  # D_i
 Demonstrations: TypeAlias = list[Demonstration]  # [D_i]_{i = 1}^{N}
 
 
-class PhaseEstimator(nn.Module):
-    """Neural network to estimate state-dependent phase score `g_psi`."""
+class PhaseScorer(nn.Module):
+    """A small neural network (MLP) to estimate state-dependent phase score `g_psi`."""
 
     def __init__(self, state_dim: int, hidden_dim: int = 64):
         super().__init__()
@@ -127,7 +127,7 @@ class BinStats(Generic[DimState, DimAction]):
 
     ## Local task dynamics
     action_tangent: Action[DimAction]  # t_a[b] <- diff{ alpha_a[b] }
-    state_tangent: State[DimState]  # t_s[b] <- diff{ alpha_s[b] }
+    state_tangent: State[DimState] | None = None  # t_s[b] <- diff{ alpha_s[b] }
 
 
 @dataclass(kw_only=True)
@@ -142,5 +142,5 @@ class RibbonToken(Generic[DimState, DimAction]):
     median_state: State[DimState]  # alpha_s[b]
     median_state_change: float  # beta_s[b]
     action_tangent: Action[DimAction]  # t_a[b]
-    state_tangent: State[DimState]  # t_s[b]
+    state_tangent: State[DimState] | None = None  # t_s[b]
     MAD_action: float  # Median Absolute Deviation of actions
