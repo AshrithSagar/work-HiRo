@@ -9,9 +9,10 @@ https://openreview.net/forum?id=gaYyBvP2Rz
 # src/pacer/base.py
 
 from dataclasses import dataclass
-from typing import Generic, Iterator, TypeAlias, TypeVar
+from typing import Generic, Iterator, Sequence, TypeAlias, TypeVar
 
 import numpy as np
+import numpy.typing as npt
 import torch.nn as nn
 from torch import Tensor
 from typed_numpy._typed import TypedNDArray
@@ -30,6 +31,25 @@ type SampleIndex = tuple[int, int]  # (i, t)
 # (x_{i, t}, a_{i, t})
 StateActionPair: TypeAlias = tuple[State[DimState], Action[DimAction]]
 Sample: TypeAlias = StateActionPair[DimState, DimAction]
+
+
+## Utils
+
+EPS: float = 1e-8
+MAD_SCALE: float = 1.4826  # Gaussian consistency factor for MAD
+
+
+def median(
+    arr: npt.ArrayLike, /, axis: int | Sequence[int] | None = None
+) -> np.ndarray:
+    arr = np.asarray(arr)
+    return np.median(arr, axis=axis)
+
+
+def normalise(vec: npt.ArrayLike, /) -> np.ndarray:
+    vec = np.asarray(vec)
+    norm = np.linalg.norm(vec)
+    return vec / (norm + EPS)
 
 
 @dataclass(kw_only=True)
@@ -60,6 +80,9 @@ class Demonstration(Generic[DimState, DimAction]):  # D_i
     @property
     def action_dim(self) -> DimAction:  # d_a
         return self.actions[0].shape[0]
+
+    def sample(self, t: int, /) -> Sample[DimState, DimAction]:
+        return self[t]  # (x_{i, t}, a_{i, t})
 
 
 Demonstrations: TypeAlias = list[Demonstration]  # [D_i]_{i = 1}^{N}
