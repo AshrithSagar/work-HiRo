@@ -14,6 +14,7 @@ from typing import (
     Generic,
     Iterator,
     Literal,
+    Self,
     Sequence,
     TypeAlias,
     TypeVar,
@@ -49,6 +50,10 @@ type SampleIndex = tuple[int, int]  # (i, t)
 StateActionPair: TypeAlias = tuple[State[DimState], Action[DimAction]]
 Sample: TypeAlias = StateActionPair[DimState, DimAction]
 
+States: TypeAlias = list[State[DimState]]
+Actions: TypeAlias = list[Action[DimAction]]
+Samples: TypeAlias = list[Sample[DimState, DimAction]]
+SampleIndices: TypeAlias = list[SampleIndex]
 
 ## Utils
 
@@ -80,8 +85,8 @@ def normalise(
 @dataclass(kw_only=True)
 class Demonstration(Generic[DimState, DimAction]):  # D_i
     index: DemoIndex  # i
-    states: list[State[DimState]]  # [x_{i, t}]_{t = 1}^{T_i}
-    actions: list[Action[DimAction]]  # [a_{i, t}]_{t = 1}^{T_i}
+    states: States[DimState]  # [x_{i, t}]_{t = 1}^{T_i}
+    actions: Actions[DimAction]  # [a_{i, t}]_{t = 1}^{T_i}
 
     def __post_init__(self) -> None:
         assert len(self.states) == len(self.actions)
@@ -112,6 +117,14 @@ class Demonstration(Generic[DimState, DimAction]):  # D_i
 
     def sample(self, t: int, /) -> Sample[DimState, DimAction]:
         return self[t]  # (x_{i, t}, a_{i, t})
+
+    @classmethod
+    def from_samples(
+        cls, index: DemoIndex, samples: Samples[DimState, DimAction]
+    ) -> Self:
+        states = list(state for state, _ in samples)
+        actions = list(action for _, action in samples)
+        return cls(index=index, states=states, actions=actions)
 
 
 @dataclass(slots=True)
@@ -269,18 +282,18 @@ class RibbonToken(Generic[DimState, DimAction]):
 @dataclass(kw_only=True)
 class Bin(Generic[DimState, DimAction]):
     index: BinIndex  # b
-    sample_indices: list[SampleIndex] = field(default_factory=list[SampleIndex])  # I_b
-    samples: list[Sample[DimState, DimAction]] = field(
-        default_factory=list[Sample[DimState, DimAction]]
+    sample_indices: SampleIndices = field(default_factory=SampleIndices)  # I_b
+    samples: Samples[DimState, DimAction] = field(
+        default_factory=Samples[DimState, DimAction]
     )
     robust_statistics: BinStats[DimState, DimAction] | None = None
 
     @property
-    def states(self) -> list[State[DimState]]:
+    def states(self) -> States[DimState]:
         return list(state for state, _ in self.samples)
 
     @property
-    def actions(self) -> list[Action[DimAction]]:
+    def actions(self) -> Actions[DimAction]:
         return list(action for _, action in self.samples)
 
 
@@ -312,7 +325,7 @@ class BinHandler(Generic[DimState, DimAction]):
                 bin.samples.append(sample)
 
     def compute_robust_consensus_statistics(
-        self, samples: list[Sample[DimState, DimAction]]
+        self, samples: Samples[DimState, DimAction]
     ) -> BinStats[DimState, DimAction]:
         states = list(state for state, _ in samples)
         actions = list(action for _, action in samples)
@@ -340,9 +353,9 @@ class BinHandler(Generic[DimState, DimAction]):
         self,
         bin_idx: BinIndex,  # b
         demo_idx: int,  # i
-    ) -> list[SampleIndex]:  # I_b^{(-i)}
+    ) -> SampleIndices:  # I_b^{(-i)}
         bin = self.bins[bin_idx]
-        sample_indices = list[SampleIndex]()
+        sample_indices = SampleIndices()
         for sample_idx in bin.sample_indices:
             i, _t = sample_idx
             if i == demo_idx:
@@ -354,7 +367,7 @@ class BinHandler(Generic[DimState, DimAction]):
         self,
         bin_idx: BinIndex,  # b
         demo_idx: int,  # i
-    ) -> list[Sample[DimState, DimAction]]:
+    ) -> Samples[DimState, DimAction]:
         bin = self.bins[bin_idx]
         sample_indices = self.LOO_sample_indices(bin_idx, demo_idx)
         demo_indices = list(i for i, _t in sample_indices)
