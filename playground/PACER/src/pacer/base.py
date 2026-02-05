@@ -12,6 +12,7 @@ import math
 from dataclasses import dataclass, field
 from typing import (
     Generic,
+    Iterable,
     Iterator,
     Literal,
     Self,
@@ -52,7 +53,6 @@ Sample: TypeAlias = StateActionPair[DimState, DimAction]
 
 States: TypeAlias = list[State[DimState]]
 Actions: TypeAlias = list[Action[DimAction]]
-Samples: TypeAlias = list[Sample[DimState, DimAction]]
 SampleIndices: TypeAlias = list[SampleIndex]
 
 ## Utils
@@ -80,6 +80,34 @@ def normalise(
             min_: float = vec.min()
             max_: float = vec.max()
             return (vec - min_) / (max_ - min_ + EPS)
+
+
+@dataclass
+class Samples(Generic[DimState, DimAction]):
+    samples: list[Sample[DimState, DimAction]] = field(
+        default_factory=list[Sample[DimState, DimAction]]
+    )  # [(x_{t}, a_{t})]_{t = 1}^{T}
+
+    def __len__(self) -> int:
+        return len(self.samples)  # T
+
+    @enforce_shapes
+    def __getitem__(
+        self,
+        index: TimeIndex,  # t
+    ) -> Sample[DimState, DimAction]:
+        return self.samples[index]  # (x_{t}, a_{t})
+
+    @enforce_shapes
+    def __iter__(self) -> Iterator[Sample[DimState, DimAction]]:
+        for sample in self.samples:
+            yield sample
+
+    def append(self, sample: Sample[DimState, DimAction]) -> None:
+        self.samples.append(sample)
+
+    def extend(self, samples: Iterable[Sample[DimState, DimAction]]) -> None:
+        self.samples.extend(samples)
 
 
 @dataclass(kw_only=True)
@@ -119,7 +147,7 @@ class Demonstration(Generic[DimState, DimAction]):  # D_i
         return self[t]  # (x_{i, t}, a_{i, t})
 
     def samples(self) -> Samples[DimState, DimAction]:
-        return list(sample for sample in self)
+        return Samples(list(sample for sample in self))
 
     @classmethod
     def from_samples(
