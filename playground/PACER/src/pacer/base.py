@@ -8,10 +8,12 @@ https://openreview.net/forum?id=gaYyBvP2Rz
 """
 # src/pacer/base.py
 
-from dataclasses import dataclass
+import math
+from dataclasses import dataclass, field
 from typing import Generic, Iterator, Literal, Sequence, TypeAlias, TypeVar
 
 import numpy as np
+import numpy.linalg as la
 import numpy.typing as npt
 import optype.numpy as onp
 import torch
@@ -29,6 +31,7 @@ DimAction = TypeVar("DimAction", bound=int, default=int)  # d_a
 State: TypeAlias = Array1D[DimState]  # x_{i, t} \in R^{d_x}
 Action: TypeAlias = Array1D[DimAction]  # a_{i, t} \in R^{d_a}
 type Phase = float  # tau \in [0, 1]
+type DemoIndex = int  # i \i {0, 1, ..., N-1}
 type BinIndex = int  # b \in {0, 1, ..., B-1}
 type SampleIndex = tuple[int, int]  # (i, t)
 
@@ -56,7 +59,7 @@ def normalise(
     vec = np.asarray(vec, dtype=DType)
     match method:
         case "NORM":
-            norm = np.linalg.norm(vec)
+            norm = la.norm(vec)
             return vec / (norm + EPS)
         case "MINMAX" | "ZSCORE":
             min_: float = vec.min()
@@ -68,6 +71,7 @@ def normalise(
 
 @dataclass(kw_only=True)
 class Demonstration(Generic[DimState, DimAction]):  # D_i
+    index: DemoIndex  # i
     states: list[State[DimState]]  # [x_{i, t}]_{t = 1}^{T_i}
     actions: list[Action[DimAction]]  # [a_{i, t}]_{t = 1}^{T_i}
 
@@ -106,10 +110,10 @@ class Demonstration(Generic[DimState, DimAction]):  # D_i
 Demonstrations: TypeAlias = list[Demonstration[DimState, DimAction]]
 
 
-class PhaseScorer(nn.Module):
+class PhaseScorer(nn.Module, Generic[DimState]):
     """A small neural network (MLP) to estimate state-dependent phase score `g_psi`."""
 
-    def __init__(self, state_dim: int, hidden_dim: int = 64):
+    def __init__(self, state_dim: DimState, hidden_dim: int = 64):
         super().__init__()
         self.network = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
@@ -127,10 +131,10 @@ class PhaseScorer(nn.Module):
         return forward.squeeze(-1)
 
 
-class PhaseEstimator(Generic[DimState]):
+class PhaseEstimator(Generic[DimState, DimAction]):
     def __init__(
         self,
-        demonstrations: Demonstrations[DimState],
+        demonstrations: Demonstrations[DimState, DimAction],
         *,
         margin: float = 1.0,
         lr: float = 1e-3,
@@ -147,7 +151,7 @@ class PhaseEstimator(Generic[DimState]):
         self.scorer = PhaseScorer(state_dim=state_dim).to(self.device)
         self.optimiser = torch.optim.Adam(self.scorer.parameters(), lr=self.lr)
 
-    def compute_ranking_loss(self) -> Tensor:
+    def compute_ranking_loss(self) -> Tensor:  # L_rank
         ranking_loss = torch.tensor(0.0, device=self.device)
         for demo in self.demonstrations:
             states = torch.from_numpy(demo.states)  # type: ignore
@@ -168,7 +172,9 @@ class PhaseEstimator(Generic[DimState]):
             self.optimiser.step()  # type: ignore
 
     @enforce_shapes
-    def estimate_phases(self) -> list[Array1D[int]]:
+    def estimate_phases(
+        self,
+    ) -> list[Array1D[int]]:  # [[tau_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
         self.scorer.eval()
         phases = list[Array1D[int]]()
         with torch.no_grad():
@@ -217,3 +223,107 @@ class RibbonToken(Generic[DimState, DimAction]):
     action_tangent: Action[DimAction]  # t_a[b]
     state_tangent: State[DimState] | None = None  # t_s[b]
     MAD_action: float  # Median Absolute Deviation of actions
+
+
+@dataclass(kw_only=True)
+class Bin(Generic[DimState, DimAction]):
+    index: BinIndex  # b
+    sample_indices: list[SampleIndex] = field(default_factory=list[SampleIndex])  # I_b
+    samples: list[Sample[DimState, DimAction]] = field(
+        default_factory=list[Sample[DimState, DimAction]]
+    )
+    robust_statistics: BinStats[DimState, DimAction] | None = None
+
+
+class BinHandler(Generic[DimState, DimAction]):
+    def __init__(
+        self, phase_estimator: PhaseEstimator[DimState, DimAction], *, n_bins: int = 96
+    ) -> None:
+        self.phase_estimator = phase_estimator
+        self.n_bins = n_bins  # B
+        self.demonstrations = self.phase_estimator.demonstrations
+
+    def phase_range(self, bin_idx: BinIndex) -> tuple[Phase, Phase]:
+        return (bin_idx / self.n_bins, (bin_idx + 1) / self.n_bins)
+
+    def make_bins(self) -> None:
+        phases = self.phase_estimator.estimate_phases()
+        self.bins = [
+            Bin[DimState, DimAction](index=bin_idx) for bin_idx in range(self.n_bins)
+        ]
+        for i in range(len(phases)):
+            for t in range(len(phases[i])):
+                tau: Phase = phases[i][t]
+                bin_idx: BinIndex = math.floor(tau * self.n_bins)
+                assert bin_idx < self.n_bins
+                bin = self.bins[bin_idx]
+                sample_idx: SampleIndex = (i, t)
+                bin.sample_indices.append(sample_idx)
+                sample = self.demonstrations[i][t]
+                bin.samples.append(sample)
+
+    def compute_robust_consensus_statistics(
+        self, samples: list[Sample[DimState, DimAction]]
+    ) -> BinStats[DimState, DimAction]:
+        states = list(state for state, _ in samples)
+        actions = list(action for _, action in samples)
+
+        action_norms = list(la.norm(action) for action in actions)
+        state_change_norms = list(la.norm(np.diff(state)) for state in states)
+
+        median_action = Action[DimAction](median(actions, axis=0))
+        median_state = State[DimState](median(states, axis=0))
+        median_action_strength = float(median(action_norms, axis=0))
+        median_state_change = float(median(state_change_norms, axis=0))
+        action_tangent = np.diff(median_action, axis=0)
+        state_tangent = np.diff(median_state, axis=0)
+
+        return BinStats(
+            median_action=median_action,
+            median_state=median_state,
+            median_action_strength=median_action_strength,
+            median_state_change=median_state_change,
+            action_tangent=action_tangent,
+            state_tangent=state_tangent,
+        )
+
+    def LOO_sample_indices(
+        self,
+        bin_idx: BinIndex,  # b
+        demo_idx: int,  # i
+    ) -> list[SampleIndex]:  # I_b^{(-i)}
+        bin = self.bins[bin_idx]
+        sample_indices = list[SampleIndex]()
+        for sample_idx in bin.sample_indices:
+            i, _t = sample_idx
+            if i == demo_idx:
+                continue
+            sample_indices.append(sample_idx)
+        return sample_indices
+
+    def LOO_samples(
+        self,
+        bin_idx: BinIndex,  # b
+        demo_idx: int,  # i
+    ) -> list[Sample[DimState, DimAction]]:
+        bin = self.bins[bin_idx]
+        sample_indices = self.LOO_sample_indices(bin_idx, demo_idx)
+        demo_indices = list(i for i, _t in sample_indices)
+        samples = list(
+            sample for i, sample in enumerate(bin.samples) if i not in demo_indices
+        )
+        return samples
+
+    def compute_trust_values(self) -> None:
+        for bin in self.bins:
+            stats = self.compute_robust_consensus_statistics(bin.samples)
+            bin.robust_statistics = stats
+            for demo in self.demonstrations:
+                loo_samples = self.LOO_samples(bin.index, demo.index)
+                _loo_stats = self.compute_robust_consensus_statistics(loo_samples)
+        raise
+
+
+class PACER(Generic[DimState, DimAction]):
+    def __init__(self, demonstrations: Demonstrations[DimState, DimAction]) -> None:
+        self.demonstrations = demonstrations
