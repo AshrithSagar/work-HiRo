@@ -44,7 +44,7 @@ type Phase = float  # tau \in [0, 1]
 type DemoIndex = int  # i \i {0, 1, ..., N-1}
 type TimeIndex = int  # t \i {0, 1, ..., T_i-1}
 type BinIndex = int  # b \in {0, 1, ..., B-1}
-type SampleIndex = tuple[int, int]  # (i, t)
+type SampleIndex = tuple[DemoIndex, TimeIndex]  # (i, t)
 
 # (x_{i, t}, a_{i, t})
 StateActionPair: TypeAlias = tuple[State[DimState], Action[DimAction]]
@@ -117,6 +117,9 @@ class Demonstration(Generic[DimState, DimAction]):  # D_i
 
     def sample(self, t: int, /) -> Sample[DimState, DimAction]:
         return self[t]  # (x_{i, t}, a_{i, t})
+
+    def samples(self) -> Samples[DimState, DimAction]:
+        return list(sample for sample in self)
 
     @classmethod
     def from_samples(
@@ -243,8 +246,8 @@ class PhaseEstimator(Generic[DimState, DimAction]):
 
 
 @dataclass(kw_only=True)
-class BinStats(Generic[DimState, DimAction]):
-    """Robust bin-level consensus statistics for a single phase bin `b`."""
+class RobustStatistics(Generic[DimState, DimAction]):
+    """Robust consensus statistics for a set of samples."""
 
     ## Stable anchors
     median_action: Action[DimAction]  # alpha_a[b] = median{ a_{i, t} : (i, t) \in I_b }
@@ -286,7 +289,7 @@ class Bin(Generic[DimState, DimAction]):
     samples: Samples[DimState, DimAction] = field(
         default_factory=Samples[DimState, DimAction]
     )
-    robust_statistics: BinStats[DimState, DimAction] | None = None
+    robust_statistics: RobustStatistics[DimState, DimAction] | None = None
 
     @property
     def states(self) -> States[DimState]:
@@ -326,7 +329,7 @@ class BinHandler(Generic[DimState, DimAction]):
 
     def compute_robust_consensus_statistics(
         self, samples: Samples[DimState, DimAction]
-    ) -> BinStats[DimState, DimAction]:
+    ) -> RobustStatistics[DimState, DimAction]:
         states = list(state for state, _ in samples)
         actions = list(action for _, action in samples)
 
@@ -340,7 +343,7 @@ class BinHandler(Generic[DimState, DimAction]):
         action_tangent = np.diff(median_action, axis=0)
         state_tangent = np.diff(median_state, axis=0)
 
-        return BinStats(
+        return RobustStatistics(
             median_action=median_action,
             median_state=median_state,
             median_action_strength=median_action_strength,
@@ -376,16 +379,29 @@ class BinHandler(Generic[DimState, DimAction]):
         )
         return samples
 
-    def compute_trust_values(self) -> None:
+    def compute_action_residuals(self) -> list[list[DType]]:
+        residuals = list[list[DType]]()
         for bin in self.bins:
             stats = self.compute_robust_consensus_statistics(bin.samples)
             bin.robust_statistics = stats
+            action_residuals = list[DType]()
             for demo in self.demonstrations:
                 loo_samples = self.LOO_samples(bin.index, demo.index)
                 loo_stats = self.compute_robust_consensus_statistics(loo_samples)
                 bin_median_action = loo_stats.median_action  # alpha_a^{(-i)}[b]
-                for _, action in demo:
-                    _action_residual = la.norm(action - bin_median_action)  # r_{i, t}
+                for action in bin.actions:
+                    action_residual = la.norm(action - bin_median_action)  # r_{i, t}
+                    action_residuals.append(action_residual)
+            residuals.append(action_residuals)
+        return residuals
+
+    def compute_MAD_actions(self) -> None:
+        residuals = self.compute_action_residuals()
+        for bin, action_residuals in zip(self.bins, residuals):
+            raise NotImplementedError
+
+    def compute_trust_values(self) -> None:
+        raise NotImplementedError
 
 
 class PACER(Generic[DimState, DimAction]):
