@@ -10,7 +10,16 @@ https://openreview.net/forum?id=gaYyBvP2Rz
 
 import math
 from dataclasses import dataclass, field
-from typing import Generic, Iterator, Literal, Sequence, TypeAlias, TypeVar
+from typing import (
+    Generic,
+    Iterator,
+    Literal,
+    Sequence,
+    TypeAlias,
+    TypeVar,
+    cast,
+    overload,
+)
 
 import numpy as np
 import numpy.linalg as la
@@ -23,8 +32,8 @@ from typed_numpy._typed import TypedNDArray
 from typed_numpy._typed.context import enforce_shapes  # type: ignore
 
 DType: TypeAlias = np.float32
-N = TypeVar("N", bound=int, default=int)
-Array1D: TypeAlias = TypedNDArray[tuple[N], np.dtype[DType]]
+Dim1 = TypeVar("Dim1", bound=int, default=int)
+Array1D: TypeAlias = TypedNDArray[tuple[Dim1], np.dtype[DType]]
 
 DimState = TypeVar("DimState", bound=int, default=int)  # d_x
 DimAction = TypeVar("DimAction", bound=int, default=int)  # d_a
@@ -32,6 +41,7 @@ State: TypeAlias = Array1D[DimState]  # x_{i, t} \in R^{d_x}
 Action: TypeAlias = Array1D[DimAction]  # a_{i, t} \in R^{d_a}
 type Phase = float  # tau \in [0, 1]
 type DemoIndex = int  # i \i {0, 1, ..., N-1}
+type TimeIndex = int  # t \i {0, 1, ..., T_i-1}
 type BinIndex = int  # b \in {0, 1, ..., B-1}
 type SampleIndex = tuple[int, int]  # (i, t)
 
@@ -65,8 +75,6 @@ def normalise(
             min_: float = vec.min()
             max_: float = vec.max()
             return (vec - min_) / (max_ - min_ + EPS)
-        case _:
-            raise NotImplementedError
 
 
 @dataclass(kw_only=True)
@@ -96,18 +104,51 @@ class Demonstration(Generic[DimState, DimAction]):  # D_i
 
     @property
     def state_dim(self) -> DimState:  # d_x
-        return self.states[0].shape[0]
+        return cast(DimState, self.states[0].shape[0])
 
     @property
     def action_dim(self) -> DimAction:  # d_a
-        return self.actions[0].shape[0]
+        return cast(DimAction, self.actions[0].shape[0])
 
     def sample(self, t: int, /) -> Sample[DimState, DimAction]:
         return self[t]  # (x_{i, t}, a_{i, t})
 
 
-# [D_i]_{i = 1}^{N}
-Demonstrations: TypeAlias = list[Demonstration[DimState, DimAction]]
+@dataclass(slots=True)
+class Demonstrations(Generic[DimState, DimAction]):  # [D_i]_{i = 1}^{N}
+    demos: list[Demonstration[DimState, DimAction]]
+
+    def __len__(self) -> int:
+        return len(self.demos)
+
+    @enforce_shapes
+    @overload
+    def __getitem__(self, index: DemoIndex) -> Demonstration[DimState, DimAction]: ...
+    @overload
+    def __getitem__(self, index: SampleIndex) -> Sample[DimState, DimAction]: ...
+    #
+    def __getitem__(
+        self, index: DemoIndex | SampleIndex
+    ) -> Demonstration[DimState, DimAction] | Sample[DimState, DimAction]:
+        match index:
+            case tuple():
+                i, t = index
+                return self.demos[i][t]
+            case int():
+                return self.demos[index]
+
+    @enforce_shapes
+    def __iter__(self) -> Iterator[Demonstration[DimState, DimAction]]:
+        for demo in self.demos:
+            yield demo  # D_i
+
+    @property
+    def state_dim(self) -> DimState:  # d_x
+        return self.demos[0].state_dim
+
+    @property
+    def action_dim(self) -> DimAction:  # d_a
+        return self.demos[0].action_dim
 
 
 class PhaseScorer(nn.Module, Generic[DimState]):
@@ -147,7 +188,7 @@ class PhaseEstimator(Generic[DimState, DimAction]):
         self.epochs = epochs
         self.device = device
 
-        state_dim = self.demonstrations[0].state_dim
+        state_dim = self.demonstrations.state_dim
         self.scorer = PhaseScorer(state_dim=state_dim).to(self.device)
         self.optimiser = torch.optim.Adam(self.scorer.parameters(), lr=self.lr)
 
@@ -234,6 +275,14 @@ class Bin(Generic[DimState, DimAction]):
     )
     robust_statistics: BinStats[DimState, DimAction] | None = None
 
+    @property
+    def states(self) -> list[State[DimState]]:
+        return list(state for state, _ in self.samples)
+
+    @property
+    def actions(self) -> list[Action[DimAction]]:
+        return list(action for _, action in self.samples)
+
 
 class BinHandler(Generic[DimState, DimAction]):
     def __init__(
@@ -259,7 +308,7 @@ class BinHandler(Generic[DimState, DimAction]):
                 bin = self.bins[bin_idx]
                 sample_idx: SampleIndex = (i, t)
                 bin.sample_indices.append(sample_idx)
-                sample = self.demonstrations[i][t]
+                sample = self.demonstrations[sample_idx]
                 bin.samples.append(sample)
 
     def compute_robust_consensus_statistics(
@@ -320,8 +369,10 @@ class BinHandler(Generic[DimState, DimAction]):
             bin.robust_statistics = stats
             for demo in self.demonstrations:
                 loo_samples = self.LOO_samples(bin.index, demo.index)
-                _loo_stats = self.compute_robust_consensus_statistics(loo_samples)
-        raise
+                loo_stats = self.compute_robust_consensus_statistics(loo_samples)
+                bin_median_action = loo_stats.median_action  # alpha_a^{(-i)}[b]
+                for _, action in demo:
+                    _action_residual = la.norm(action - bin_median_action)  # r_{i, t}
 
 
 class PACER(Generic[DimState, DimAction]):
