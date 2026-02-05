@@ -366,38 +366,47 @@ class BinHandler(Generic[DimState, DimAction]):
             sample_indices.append(sample_idx)
         return sample_indices
 
-    def LOO_samples(
+    def LOO_split_samples(
         self,
         bin_idx: BinIndex,  # b
         demo_idx: int,  # i
-    ) -> Samples[DimState, DimAction]:
+    ) -> tuple[Samples[DimState, DimAction], Samples[DimState, DimAction]]:
         bin = self.bins[bin_idx]
         sample_indices = self.LOO_sample_indices(bin_idx, demo_idx)
         demo_indices = list(i for i, _t in sample_indices)
-        samples = list(
-            sample for i, sample in enumerate(bin.samples) if i not in demo_indices
-        )
-        return samples
+        loo_samples = Samples[DimState, DimAction]()
+        demo_samples = Samples[DimState, DimAction]()
+        for i, sample in enumerate(bin.samples):
+            if i not in demo_indices:
+                loo_samples.append(sample)
+            else:
+                demo_samples.append(sample)
+        return loo_samples, demo_samples
 
-    def compute_action_residuals(self) -> list[list[DType]]:
-        residuals = list[list[DType]]()
+    def compute_action_residuals(
+        self,
+    ) -> list[list[DType]]:  # [[r_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
+        action_residuals = [list[DType]() for _ in range(len(self.demonstrations))]
         for bin in self.bins:
             stats = self.compute_robust_consensus_statistics(bin.samples)
             bin.robust_statistics = stats
-            action_residuals = list[DType]()
             for demo in self.demonstrations:
-                loo_samples = self.LOO_samples(bin.index, demo.index)
+                loo_samples, demo_samples = self.LOO_split_samples(
+                    bin.index, demo.index
+                )
                 loo_stats = self.compute_robust_consensus_statistics(loo_samples)
                 bin_median_action = loo_stats.median_action  # alpha_a^{(-i)}[b]
-                for action in bin.actions:
+                residuals = list[DType]()
+                actions = list(action for _, action in demo_samples)
+                for action in actions:
                     action_residual = la.norm(action - bin_median_action)  # r_{i, t}
-                    action_residuals.append(action_residual)
-            residuals.append(action_residuals)
-        return residuals
+                    residuals.append(action_residual)
+                action_residuals[demo.index].extend(residuals)
+        return action_residuals
 
     def compute_MAD_actions(self) -> None:
-        residuals = self.compute_action_residuals()
-        for bin, action_residuals in zip(self.bins, residuals):
+        action_residuals = self.compute_action_residuals()
+        for bin, residuals in zip(self.bins, action_residuals):
             raise NotImplementedError
 
     def compute_trust_values(self) -> None:
