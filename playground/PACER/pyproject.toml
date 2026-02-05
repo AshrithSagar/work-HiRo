@@ -7,29 +7,32 @@ authors = [{ name = "Ashrith Sagar", email = "ashrithy@iisc.ac.in" }]
 requires-python = ">=3.14"
 dependencies = [
     "matplotlib>=3.10.8",
-    "microsoft-python-type-stubs",
     "numpy>=2.4.2",
     "optype[numpy]>=0.15.0",
     "rich>=14.3.2",
     "scikit-learn>=1.8.0",
     "scipy>=1.17.0",
-    "scipy-stubs>=1.17.0.2",
     "torch>=2.10.0",
     "typed-numpy",
 ]
 
 [dependency-groups]
-lint = ["ruff>=0.14.14"]
+dev = [
+    "microsoft-python-type-stubs",
+    "numtype>=2.4.0.0a1",
+    "scipy-stubs>=1.17.0.2",
+]
+lint = ["ruff>=0.15.0"]
 typecheck = [
-    "basedpyright>=1.37.3",
+    "basedpyright>=1.37.4",
     "mypy>=1.19.1",
-    "pyrefly>=0.50.1",
+    "pyrefly>=0.51.0",
     "pyright>=1.1.408",
-    "ty>=0.0.14",
+    "ty>=0.0.15",
 ]
 
 [build-system]
-requires = ["uv_build>=0.9.28,<0.10.0"]
+requires = ["uv_build>=0.9.30,<0.10.0"]
 build-backend = "uv_build"
 
 [tool.uv.sources]
