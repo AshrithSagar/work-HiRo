@@ -372,10 +372,10 @@ class RobustStatistics(Generic[DimState, DimAction]):
     median_state: State[DimState]  # alpha_s[b] = median{ x_{i, t} : (i, t) \in I_b }
 
     ## Pace
-    median_action_strength: float
+    median_action_strength: DType
     # beta_a[b] = median{ ||a_{i, t}|| : (i, t) \in I_b }
     # Captures strength of actions
-    median_state_change: float
+    median_state_change: DType
     # beta_s[b] = median{ ||xdot_{i, t}|| : (i, t) \in I_b }
     # Captures typical rate of state change
 
@@ -385,19 +385,19 @@ class RobustStatistics(Generic[DimState, DimAction]):
 
 
 @dataclass(kw_only=True)
-class RibbonToken(Generic[DimState, DimAction]):
+class RibbonToken(Generic[DimState, DimAction]):  # z_b
     """
     Robust structured descriptor for a single phase bin `b`.\\
     Encodes both consensus behaviour and degree of variability present at phase `b`.
     """
 
     median_action: Action[DimAction]  # alpha_a[b]
-    median_action_strength: float  # beta_a[b]
+    median_action_strength: DType  # beta_a[b]
     median_state: State[DimState]  # alpha_s[b]
-    median_state_change: float  # beta_s[b]
+    median_state_change: DType  # beta_s[b]
     action_tangent: Action[DimAction]  # t_a[b]
     state_tangent: State[DimState] | None = None  # t_s[b]
-    MAD_action: float  # Median Absolute Deviation of actions
+    MAD_action_residual: DType  # Median Absolute Deviation of action residuals
 
 
 @dataclass(kw_only=True)
@@ -407,6 +407,7 @@ class Bin(Generic[DimState, DimAction]):
     samples_collection: SamplesCollection[DimState, DimAction] = field(
         default_factory=SamplesCollection[DimState, DimAction]
     )
+    ribbon_token: RibbonToken[DimState, DimAction] = field(init=False)
 
     def samples(
         self, *, LOO_demo_index: DemoIndex | None = None
@@ -455,19 +456,19 @@ class BinHandler(Generic[DimState, DimAction]):
                 collection = bin.samples_collection.collection[i]
                 collection.append(sample)
 
+    @enforce_shapes
     def compute_robust_consensus_statistics(
         self, samples: Samples[DimState, DimAction]
     ) -> RobustStatistics[DimState, DimAction]:
-        states = list(state for state, _ in samples)
-        actions = list(action for _, action in samples)
-
+        states = samples.states()
+        actions = samples.actions()
         action_norms = list(la.norm(action) for action in actions)
         state_change_norms = list(la.norm(np.diff(state)) for state in states)
 
         median_action = Action[DimAction](median(actions, axis=0))
         median_state = State[DimState](median(states, axis=0))
-        median_action_strength = float(median(action_norms, axis=0))
-        median_state_change = float(median(state_change_norms, axis=0))
+        median_action_strength = DType(median(action_norms, axis=0))
+        median_state_change = DType(median(state_change_norms, axis=0))
         action_tangent = np.diff(median_action, axis=0)
         state_tangent = np.diff(median_state, axis=0)
 
@@ -512,6 +513,7 @@ class BinHandler(Generic[DimState, DimAction]):
                 demo_samples.append(sample)
         return loo_samples, demo_samples
 
+    @enforce_shapes
     def compute_z_scores(self) -> list[list[DType]]:  # (N x T_)
         N = len(self.demonstrations)
 
@@ -550,7 +552,7 @@ class BinHandler(Generic[DimState, DimAction]):
                 for residual in bin_action_residuals:
                     abs_deviation = DType(abs(residual - bin_median_action_residual))
                     abs_deviations.append(abs_deviation)
-                MAD_residual = DType(median(abs_deviations))
+                MAD_residual = DType(MAD_SCALE * median(abs_deviations))
                 MAD_residuals.append(MAD_residual)
 
         for i in range(N):
@@ -562,8 +564,12 @@ class BinHandler(Generic[DimState, DimAction]):
 
         return z_scores
 
+    @enforce_shapes
     def compute_trust_values(
-        self, *, cutoff: DType, min_trust: DType
+        self,
+        *,
+        cutoff: DType | float,  # c
+        min_trust: DType | float,  # w_min
     ) -> list[list[DType]]:  # (N x T_)
         assert 3 <= cutoff <= 5
         N = len(self.demonstrations)
@@ -576,9 +582,115 @@ class BinHandler(Generic[DimState, DimAction]):
                 else:
                     trust_value = DType(0)
                 if trust_value < min_trust:
-                    trust_value = min_trust
+                    trust_value = DType(min_trust)
                 trust_values[i].append(trust_value)
-        return trust_values
+        return trust_values  # [[w_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
+
+    @enforce_shapes
+    def consolidate_ribbon_tokens(self) -> None:
+        for bin in self.bins:
+            stats = self.compute_robust_consensus_statistics(bin.samples())
+
+            bin_median_action = stats.median_action  # alpha_a[b]
+            bin_action_residuals = list[DType]()
+            for action in bin.actions():
+                residual = la.norm(action - bin_median_action)  # r_{i, t}
+                bin_action_residuals.append(residual)
+            bin_median_action_residual = DType(median(bin_action_residuals))
+            abs_deviations = list[DType]()
+            for residual in bin_action_residuals:
+                abs_deviation = DType(abs(residual - bin_median_action_residual))
+                abs_deviations.append(abs_deviation)
+            MAD_action_residual = DType(MAD_SCALE * median(abs_deviations))
+
+            bin.ribbon_token = RibbonToken(
+                median_action=stats.median_action,
+                median_action_strength=stats.median_action_strength,
+                median_state=stats.median_state,
+                median_state_change=stats.median_state_change,
+                action_tangent=stats.action_tangent,
+                state_tangent=stats.state_tangent,
+                MAD_action_residual=MAD_action_residual,
+            )
+
+    @enforce_shapes
+    def compute_pseudo_labels(
+        self,
+        *,
+        cutoff: DType | float,  # c
+        min_trust: DType | float,  # w_min
+        debias_weight: DType | float,  # lambda_{debias}
+        sideways_attenuation_shrinkage: DType | float = 0.5,  # rho_0
+        speed_regularisation_influence: DType | float = 0.5,  # eta_0
+        temporal_smoothing_weight: DType | float = 0.0,  # kappa
+    ) -> list[Actions[DimAction]]:  # (N x T_)
+        N = len(self.demonstrations)
+        pseudo_labels = [Actions[DimAction]() for _ in range(N)]
+        _labels = [
+            Actions[DimAction]() for _ in range(N)
+        ]  # [[y^{(3)}_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
+        trust_values = self.compute_trust_values(cutoff=cutoff, min_trust=min_trust)
+        self.consolidate_ribbon_tokens()
+        rho_0 = sideways_attenuation_shrinkage
+        assert 0 <= rho_0 <= 1
+        eta_0 = speed_regularisation_influence
+        assert 0 <= eta_0 <= 1
+        kappa = temporal_smoothing_weight
+
+        for bin in self.bins:
+            # Alignment with ribbon tangent
+            token = bin.ribbon_token  # z_b
+            tangent = token.state_tangent or token.action_tangent
+            unit_tangent = Array1D[int](normalise(tangent, method="NORM"))  # t_{dir}[b]
+
+            for j in range(N):
+                loo_samples = bin.samples(LOO_demo_index=j)
+                loo_stats = self.compute_robust_consensus_statistics(loo_samples)
+                bin_median_action = loo_stats.median_action  # alpha_a^{(-j)}[b]
+
+                demo_samples = bin.samples_collection.collection[j]
+                for t, action in enumerate(demo_samples.actions()):
+                    w = trust_values[j][t]  # w_{i, t}
+
+                    # Debiasing towards the anchor
+                    gamma = 1 - debias_weight * (1 - w)  # gamma_{i, t}
+                    assert 0 <= gamma <= 1
+                    y1 = Action[DimAction](
+                        gamma * action + (1 - gamma) * bin_median_action
+                    )  # y^{(1)}_{i, t}
+
+                    # Sideways attentuation
+                    y1_pll = Action[DimAction](np.dot(y1, unit_tangent) * tangent)
+                    y1_perp = Action[DimAction](y1 - y1_pll)
+                    has_state_tangent = token.state_tangent is not None
+                    rho = rho_0 * (1 - w) if has_state_tangent else DType(0)
+                    y2 = Action[DimAction](
+                        y1_pll + (1 - rho) * y1_perp
+                    )  # y^{(2)}_{i, t}
+
+                    # Speed regularisation
+                    eta = eta_0 * (1 - w)  # eta_{i, t}
+                    beta_a = bin.ribbon_token.median_action_strength
+                    s = (1 - eta) * la.norm(y2) + eta * beta_a  # s_{i, t}
+                    y3 = Action[DimAction](
+                        s * (y2 / la.norm(y2) + EPS)
+                    )  # y^{(3)}_{i, t}
+
+                    _labels[j].append(y3)
+
+        # Temporal smoothing
+        for i in range(N):
+            T_i = len(self.demonstrations.demos[i])
+            ystar_prev: Action[DimAction] | None = None
+            for t in range(T_i):
+                y3 = _labels[i][t]
+                if ystar_prev is None:  # t = 0
+                    ystar_prev = y3
+                ystar = Action[DimAction]((1 - kappa) * y3 + kappa * ystar_prev)
+                pseudo_labels[i].append(ystar)
+                ystar_prev = ystar
+
+        return pseudo_labels
 
 
 class PACER(Generic[DimState, DimAction]):
