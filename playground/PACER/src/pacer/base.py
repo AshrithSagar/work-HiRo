@@ -29,7 +29,7 @@ import numpy.typing as npt
 import optype.numpy as onp
 import torch
 import torch.nn as nn
-from deprecated import deprecated
+from deprecated import deprecated  # type: ignore
 from torch import Tensor
 from typed_numpy._typed import TypedNDArray
 from typed_numpy._typed.context import enforce_shapes  # type: ignore
@@ -562,8 +562,23 @@ class BinHandler(Generic[DimState, DimAction]):
 
         return z_scores
 
-    def compute_trust_values(self) -> None:
-        raise NotImplementedError
+    def compute_trust_values(
+        self, *, cutoff: DType, min_trust: DType
+    ) -> list[list[DType]]:  # (N x T_)
+        assert 3 <= cutoff <= 5
+        N = len(self.demonstrations)
+        trust_values = [list[DType]() for _ in range(N)]  # (N x T_)
+        z_scores = self.compute_z_scores()
+        for i, scores in enumerate(z_scores):
+            for _t, z_score in enumerate(scores):
+                if z_score <= cutoff:
+                    trust_value = (1 - (z_score / cutoff) ** 2) ** 2
+                else:
+                    trust_value = DType(0)
+                if trust_value < min_trust:
+                    trust_value = min_trust
+                trust_values[i].append(trust_value)
+        return trust_values
 
 
 class PACER(Generic[DimState, DimAction]):
