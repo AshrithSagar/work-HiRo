@@ -311,6 +311,7 @@ class PhaseEstimator(Generic[DimState, DimAction]):
         self,
         demonstrations: Demonstrations[DimState, DimAction],
         *,
+        hidden_dim: int = 128,
         margin: float = 1.0,
         lr: float = 1e-3,
         epochs: int = 240,
@@ -323,7 +324,8 @@ class PhaseEstimator(Generic[DimState, DimAction]):
         self.device = device
 
         state_dim = self.demonstrations.state_dim
-        self.scorer = PhaseScorer(state_dim=state_dim).to(self.device)
+        scorer = PhaseScorer(state_dim=state_dim, hidden_dim=hidden_dim)
+        self.scorer = scorer.to(self.device)
         self.optimiser = torch.optim.Adam(self.scorer.parameters(), lr=self.lr)
 
     def compute_ranking_loss(self) -> Tensor:  # L_rank
@@ -696,3 +698,23 @@ class BinHandler(Generic[DimState, DimAction]):
 class PACER(Generic[DimState, DimAction]):
     def __init__(self, demonstrations: Demonstrations[DimState, DimAction]) -> None:
         self.demonstrations = demonstrations
+
+    def prepare(self) -> None:
+        self.phase_estimator = PhaseEstimator(
+            self.demonstrations,
+            hidden_dim=128,
+            margin=1,
+            lr=1e-3,
+            epochs=240,
+            device=torch.device("cpu"),
+        )
+        self.binner = BinHandler(self.phase_estimator, n_bins=96)
+        self.binner.make_bins()
+        self.binner.compute_pseudo_labels(
+            cutoff=4.685,
+            min_trust=0.02,
+            debias_weight=0.5,
+            sideways_attenuation_shrinkage=0.5,
+            speed_regularisation_influence=0.5,
+            temporal_smoothing_weight=0.0,
+        )
