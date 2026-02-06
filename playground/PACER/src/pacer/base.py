@@ -29,6 +29,7 @@ import numpy.typing as npt
 import optype.numpy as onp
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from deprecated import deprecated  # type: ignore
 from torch import Tensor
 from typed_numpy._typed import TypedNDArray
@@ -695,9 +696,48 @@ class BinHandler(Generic[DimState, DimAction]):
         return pseudo_labels
 
 
+class BCPolicy(nn.Module, Generic[DimState, DimAction]):
+    """Behavioral cloning policy that maps states to actions"""
+
+    def __init__(
+        self, state_dim: DimState, action_dim: DimAction, hidden_dim: int = 128
+    ):
+        super().__init__()
+        self.network = nn.Sequential(
+            nn.Linear(state_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, action_dim),
+        )
+
+    def forward(
+        self,
+        states: Tensor,  # (batch, state_dim)
+    ) -> Tensor:  # (batch,)
+        return self.network(states)
+
+
 class PACER(Generic[DimState, DimAction]):
-    def __init__(self, demonstrations: Demonstrations[DimState, DimAction]) -> None:
+    def __init__(
+        self,
+        demonstrations: Demonstrations[DimState, DimAction],
+        *,
+        lr: float = 1e-3,
+        epochs: int = 240,
+        device: torch.device = torch.device("cpu"),
+    ) -> None:
         self.demonstrations = demonstrations
+        self.lr = lr
+        self.epochs = epochs
+        self.device = device
+
+        self.policy = BCPolicy(
+            state_dim=self.demonstrations.state_dim,
+            action_dim=self.demonstrations.action_dim,
+            hidden_dim=128,
+        )
+        self.optimiser = torch.optim.Adam(self.policy.parameters(), lr=1e-3)
 
     def prepare(self) -> None:
         self.phase_estimator = PhaseEstimator(
@@ -706,8 +746,9 @@ class PACER(Generic[DimState, DimAction]):
             margin=1,
             lr=1e-3,
             epochs=240,
-            device=torch.device("cpu"),
+            device=self.device,
         )
+        self.phase_estimator.train()
         self.binner = BinHandler(self.phase_estimator, n_bins=96)
         self.binner.make_bins()
         self.binner.compute_pseudo_labels(
@@ -718,3 +759,29 @@ class PACER(Generic[DimState, DimAction]):
             speed_regularisation_influence=0.5,
             temporal_smoothing_weight=0.0,
         )
+
+    def compute_huber_loss(self) -> Tensor:  # L
+        loss = torch.tensor(0.0, device=self.device)
+        raise NotImplementedError
+        return loss
+
+    def train(self) -> None:
+        for _epoch in range(self.epochs):
+            self.optimiser.zero_grad()
+            for demo in self.demonstrations:
+                for state in demo.states:
+                    preds = self.policy(state)
+            loss = self.compute_huber_loss()
+            loss.backward()  # type: ignore
+            self.optimiser.step()  # type: ignore
+
+    @enforce_shapes
+    def predict(self, states: States[DimState]) -> Actions[DimAction]:
+        self.policy.eval()
+        with torch.no_grad():
+            states_tensor = torch.from_numpy(states)  # type: ignore
+            states_tensor = states_tensor.float().to(self.device)
+            actions_tensor: Tensor = self.policy(states_tensor)
+            actions_np = actions_tensor.cpu().numpy()
+        actions = list(Action[DimAction](action_np) for action_np in actions_np)
+        return actions
