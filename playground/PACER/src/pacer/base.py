@@ -29,6 +29,7 @@ import numpy.typing as npt
 import optype.numpy as onp
 import torch
 import torch.nn as nn
+from deprecated import deprecated
 from torch import Tensor
 from typed_numpy._typed import TypedNDArray
 from typed_numpy._typed.context import enforce_shapes  # type: ignore
@@ -103,13 +104,89 @@ class Samples(Generic[DimState, DimAction]):
         for sample in self.samples:
             yield sample
 
+    @enforce_shapes
     def append(self, sample: Sample[DimState, DimAction]) -> None:
         self.samples.append(sample)
 
+    @enforce_shapes
     def extend(self, samples: Iterable[Sample[DimState, DimAction]]) -> None:
         self.samples.extend(samples)
 
+    @enforce_shapes
+    def states(self) -> States[DimState]:
+        return list(state for state, _ in self.samples)
 
+    @enforce_shapes
+    def actions(self) -> Actions[DimAction]:
+        return list(action for _, action in self.samples)
+
+
+@dataclass
+class SamplesCollection(Generic[DimState, DimAction]):
+    """A collection of state-action pairs (a sequence of state-action pair)."""
+
+    collection: list[Samples[DimState, DimAction]] = field(
+        default_factory=list[Samples[DimState, DimAction]]
+    )  # [[(x_{i, t}, a_{i, t})]_{t = 1}^{T_i}]_{i = 1}^{N}
+
+    def __len__(self) -> int:
+        return len(self.collection)  # N
+
+    @enforce_shapes
+    @overload
+    def __getitem__(
+        self,
+        index: DemoIndex,  # i
+    ) -> Samples[DimState, DimAction]: ...  # [(x_{i, t}, a_{i, t})]_{t = 1}^{T_i}
+    @overload
+    def __getitem__(
+        self,
+        index: SampleIndex,  # (i, t)
+    ) -> Sample[DimState, DimAction]: ...  # (x_{i, t}, a_{i, t})
+    #
+    def __getitem__(
+        self, index: DemoIndex | SampleIndex
+    ) -> Samples[DimState, DimAction] | Sample[DimState, DimAction]:
+        match index:
+            case tuple():
+                i, t = index
+                return self.collection[i][t]
+            case int():
+                return self.collection[index]
+
+    @enforce_shapes
+    def __iter__(self) -> Iterator[Samples[DimState, DimAction]]:
+        for samples in self.collection:
+            yield samples
+
+    @enforce_shapes
+    def append(self, samples: Samples[DimState, DimAction]) -> None:
+        self.collection.append(samples)
+
+    @enforce_shapes
+    def extend(self, samples: Iterable[Samples[DimState, DimAction]]) -> None:
+        self.collection.extend(samples)
+
+    @enforce_shapes
+    def samples(
+        self, *, LOO_demo_index: DemoIndex | None = None
+    ) -> Iterator[Sample[DimState, DimAction]]:
+        for i, samples in enumerate(self.collection):
+            if i == LOO_demo_index:
+                continue
+            for sample in samples:
+                yield sample
+
+    @enforce_shapes
+    def states(self, *, LOO_demo_index: DemoIndex | None = None) -> States[DimState]:
+        return list(state for state, _ in self.samples(LOO_demo_index=LOO_demo_index))
+
+    @enforce_shapes
+    def actions(self, *, LOO_demo_index: DemoIndex | None = None) -> Actions[DimAction]:
+        return list(action for _, action in self.samples(LOO_demo_index=LOO_demo_index))
+
+
+# Behaves like Samples
 @dataclass(kw_only=True)
 class Demonstration(Generic[DimState, DimAction]):  # D_i
     index: DemoIndex  # i
@@ -125,7 +202,7 @@ class Demonstration(Generic[DimState, DimAction]):  # D_i
 
     @enforce_shapes
     def __getitem__(
-        self, t: int, /
+        self, t: TimeIndex, /
     ) -> StateActionPair[DimState, DimAction]:  # (x_{i, t}, a_{i, t})
         return (self.states[t], self.actions[t])
 
@@ -143,7 +220,7 @@ class Demonstration(Generic[DimState, DimAction]):  # D_i
     def action_dim(self) -> DimAction:  # d_a
         return cast(DimAction, self.actions[0].shape[0])
 
-    def sample(self, t: int, /) -> Sample[DimState, DimAction]:
+    def sample(self, t: TimeIndex, /) -> Sample[DimState, DimAction]:
         return self[t]  # (x_{i, t}, a_{i, t})
 
     def samples(self) -> Samples[DimState, DimAction]:
@@ -158,6 +235,7 @@ class Demonstration(Generic[DimState, DimAction]):  # D_i
         return cls(index=index, states=states, actions=actions)
 
 
+# Behaves like SamplesCollection
 @dataclass(slots=True)
 class Demonstrations(Generic[DimState, DimAction]):  # [D_i]_{i = 1}^{N}
     demos: list[Demonstration[DimState, DimAction]]
@@ -193,6 +271,16 @@ class Demonstrations(Generic[DimState, DimAction]):  # [D_i]_{i = 1}^{N}
     @property
     def action_dim(self) -> DimAction:  # d_a
         return self.demos[0].action_dim
+
+    @classmethod
+    def from_samples_collection(
+        cls, collection: SamplesCollection[DimState, DimAction]
+    ) -> Self:
+        demos = list[Demonstration[DimState, DimAction]]()
+        for i, samples in enumerate(collection):
+            demo = Demonstration[DimState, DimAction].from_samples(i, samples)
+            demos.append(demo)
+        return cls(demos=demos)
 
 
 class PhaseScorer(nn.Module, Generic[DimState]):
@@ -314,27 +402,33 @@ class RibbonToken(Generic[DimState, DimAction]):
 class Bin(Generic[DimState, DimAction]):
     index: BinIndex  # b
     sample_indices: SampleIndices = field(default_factory=SampleIndices)  # I_b
-    samples: Samples[DimState, DimAction] = field(
-        default_factory=Samples[DimState, DimAction]
+    samples_collection: SamplesCollection[DimState, DimAction] = field(
+        default_factory=SamplesCollection[DimState, DimAction]
     )
-    robust_statistics: RobustStatistics[DimState, DimAction] | None = None
 
-    @property
-    def states(self) -> States[DimState]:
-        return list(state for state, _ in self.samples)
+    def samples(
+        self, *, LOO_demo_index: DemoIndex | None = None
+    ) -> Samples[DimState, DimAction]:
+        return Samples(
+            list(self.samples_collection.samples(LOO_demo_index=LOO_demo_index))
+        )
 
-    @property
-    def actions(self) -> Actions[DimAction]:
-        return list(action for _, action in self.samples)
+    def states(self, *, LOO_demo_index: DemoIndex | None = None) -> States[DimState]:
+        return self.samples_collection.states(LOO_demo_index=LOO_demo_index)
+
+    def actions(self, *, LOO_demo_index: DemoIndex | None = None) -> Actions[DimAction]:
+        return self.samples_collection.actions(LOO_demo_index=LOO_demo_index)
 
 
+@dataclass
 class BinHandler(Generic[DimState, DimAction]):
-    def __init__(
-        self, phase_estimator: PhaseEstimator[DimState, DimAction], *, n_bins: int = 96
-    ) -> None:
-        self.phase_estimator = phase_estimator
-        self.n_bins = n_bins  # B
-        self.demonstrations = self.phase_estimator.demonstrations
+    phase_estimator: PhaseEstimator[DimState, DimAction]
+    n_bins: int = field(default=96, kw_only=True)  # B
+    bins: list[Bin[DimState, DimAction]] = field(init=False)
+
+    @property
+    def demonstrations(self) -> Demonstrations[DimState, DimAction]:
+        return self.phase_estimator.demonstrations
 
     def phase_range(self, bin_idx: BinIndex) -> tuple[Phase, Phase]:
         return (bin_idx / self.n_bins, (bin_idx + 1) / self.n_bins)
@@ -353,7 +447,8 @@ class BinHandler(Generic[DimState, DimAction]):
                 sample_idx: SampleIndex = (i, t)
                 bin.sample_indices.append(sample_idx)
                 sample = self.demonstrations[sample_idx]
-                bin.samples.append(sample)
+                collection = bin.samples_collection.collection[i]
+                collection.append(sample)
 
     def compute_robust_consensus_statistics(
         self, samples: Samples[DimState, DimAction]
@@ -394,6 +489,7 @@ class BinHandler(Generic[DimState, DimAction]):
             sample_indices.append(sample_idx)
         return sample_indices
 
+    @deprecated
     def LOO_split_samples(
         self,
         bin_idx: BinIndex,  # b
@@ -404,33 +500,28 @@ class BinHandler(Generic[DimState, DimAction]):
         demo_indices = list(i for i, _t in sample_indices)
         loo_samples = Samples[DimState, DimAction]()
         demo_samples = Samples[DimState, DimAction]()
-        for i, sample in enumerate(bin.samples):
+        for i, sample in enumerate(bin.samples()):
             if i not in demo_indices:
                 loo_samples.append(sample)
             else:
                 demo_samples.append(sample)
         return loo_samples, demo_samples
 
-    def compute_action_residuals(
-        self,
-    ) -> list[list[DType]]:  # [[r_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
-        action_residuals = [list[DType]() for _ in range(len(self.demonstrations))]
+    # [[[r^{(-j)}_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}]_{j = 1}^{N}
+    def compute_action_residuals(self) -> list[list[list[DType]]]:
+        N = len(self.demonstrations)
+        action_residuals = [[list[DType]() for _ in range(N)] for _ in range(N)]
         for bin in self.bins:
-            stats = self.compute_robust_consensus_statistics(bin.samples)
-            bin.robust_statistics = stats
-            for demo in self.demonstrations:
-                loo_samples, demo_samples = self.LOO_split_samples(
-                    bin.index, demo.index
-                )
+            for j in range(N):
+                loo_samples = bin.samples(LOO_demo_index=j)
                 loo_stats = self.compute_robust_consensus_statistics(loo_samples)
-                bin_median_action = loo_stats.median_action  # alpha_a^{(-i)}[b]
-                residuals = list[DType]()
-                actions = list(action for _, action in demo_samples)
-                for action in actions:
+                bin_median_action = loo_stats.median_action  # alpha_a^{(-j)}[b]
+                residuals = list[list[DType]]()
+                for i, action in enumerate(bin.actions()):
                     action_residual = la.norm(action - bin_median_action)  # r_{i, t}
-                    residuals.append(action_residual)
-                action_residuals[demo.index].extend(residuals)
-        return action_residuals
+                    residuals[i].append(action_residual)
+                action_residuals[j].extend(residuals)
+        return action_residuals  # N x N x T_
 
     def compute_MAD_actions(self) -> None:
         action_residuals = self.compute_action_residuals()
