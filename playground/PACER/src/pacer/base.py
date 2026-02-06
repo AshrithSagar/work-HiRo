@@ -170,7 +170,7 @@ class SamplesCollection(Generic[DimState, DimAction]):
     @enforce_shapes
     def samples(
         self, *, LOO_demo_index: DemoIndex | None = None
-    ) -> Iterator[Sample[DimState, DimAction]]:
+    ) -> Iterator[Sample[DimState, DimAction]]:  # (N x T_) or (N-1 x T_)
         for i, samples in enumerate(self.collection):
             if i == LOO_demo_index:
                 continue
@@ -179,10 +179,12 @@ class SamplesCollection(Generic[DimState, DimAction]):
 
     @enforce_shapes
     def states(self, *, LOO_demo_index: DemoIndex | None = None) -> States[DimState]:
+        # (N x T_) or (N-1 x T_)
         return list(state for state, _ in self.samples(LOO_demo_index=LOO_demo_index))
 
     @enforce_shapes
     def actions(self, *, LOO_demo_index: DemoIndex | None = None) -> Actions[DimAction]:
+        # (N x T_) or (N-1 x T_)
         return list(action for _, action in self.samples(LOO_demo_index=LOO_demo_index))
 
 
@@ -409,14 +411,17 @@ class Bin(Generic[DimState, DimAction]):
     def samples(
         self, *, LOO_demo_index: DemoIndex | None = None
     ) -> Samples[DimState, DimAction]:
+        # (N x T_) or (N-1 x T_)
         return Samples(
             list(self.samples_collection.samples(LOO_demo_index=LOO_demo_index))
         )
 
     def states(self, *, LOO_demo_index: DemoIndex | None = None) -> States[DimState]:
+        # (N x T_) or (N-1 x T_)
         return self.samples_collection.states(LOO_demo_index=LOO_demo_index)
 
     def actions(self, *, LOO_demo_index: DemoIndex | None = None) -> Actions[DimAction]:
+        # (N x T_) or (N-1 x T_)
         return self.samples_collection.actions(LOO_demo_index=LOO_demo_index)
 
 
@@ -507,26 +512,55 @@ class BinHandler(Generic[DimState, DimAction]):
                 demo_samples.append(sample)
         return loo_samples, demo_samples
 
-    # [[[r^{(-j)}_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}]_{j = 1}^{N}
-    def compute_action_residuals(self) -> list[list[list[DType]]]:
+    def compute_z_scores(self) -> list[list[DType]]:  # (N x T_)
         N = len(self.demonstrations)
-        action_residuals = [[list[DType]() for _ in range(N)] for _ in range(N)]
+
+        # (N x N x T_)
+        # [[[r^{(-j)}_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}]_{j = 1}^{N}
+        _action_residuals = [[list[DType]() for _ in range(N)] for _ in range(N)]
+
+        # (N x T_)
+        # [[r^{(-i)}_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}]
+        self_action_residuals = [list[DType]() for _ in range(N)]
+
+        # (N,)
+        MAD_residuals = list[DType]()
+
+        # (N x T_)
+        z_scores = [list[DType]() for _ in range(N)]
+
         for bin in self.bins:
             for j in range(N):
                 loo_samples = bin.samples(LOO_demo_index=j)
                 loo_stats = self.compute_robust_consensus_statistics(loo_samples)
                 bin_median_action = loo_stats.median_action  # alpha_a^{(-j)}[b]
-                residuals = list[list[DType]]()
-                for i, action in enumerate(bin.actions()):
-                    action_residual = la.norm(action - bin_median_action)  # r_{i, t}
-                    residuals[i].append(action_residual)
-                action_residuals[j].extend(residuals)
-        return action_residuals  # N x N x T_
 
-    def compute_MAD_actions(self) -> None:
-        action_residuals = self.compute_action_residuals()
-        for bin, residuals in zip(self.bins, action_residuals):
-            raise NotImplementedError
+                demo_samples = bin.samples_collection.collection[j]
+                for action in demo_samples.actions():
+                    residual = la.norm(action - bin_median_action)  # r^{-i}_{i, t}
+                    self_action_residuals[j].append(residual)
+
+                bin_action_residuals = list[DType]()  # LOO
+                for action in bin.actions(LOO_demo_index=j):
+                    residual = la.norm(action - bin_median_action)  # r^{-j}_{i, t}
+                    bin_action_residuals.append(residual)
+
+                bin_median_action_residual = DType(median(bin_action_residuals))
+                abs_deviations = list[DType]()
+                for residual in bin_action_residuals:
+                    abs_deviation = DType(abs(residual - bin_median_action_residual))
+                    abs_deviations.append(abs_deviation)
+                MAD_residual = DType(median(abs_deviations))
+                MAD_residuals.append(MAD_residual)
+
+        for i in range(N):
+            T_i = len(self.demonstrations.demos[i])
+            denom = MAD_residuals[i] + EPS
+            for t in range(T_i):
+                z_score = (self_action_residuals[i][t]) / denom  # z_{i, t}
+                z_scores[i].append(z_score)
+
+        return z_scores
 
     def compute_trust_values(self) -> None:
         raise NotImplementedError
