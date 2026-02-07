@@ -28,12 +28,10 @@ class DemonstrationScene(mn.Scene):
         self.camera.background_color = mn.BLACK
 
     def construct(self) -> None:
-        self.draw_demos()
+        self.draw_demos(lasa.DataSet.GShape)
 
     def draw_demos(
-        self,
-        data: _Data = lasa.DataSet.GShape,
-        demo_indices: list[int] | None = None,
+        self, data: _Data, demo_indices: list[int] | None = None
     ) -> list[mn.VMobject]:
         n_demos = len(data.demos)  # N
         if demo_indices is None:
@@ -48,8 +46,7 @@ class DemonstrationScene(mn.Scene):
 
             curve = mn.VMobject()
             curve.set_points_smoothly(points)
-            curve.set_stroke(opacity=0.6)
-            curve.set_color(colors[i])
+            curve.set_stroke(color=colors[i], width=3, opacity=0.6)
             curves.append(curve)
 
         group = mn.VGroup(*curves)
