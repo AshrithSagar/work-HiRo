@@ -3,7 +3,6 @@ from typing import Literal, TypeAlias, TypeVar
 import manim as mn  # type: ignore
 import numpy as np
 import pyLasaDataset as lasa  # type: ignore
-from pyLasaDataset.dataset import _Data  # type: ignore
 from typed_numpy._typed import TypedNDArray
 from typed_numpy._typed.shapes import THREE, TWO
 
@@ -28,15 +27,12 @@ class DemonstrationScene(mn.Scene):
         self.camera.background_color = mn.BLACK
 
     def construct(self) -> None:
-        curves = self.draw_demos(lasa.DataSet.GShape)
-        self.animate_phase_slider(curves)
+        # ── Demonstrations ───────────────────────────────────────────────────────
+        # Draw demonstrations into scene
 
-    def draw_demos(
-        self, data: _Data, demo_indices: list[int] | None = None
-    ) -> list[mn.VMobject]:
+        data = lasa.DataSet.GShape
         n_demos = len(data.demos)  # N
-        if demo_indices is None:
-            demo_indices = list(range(n_demos))
+        demo_indices = list(range(n_demos))  # All demonstrations
 
         curves = list[mn.VMobject]()
         colors = mn.color_gradient(
@@ -60,9 +56,10 @@ class DemonstrationScene(mn.Scene):
             run_time=3,
         )
         self.wait()
-        return curves
 
-    def animate_phase_slider(self, curves: list[mn.VMobject]) -> None:
+        # ── Phase slider ─────────────────────────────────────────────────────────
+        # Animate phase variable on the demonstrations
+
         tau = mn.ValueTracker(0)
 
         dots = list[mn.Mobject]()
@@ -92,3 +89,5 @@ class DemonstrationScene(mn.Scene):
         self.wait()
         self.play(tau.animate.set_value(1), run_time=4, rate_func=mn.linear)
         self.wait()
+
+        # ─────────────────────────────────────────────────────────────────────────
