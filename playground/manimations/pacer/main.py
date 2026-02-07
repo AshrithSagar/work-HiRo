@@ -28,7 +28,7 @@ class DemonstrationScene(mn.Scene):
         self.camera.background_color = mn.BLACK
 
     def construct(self) -> None:
-        self.draw_demo()
+        self.draw_demos()
 
     def draw_demo(
         self,
@@ -45,4 +45,35 @@ class DemonstrationScene(mn.Scene):
         curve.scale_to_fit_width(5)  # type: ignore
         self.add(curve)
         self.play(mn.Create(curve), run_time=4)
+        self.wait()
+
+    def draw_demos(
+        self,
+        data: _Data = lasa.DataSet.GShape,
+        demo_indices: list[int] | None = None,
+    ) -> None:
+        n_demos = len(data.demos)  # N
+        if demo_indices is None:
+            demo_indices = list(range(n_demos))
+
+        curves = list[mn.VMobject]()
+        colors = mn.color_gradient([mn.BLUE, mn.GREEN, mn.YELLOW], n_demos)
+        for i in demo_indices:
+            demo = Demo(data.demos[i].__getattribute__("pos"))
+            n_points = demo.shape[1]  # T_i
+            points = Points3D([(demo[0, t], demo[1, t], 0.0) for t in range(n_points)])
+
+            curve = mn.VMobject()
+            curve.set_points_smoothly(points)
+            curve.set_stroke(opacity=0.6)
+            curve.set_color(colors[i])
+            curves.append(curve)
+
+        group = mn.VGroup(*curves)
+        group.center()
+        group.scale_to_fit_width(5)  # type: ignore
+        self.play(
+            *[mn.Create(c) for c in curves],
+            run_time=3,
+        )
         self.wait()
