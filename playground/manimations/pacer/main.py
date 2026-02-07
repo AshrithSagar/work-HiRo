@@ -30,28 +30,11 @@ class DemonstrationScene(mn.Scene):
     def construct(self) -> None:
         self.draw_demos()
 
-    def draw_demo(
-        self,
-        data: _Data = lasa.DataSet.GShape,
-        demo_idx: int = 0,  # i
-    ) -> None:
-        demo = Demo(data.demos[demo_idx].__getattribute__("pos"))
-        n_points = demo.shape[1]  # T_i
-        points = Points3D([(demo[0, t], demo[1, t], 0) for t in range(n_points)])
-
-        curve = mn.VMobject()
-        curve.set_points_smoothly(points)
-        curve.center()
-        curve.scale_to_fit_width(5)  # type: ignore
-        self.add(curve)
-        self.play(mn.Create(curve), run_time=4)
-        self.wait()
-
     def draw_demos(
         self,
         data: _Data = lasa.DataSet.GShape,
         demo_indices: list[int] | None = None,
-    ) -> None:
+    ) -> list[mn.VMobject]:
         n_demos = len(data.demos)  # N
         if demo_indices is None:
             demo_indices = list(range(n_demos))
@@ -73,7 +56,8 @@ class DemonstrationScene(mn.Scene):
         group.center()
         group.scale_to_fit_width(5)  # type: ignore
         self.play(
-            *[mn.Create(c) for c in curves],
+            *[mn.Create(curve) for curve in curves],
             run_time=3,
         )
         self.wait()
+        return curves
