@@ -28,7 +28,8 @@ class DemonstrationScene(mn.Scene):
         self.camera.background_color = mn.BLACK
 
     def construct(self) -> None:
-        self.draw_demos(lasa.DataSet.GShape)
+        curves = self.draw_demos(lasa.DataSet.GShape)
+        self.animate_phase_slider(curves)
 
     def draw_demos(
         self, data: _Data, demo_indices: list[int] | None = None
@@ -60,3 +61,32 @@ class DemonstrationScene(mn.Scene):
         )
         self.wait()
         return curves
+
+    def animate_phase_slider(self, curves: list[mn.VMobject]) -> None:
+        tau = mn.ValueTracker(0)
+
+        dots = list[mn.Mobject]()
+        for curve in curves:
+            dot = mn.always_redraw(
+                lambda curve=curve: mn.Dot(
+                    curve.point_from_proportion(tau.get_value()),
+                    fill_opacity=curve.stroke_opacity,
+                    color=curve.color,
+                )
+            )
+            dots.append(dot)
+        self.add(*dots)
+
+        progress_line = mn.NumberLine(
+            x_range=[0, 1, 0.1],
+            length=10,
+            include_numbers=True,
+        ).to_edge(mn.DOWN)
+        progress_dot = mn.always_redraw(
+            lambda: mn.Dot(progress_line.n2p(tau.get_value()), color=mn.YELLOW)
+        )
+        self.add(progress_line, progress_dot)
+
+        self.wait()
+        self.play(tau.animate.set_value(1), run_time=4, rate_func=mn.linear)
+        self.wait()
