@@ -85,7 +85,9 @@ class DemonstrationScene(mn.Scene):
         progress_dot = mn.always_redraw(
             lambda: mn.Dot(progress_line.n2p(tau.get_value()), color=mn.YELLOW)
         )
-        self.add(progress_line, progress_dot)
+        tau_label = mn.MathTex(r"\tau", color=mn.WHITE)
+        tau_label.next_to(progress_line, mn.LEFT)
+        self.add(progress_line, progress_dot, tau_label)
 
         self.wait()
         self.play(tau.animate.set_value(1), run_time=4, rate_func=mn.linear)
