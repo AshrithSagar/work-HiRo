@@ -38,7 +38,9 @@ class DemonstrationScene(mn.Scene):
             demo_indices = list(range(n_demos))
 
         curves = list[mn.VMobject]()
-        colors = mn.color_gradient([mn.BLUE, mn.GREEN, mn.YELLOW], n_demos)
+        colors = mn.color_gradient(
+            [mn.RED, mn.ORANGE, mn.YELLOW, mn.GREEN, mn.BLUE, mn.PURPLE], n_demos
+        )
         for i in demo_indices:
             demo = Demo(data.demos[i].__getattribute__("pos"))
             n_points = demo.shape[1]  # T_i
@@ -46,7 +48,7 @@ class DemonstrationScene(mn.Scene):
 
             curve = mn.VMobject()
             curve.set_points_smoothly(points)
-            curve.set_stroke(color=colors[i], width=3, opacity=0.6)
+            curve.set_stroke(color=colors[i], width=3, opacity=0.7)
             curves.append(curve)
 
         group = mn.VGroup(*curves)
