@@ -12,6 +12,10 @@ stubs/
 typings/
 
 
+# Manim
+**/media/*
+
+
 ### Python
 
 # Byte-compiled / optimized / DLL files
