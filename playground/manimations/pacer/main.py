@@ -40,18 +40,18 @@ class DemonstrationScene(mn.Scene):
             [mn.RED, mn.ORANGE, mn.YELLOW, mn.GREEN, mn.BLUE, mn.PURPLE], n_demos
         )
         for i in demo_indices:
-            demo = Demo(data.demos[i].__getattribute__("pos"))
-            n_points = demo.shape[1]  # T_i
-            points = Points3D([(demo[0, t], demo[1, t], 0.0) for t in range(n_points)])
+            pos = Demo(data.demos[i].__getattribute__("pos"))
+            n_points = pos.shape[1]  # T_i
+            points = Points3D([(pos[0, t], pos[1, t], 0.0) for t in range(n_points)])
 
             curve = mn.VMobject()
             curve.set_points_smoothly(points)
             curve.set_stroke(color=curve_colors[i], width=3, opacity=0.7)
             curves.append(curve)
 
-        group = mn.VGroup(*curves)
-        group.center()
-        group.scale_to_fit_width(5)  # type: ignore
+        curves_group = mn.VGroup(*curves)
+        curves_group.center()
+        curves_group.scale_to_fit_width(5)  # type: ignore
         self.play(
             *[mn.Create(curve) for curve in curves],
             run_time=3,
@@ -75,6 +75,30 @@ class DemonstrationScene(mn.Scene):
             )
             curve_dots.append(dot)
         self.add(*curve_dots)
+
+        velocity_vectors = list[mn.Mobject]()
+        vec_scale = 0.03  # Purely for visual
+        for i, curve in enumerate(curves):
+            pos = Demo(data.demos[i].__getattribute__("pos"))
+            vel = Demo(data.demos[i].__getattribute__("vel"))
+            vector = mn.always_redraw(
+                lambda pos=pos, vel=vel, curve=curve: (
+                    lambda idx: (
+                        lambda p, v: mn.Arrow(
+                            start=p,
+                            end=p + v,
+                            buff=0,
+                            stroke_width=3,
+                            color=curve.color,
+                        )
+                    )(
+                        curve.point_from_proportion(idx / (pos.shape[1] - 1)),
+                        vec_scale * np.array([vel[0, idx], vel[1, idx], 0.0]),
+                    )
+                )(min(int(tau.get_value() * (pos.shape[1] - 1)), pos.shape[1] - 1))
+            )
+            velocity_vectors.append(vector)
+        self.add(*velocity_vectors)
 
         progress_line = mn.NumberLine(
             x_range=[0, 1, 0.1],
