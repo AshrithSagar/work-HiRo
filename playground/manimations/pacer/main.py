@@ -31,6 +31,10 @@ class DemonstrationScene(mn.Scene):
         # Draw demonstrations into scene
         self.next_section(skip_animations=False)
 
+        heading = mn.Text("Demonstrations", font_size=36, color=mn.WHITE)
+        heading.to_corner(mn.UL)
+        self.play(mn.Create(heading))
+
         data = lasa.DataSet.GShape
         n_demos = len(data.demos)  # N
         demo_indices = list(range(n_demos))  # All demonstrations
@@ -56,11 +60,15 @@ class DemonstrationScene(mn.Scene):
             *[mn.Create(curve) for curve in curves],
             run_time=3,
         )
-        self.wait()
 
         # ── Phase slider ─────────────────────────────────────────────────────────
         # Animate phase variable on the demonstrations
         self.next_section(skip_animations=False)
+
+        old_heading = heading
+        heading = mn.Text("Phase Alignment", font_size=36, color=mn.WHITE)
+        heading.to_corner(mn.UL)
+        self.play(mn.Transform(old_heading, heading))
 
         tau = mn.ValueTracker(0)
 
@@ -128,6 +136,13 @@ class DemonstrationScene(mn.Scene):
         for curve in curves:
             curve.set_color(mn.WHITE)
 
+        old_heading.clear_updaters()
+        self.remove(old_heading)
+        old_heading = heading
+        heading = mn.Text("Binning", font_size=36, color=mn.WHITE)
+        heading.to_corner(mn.UL)
+        self.play(mn.Transform(old_heading, heading))
+
         n_bins = 5  # B
         bin_colors = mn.color_gradient(
             [mn.RED, mn.ORANGE, mn.YELLOW, mn.GREEN, mn.BLUE], n_bins
@@ -166,6 +181,7 @@ class DemonstrationScene(mn.Scene):
                 all_segments.append(segment)
             segmented_curves_per_curve.append(mn.VGroup(*segments))
 
+        self.wait()
         self.add(*bin_lines)
         self.add(*all_segments)
         self.play(
