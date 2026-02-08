@@ -1,7 +1,6 @@
 from typing import Literal, TypeAlias, TypeVar
 
 import manim as mn  # type: ignore
-import manim.typing as mnt  # type: ignore
 import numpy as np
 import pyLasaDataset as lasa  # type: ignore
 from typed_numpy._typed import TypedNDArray
@@ -30,6 +29,7 @@ class DemonstrationScene(mn.Scene):
     def construct(self) -> None:
         # ── Demonstrations ───────────────────────────────────────────────────────
         # Draw demonstrations into scene
+        self.next_section(skip_animations=False)
 
         data = lasa.DataSet.GShape
         n_demos = len(data.demos)  # N
@@ -60,6 +60,7 @@ class DemonstrationScene(mn.Scene):
 
         # ── Phase slider ─────────────────────────────────────────────────────────
         # Animate phase variable on the demonstrations
+        self.next_section(skip_animations=False)
 
         tau = mn.ValueTracker(0)
 
@@ -93,6 +94,7 @@ class DemonstrationScene(mn.Scene):
 
         # ── Binning ──────────────────────────────────────────────────────────────
         # Divide phase into B equal bins
+        self.next_section(skip_animations=False)
 
         for dot in curve_dots:
             dot.clear_updaters()
@@ -120,67 +122,32 @@ class DemonstrationScene(mn.Scene):
             )
             bin_lines.append(line)
 
-        self.play(
-            *[mn.FadeIn(line) for line in bin_lines],
-            run_time=1,
-        )
-        self.wait()
-
         ## Curve bins
+        # Segment the curves and prepare them for fade-in
         segmented_curves_per_curve = list[mn.VGroup]()
+        all_segments = list[mn.VMobject]()
         for curve in curves:
             segments = list[mn.VMobject]()
             for b in range(n_bins):
                 t0, t1 = b / n_bins, (b + 1) / n_bins
-                segment: mn.VMobject = mn.VMobject()
+                segment = mn.VMobject()
                 segment.set_points_smoothly(
                     [
                         curve.point_from_proportion(alpha)
-                        for alpha in np.linspace(t0, t1, 30)
+                        for alpha in np.linspace(t0, t1, 10)
                     ]
                 )
-                segment.set_stroke(color=mn.WHITE, width=3, opacity=0.7)
+                segment.set_stroke(color=bin_colors[b], width=3, opacity=1.0)
                 segments.append(segment)
+                all_segments.append(segment)
             segmented_curves_per_curve.append(mn.VGroup(*segments))
 
-        for seg_group in segmented_curves_per_curve:
-            self.add(*seg_group)
-
-        # Create a circular blob per bin
-        bin_blobs: list[mn.Circle] = []
-        for line, color in zip(bin_lines, bin_colors):
-            blob: mn.Circle = mn.Circle(
-                radius=0.25, fill_color=color, fill_opacity=0.6, stroke_opacity=0
-            ).move_to(line.get_top() + mn.UP * 0.15)
-            bin_blobs.append(blob)
-            self.add(blob)
-
-        # Compute target centers for each bin
-        avg_centers: list[mnt.Point3D] = []
-        for b in range(n_bins):
-            centers: list[mnt.Point3D] = [
-                seg_group[b].get_center()  # type: ignore
-                for seg_group in segmented_curves_per_curve
-            ]
-            avg_center: mnt.Point3D = sum(centers) / len(centers)  # type: ignore
-            avg_centers.append(avg_center)
-
-        # Animate all blobs moving simultaneously
+        self.add(*bin_lines)
+        self.add(*all_segments)
         self.play(
-            *[
-                blob.animate.move_to(center)
-                for blob, center in zip(bin_blobs, avg_centers)
-            ],
-            run_time=1.0,
+            *[mn.FadeIn(line, run_time=1) for line in bin_lines]
+            + [mn.FadeIn(seg, run_time=1) for seg in all_segments]
         )
-        # Color all segments at the same time
-        for seg_group in segmented_curves_per_curve:
-            for b, color in enumerate(bin_colors):
-                seg_group[b].set_color(color)  # type: ignore
-
-        self.wait(0.5)
-        # Fade out blobs together
-        self.play(*[mn.FadeOut(blob) for blob in bin_blobs], run_time=0.5)
         self.wait()
 
         # ─────────────────────────────────────────────────────────────────────────
