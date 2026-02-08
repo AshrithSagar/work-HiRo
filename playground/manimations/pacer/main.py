@@ -21,89 +21,6 @@ Points2D: TypeAlias = Array2D[THOUSAND, TWO]
 Points3D: TypeAlias = Array2D[THOUSAND, THREE]
 
 
-def dot_on_curve(
-    curve: mn.VMobject,
-    tau: mn.ValueTracker,
-    *,
-    color: mn.ManimColor,
-    opacity: float,
-    radius: float = mn.DEFAULT_DOT_RADIUS,
-) -> mn.Dot:
-    dot = mn.Dot(
-        curve.point_from_proportion(0),
-        color=color,
-        fill_opacity=opacity,
-        radius=radius,
-    )
-
-    def updater(m: mn.Dot) -> None:
-        m.move_to(curve.point_from_proportion(tau.get_value()))
-
-    dot.add_updater(updater)  # type: ignore
-    return dot
-
-
-def velocity_arrow_on_curve(
-    curve: mn.VMobject,
-    pos: Demo,
-    vel: Demo,
-    tau: mn.ValueTracker,
-    *,
-    color: mn.ManimColor,
-    vec_scale: float,
-    eps: float = 1e-6,
-) -> mn.Arrow:
-    start = curve.get_start()
-    arrow = mn.Arrow(
-        start=start,
-        end=start + mn.RIGHT * eps,
-        buff=0,
-        stroke_width=3,
-        color=color,
-    )
-
-    T = pos.shape[1]
-
-    def updater(m: mn.Arrow) -> None:
-        idx = min(int(tau.get_value() * (T - 1)), T - 1)
-
-        p = curve.point_from_proportion(idx / (T - 1))
-        v = vec_scale * np.array([vel[0, idx], vel[1, idx], 0.0])
-
-        norm = np.linalg.norm(v)
-        if norm < eps:
-            m.set_opacity(0.0)
-            m.put_start_and_end_on(p, p + mn.RIGHT * eps)
-            return
-
-        m.set_opacity(1.0)
-        m.put_start_and_end_on(p, p + v)
-
-    arrow.add_updater(updater)  # type: ignore
-    return arrow
-
-
-def slider_dot(
-    line: mn.NumberLine,
-    tau: mn.ValueTracker,
-    *,
-    color: mn.ManimColor = mn.YELLOW,
-) -> mn.Dot:
-    dot = mn.Dot(line.n2p(0), color=color)
-
-    def updater(m: mn.Dot) -> None:
-        m.move_to(line.n2p(tau.get_value()))
-
-    dot.add_updater(updater)  # type: ignore
-    return dot
-
-
-def clear_and_remove(scene: mn.Scene, *mobjects: mn.Mobject) -> None:
-    for m in mobjects:
-        m.clear_updaters()
-    scene.remove(*mobjects)
-
-
 class DemonstrationScene(mn.Scene):
     def setup(self) -> None:
         assert isinstance(self.camera, mn.Camera)
@@ -147,29 +64,38 @@ class DemonstrationScene(mn.Scene):
 
         tau = mn.ValueTracker(0)
 
-        curve_dots = list[mn.Dot]()
+        curve_dots = list[mn.Mobject]()
         for curve in curves:
-            dot = dot_on_curve(
-                curve,
-                tau,
-                color=curve.color,
-                opacity=curve.stroke_opacity,
+            dot = mn.always_redraw(
+                lambda curve=curve: mn.Dot(
+                    curve.point_from_proportion(tau.get_value()),
+                    fill_opacity=curve.stroke_opacity,
+                    color=curve.color,
+                )
             )
             curve_dots.append(dot)
         self.add(*curve_dots)
 
-        velocity_vectors = list[mn.Arrow]()
+        velocity_vectors = list[mn.Mobject]()
         vec_scale = 0.03  # Purely for visual
         for i, curve in enumerate(curves):
             pos = Demo(data.demos[i].__getattribute__("pos"))
             vel = Demo(data.demos[i].__getattribute__("vel"))
-            vector = velocity_arrow_on_curve(
-                curve,
-                pos,
-                vel,
-                tau,
-                color=curve.color,
-                vec_scale=vec_scale,
+            vector = mn.always_redraw(
+                lambda pos=pos, vel=vel, curve=curve: (
+                    lambda idx: (
+                        lambda p, v: mn.Arrow(
+                            start=p,
+                            end=p + v,
+                            buff=0,
+                            stroke_width=3,
+                            color=curve.color,
+                        )
+                    )(
+                        curve.point_from_proportion(idx / (pos.shape[1] - 1)),
+                        vec_scale * np.array([vel[0, idx], vel[1, idx], 0.0]),
+                    )
+                )(min(int(tau.get_value() * (pos.shape[1] - 1)), pos.shape[1] - 1))
             )
             velocity_vectors.append(vector)
         self.add(*velocity_vectors)
@@ -179,7 +105,9 @@ class DemonstrationScene(mn.Scene):
             length=10,
             include_numbers=True,
         ).to_edge(mn.DOWN)
-        progress_dot = slider_dot(progress_line, tau)
+        progress_dot = mn.always_redraw(
+            lambda: mn.Dot(progress_line.n2p(tau.get_value()), color=mn.YELLOW)
+        )
         tau_label = mn.MathTex(r"\tau", color=mn.WHITE)
         tau_label.next_to(progress_line, mn.LEFT)
         self.add(progress_line, progress_dot, tau_label)
@@ -192,8 +120,11 @@ class DemonstrationScene(mn.Scene):
         # Divide phase into B equal bins
         self.next_section(skip_animations=False)
 
-        clear_and_remove(self, *curve_dots)
-        clear_and_remove(self, progress_dot)
+        for dot in curve_dots:
+            dot.clear_updaters()
+        self.remove(*curve_dots)
+        progress_dot.clear_updaters()
+        self.remove(progress_dot)
         for curve in curves:
             curve.set_color(mn.WHITE)
 
