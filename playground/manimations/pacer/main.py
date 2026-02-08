@@ -146,33 +146,40 @@ class DemonstrationScene(mn.Scene):
         for seg_group in segmented_curves_per_curve:
             self.add(*seg_group)
 
-        # Create a single blob per bin
-        bin_blobs = list[mn.Rectangle]()
+        # Create a circular blob per bin
+        bin_blobs: list[mn.Circle] = []
         for line, color in zip(bin_lines, bin_colors):
-            blob: mn.Rectangle = mn.Rectangle(
-                width=line.get_length(),
-                height=0.3,
-                fill_color=color,
-                fill_opacity=0.6,
-                stroke_opacity=0,
+            blob: mn.Circle = mn.Circle(
+                radius=0.25, fill_color=color, fill_opacity=0.6, stroke_opacity=0
             ).move_to(line.get_top() + mn.UP * 0.15)
             bin_blobs.append(blob)
             self.add(blob)
 
-        # Animate each blob to "flood-fill" all segments of its bin
-        for b, blob in enumerate(bin_blobs):
-            # Target position: average center of all segments in this bin
-            segment_centers: list[mnt.Point3D] = [
+        # Compute target centers for each bin
+        avg_centers: list[mnt.Point3D] = []
+        for b in range(n_bins):
+            centers: list[mnt.Point3D] = [
                 seg_group[b].get_center()  # type: ignore
                 for seg_group in segmented_curves_per_curve
             ]
-            avg_center = Point3D(sum(segment_centers) / len(segment_centers))
+            avg_center: mnt.Point3D = sum(centers) / len(centers)  # type: ignore
+            avg_centers.append(avg_center)
 
-            self.play(blob.animate.move_to(avg_center), run_time=0.8)
-            for seg_group in segmented_curves_per_curve:
-                seg_group[b].set_color(bin_colors[b])  # type: ignore
-            self.wait(0.3)
+        # Animate all blobs moving simultaneously
+        self.play(
+            *[
+                blob.animate.move_to(center)
+                for blob, center in zip(bin_blobs, avg_centers)
+            ],
+            run_time=1.0,
+        )
+        # Color all segments at the same time
+        for seg_group in segmented_curves_per_curve:
+            for b, color in enumerate(bin_colors):
+                seg_group[b].set_color(color)  # type: ignore
 
+        self.wait(0.5)
+        # Fade out blobs together
         self.play(*[mn.FadeOut(blob) for blob in bin_blobs], run_time=0.5)
         self.wait()
 
