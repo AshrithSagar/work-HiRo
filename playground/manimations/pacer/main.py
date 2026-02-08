@@ -27,13 +27,34 @@ class DemonstrationScene(mn.Scene):
         self.camera.background_color = mn.BLACK
 
     def construct(self) -> None:
+        # ── Introduction ─────────────────────────────────────────────────────────
+        # Title introduction
+        self.next_section(skip_animations=False)
+
+        heading = mn.Text("PACER", font_size=48, color=mn.WHITE)
+        caption = mn.Text(
+            "Progress-Aligned Curation for Error-Resilient Imitation Learning",
+            font_size=32,
+            color=mn.LIGHT_GRAY,
+            line_spacing=1.2,
+        )
+        caption.next_to(heading, mn.DOWN, buff=0.5)
+
+        self.play(mn.FadeIn(heading, shift=mn.DOWN * 0.5))
+        self.play(mn.Write(caption), run_time=2)
+        self.wait()
+
         # ── Demonstrations ───────────────────────────────────────────────────────
         # Draw demonstrations into scene
         self.next_section(skip_animations=False)
 
+        old_heading = heading
         heading = mn.Text("Demonstrations", font_size=36, color=mn.WHITE)
         heading.to_corner(mn.UL)
-        self.play(mn.Create(heading))
+        self.play(
+            mn.Transform(old_heading, heading),
+            mn.FadeOut(caption, shift=mn.DOWN * 0.2),
+        )
 
         data = lasa.DataSet.GShape
         n_demos = len(data.demos)  # N
@@ -65,6 +86,8 @@ class DemonstrationScene(mn.Scene):
         # Animate phase variable on the demonstrations
         self.next_section(skip_animations=False)
 
+        old_heading.clear_updaters()
+        self.remove(old_heading)
         old_heading = heading
         heading = mn.Text("Phase Alignment", font_size=36, color=mn.WHITE)
         heading.to_corner(mn.UL)
