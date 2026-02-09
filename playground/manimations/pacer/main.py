@@ -199,7 +199,6 @@ class DemonstrationScene(mn.Scene):
             segmented_curves_per_curve.append(mn.VGroup(*segments))
         segmented_group = mn.VGroup(*all_segments)
 
-        self.wait()
         self.play(
             *[mn.FadeIn(line) for line in bin_lines]
             + [mn.FadeIn(seg) for seg in all_segments]
@@ -218,8 +217,12 @@ class DemonstrationScene(mn.Scene):
             mn.VGroup(*(segmented_curves_per_curve[i][b] for i in range(len(curves))))  # type: ignore
             for b in range(n_bins)
         ]
-        self.play(*[bg.animate.shift(radial_shift(bg)) for bg in segments_per_bin])
-        self.play(segmented_group.animate.scale_to_fit_width(5))  # type: ignore
+        target_group = segmented_group.copy()
+        for b, bg in enumerate(segments_per_bin):
+            target_bin = mn.VGroup(*target_group.submobjects[b::n_bins])
+            target_bin.shift(radial_shift(bg))
+        target_group.scale_to_fit_width(5)  # type: ignore
+        self.play(mn.Transform(segmented_group, target_group))
         self.wait()
 
         # ── Robust Consensus Statistics ──────────────────────────────────────────
