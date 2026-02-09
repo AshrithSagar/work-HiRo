@@ -166,7 +166,7 @@ class DemonstrationScene(mn.Scene):
         )
 
         ## Phase slider bins (on the number line)
-        bin_lines = list[mn.Mobject]()
+        bin_lines = list[mn.Line]()
         for b in range(n_bins):
             t0, t1 = b / n_bins, (b + 1) / n_bins
             line = mn.Line(
@@ -245,8 +245,10 @@ class DemonstrationScene(mn.Scene):
         )
 
         shift_vec = mn.ORIGIN - bin_group.get_center()
+        phase_group = mn.VGroup(progress_line, *bin_lines, tau_label)
         self.play(
-            segmented_group.animate.shift(shift_vec).scale(3, about_point=mn.ORIGIN)
+            segmented_group.animate.shift(shift_vec).scale(3, about_point=mn.ORIGIN),
+            mn.FadeOut(phase_group, shift=mn.DOWN),
         )
 
         self.wait()
