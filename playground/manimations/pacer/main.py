@@ -1,6 +1,7 @@
 from typing import Literal, TypeAlias, TypeVar
 
 import manim as mn  # type: ignore
+import manim.typing as mnt  # type: ignore
 import numpy as np
 import pyLasaDataset as lasa  # type: ignore
 from typed_numpy._typed import TypedNDArray
@@ -196,6 +197,7 @@ class DemonstrationScene(mn.Scene):
                 segments.append(segment)
                 all_segments.append(segment)
             segmented_curves_per_curve.append(mn.VGroup(*segments))
+        segmented_group = mn.VGroup(*all_segments)
 
         self.wait()
         self.add(*bin_lines)
@@ -203,11 +205,35 @@ class DemonstrationScene(mn.Scene):
         self.play(
             *[mn.FadeIn(line, run_time=1) for line in bin_lines]
             + [mn.FadeIn(seg, run_time=1) for seg in all_segments]
+            + [mn.FadeOut(curve, run_time=1) for curve in curves]
         )
+        self.wait()
+
+        center = curves_group.get_center()
+
+        def radial_shift(mobject: mn.Mobject, strength: float = 0.4) -> mnt.Vector3D:
+            direction = mobject.get_center() - center
+            if np.linalg.norm(direction) == 0:
+                return mn.ORIGIN
+            return strength * direction / np.linalg.norm(direction)
+
+        segments_per_bin = [
+            mn.VGroup(*(segmented_curves_per_curve[i][b] for i in range(len(curves))))  # type: ignore
+            for b in range(n_bins)
+        ]
+        self.play(*[bg.animate.shift(radial_shift(bg)) for bg in segments_per_bin])
+        self.play(segmented_group.animate.scale_to_fit_width(5))  # type: ignore
         self.wait()
 
         # ── Robust Consensus Statistics ──────────────────────────────────────────
         # Animate consensus computation for a particular bin
         self.next_section(skip_animations=False)
+
+        old_heading = heading
+        heading = mn.Text("Robust Consensus Statistics", font_size=36, color=mn.WHITE)
+        heading.to_corner(mn.UL)
+        self.play(mn.ReplacementTransform(old_heading, heading))
+
+        self.wait()
 
         # ─────────────────────────────────────────────────────────────────────────
