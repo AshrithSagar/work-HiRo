@@ -234,6 +234,16 @@ class DemonstrationScene(mn.Scene):
         heading.to_corner(mn.UL)
         self.play(mn.ReplacementTransform(old_heading, heading))
 
+        bin_idx = 0
+        bin_group = segments_per_bin[bin_idx]
+        self.play(
+            *[
+                seg.animate.set_stroke(opacity=0.25)
+                for seg in segmented_group
+                if seg not in bin_group.submobjects
+            ],
+        )
+
         self.wait()
 
         # ─────────────────────────────────────────────────────────────────────────
