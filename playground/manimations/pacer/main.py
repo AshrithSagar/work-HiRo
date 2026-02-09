@@ -244,6 +244,11 @@ class DemonstrationScene(mn.Scene):
             ],
         )
 
+        shift_vec = mn.ORIGIN - bin_group.get_center()
+        self.play(
+            segmented_group.animate.shift(shift_vec).scale(3, about_point=mn.ORIGIN)
+        )
+
         self.wait()
 
         # ─────────────────────────────────────────────────────────────────────────
