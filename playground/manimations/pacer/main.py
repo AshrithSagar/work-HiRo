@@ -200,14 +200,11 @@ class DemonstrationScene(mn.Scene):
         segmented_group = mn.VGroup(*all_segments)
 
         self.wait()
-        self.add(*bin_lines)
-        self.add(*all_segments)
         self.play(
-            *[mn.FadeIn(line, run_time=1) for line in bin_lines]
-            + [mn.FadeIn(seg, run_time=1) for seg in all_segments]
-            + [mn.FadeOut(curve, run_time=1) for curve in curves]
+            *[mn.FadeIn(line) for line in bin_lines]
+            + [mn.FadeIn(seg) for seg in all_segments]
+            + [mn.FadeOut(curve) for curve in curves]
         )
-        self.wait()
 
         center = curves_group.get_center()
 
