@@ -1,4 +1,4 @@
-from typing import Literal, TypeAlias, TypeVar
+from typing import Any, Literal, TypeAlias, TypeVar
 
 import manim as mn  # type: ignore
 import manim.typing as mnt  # type: ignore
@@ -24,6 +24,35 @@ Point2D: TypeAlias = Array1D[TWO]
 Point3D: TypeAlias = Array1D[THREE]
 Points2D: TypeAlias = Array2D[THOUSAND, TWO]
 Points3D: TypeAlias = Array2D[THOUSAND, THREE]
+
+
+class StateDot(mn.Dot):
+    def __init__(
+        self,
+        curve: mn.VMobject,
+        tau: mn.ValueTracker,
+        radius: float = mn.DEFAULT_DOT_RADIUS,
+        stroke_width: float = 0,
+        fill_opacity: float | None = None,
+        color: mn.ParsableManimColor | None = None,
+        **kwargs: Any,
+    ) -> None:
+        fill_opacity = fill_opacity or curve.stroke_opacity
+        color = color or curve.color
+        super().__init__(
+            point=curve.point_from_proportion(0),
+            radius=radius,
+            stroke_width=stroke_width,
+            fill_opacity=fill_opacity,
+            color=color,
+            **kwargs,
+        )
+        self.curve = curve
+        self.tau = tau
+        self.add_updater(self._update)  # type: ignore
+
+    def _update(self, m: mn.Dot) -> None:
+        m.move_to(self.curve.point_from_proportion(self.tau.get_value()))
 
 
 class Demonstrations:
@@ -104,17 +133,7 @@ class DemonstrationScene(mn.Scene):
         self.play(mn.ReplacementTransform(old_heading, heading))
 
         tau = mn.ValueTracker(0)
-
-        curve_dots = list[mn.Mobject]()
-        for curve in curves:
-            dot = mn.always_redraw(
-                lambda curve=curve: mn.Dot(
-                    curve.point_from_proportion(tau.get_value()),
-                    fill_opacity=curve.stroke_opacity,
-                    color=curve.color,
-                )
-            )
-            curve_dots.append(dot)
+        curve_dots = [StateDot(curve, tau) for curve in curves]
 
         velocity_vectors = list[mn.Mobject]()
         vec_scale = 0.03  # Purely for visual
