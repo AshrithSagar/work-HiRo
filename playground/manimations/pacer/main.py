@@ -236,13 +236,8 @@ class DemonstrationScene(mn.Scene):
 
         bin_idx = 0
         bin_group = segments_per_bin[bin_idx]
-        self.play(
-            *[
-                seg.animate.set_stroke(opacity=0.25)
-                for seg in segmented_group
-                if seg not in bin_group.submobjects
-            ],
-        )
+        others = mn.VGroup(*[seg for seg in segmented_group if seg not in bin_group])
+        self.play(others.animate.set_stroke(opacity=0.25))
 
         shift_vec = mn.ORIGIN - bin_group.get_center()
         phase_group = mn.VGroup(progress_line, *bin_lines, tau_label)
