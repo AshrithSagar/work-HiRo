@@ -4,15 +4,19 @@ import manim as mn  # type: ignore
 import manim.typing as mnt  # type: ignore
 import numpy as np
 import pyLasaDataset as lasa  # type: ignore
+from pyLasaDataset.dataset import _Data  # type: ignore
 from typed_numpy._typed import TypedNDArray
 from typed_numpy._typed.shapes import THREE, TWO
 
+SEVEN = Literal[7]
 THOUSAND = Literal[1000]
 DType: TypeAlias = np.float64
 Dim1 = TypeVar("Dim1", bound=int, default=int)
 Dim2 = TypeVar("Dim2", bound=int, default=int)
+Dim3 = TypeVar("Dim3", bound=int, default=int)
 Array1D: TypeAlias = TypedNDArray[tuple[Dim1], np.dtype[DType]]
 Array2D: TypeAlias = TypedNDArray[tuple[Dim1, Dim2], np.dtype[DType]]
+Array3D: TypeAlias = TypedNDArray[tuple[Dim1, Dim2, Dim3], np.dtype[DType]]
 
 NumPoints = TypeVar("NumPoints", bound=int, default=int)
 Demo: TypeAlias = Array2D[TWO, THOUSAND]
@@ -20,6 +24,24 @@ Point2D: TypeAlias = Array1D[TWO]
 Point3D: TypeAlias = Array1D[THREE]
 Points2D: TypeAlias = Array2D[THOUSAND, TWO]
 Points3D: TypeAlias = Array2D[THOUSAND, THREE]
+
+
+class Demonstrations:
+    def __init__(self, data: _Data) -> None:
+        self.data = data
+        positions = list[Points3D]()
+        velocities = list[Points3D]()
+        for demo in data.demos:
+            pos = Demo(demo.__getattribute__("pos"))
+            vel = Demo(demo.__getattribute__("vel"))
+            n_points = pos.shape[1]  # T_i
+            poss = Points3D([(pos[0, t], pos[1, t], 0.0) for t in range(n_points)])
+            vels = Points3D([(vel[0, t], vel[1, t], 0.0) for t in range(n_points)])
+            positions.append(poss)
+            velocities.append(vels)
+        self.positions = Array3D[SEVEN, THOUSAND, THREE](positions)
+        self.velocities = Array3D[SEVEN, THOUSAND, THREE](velocities)
+        self.positions_diff = np.diff(self.positions, axis=-2)
 
 
 class DemonstrationScene(mn.Scene):
@@ -54,31 +76,23 @@ class DemonstrationScene(mn.Scene):
         heading.to_corner(mn.UL)
         self.play(mn.ReplacementTransform(mn.VGroup(old_heading, caption), heading))
 
-        data = lasa.DataSet.GShape
-        n_demos = len(data.demos)  # N
-        demo_indices = list(range(n_demos))  # All demonstrations
+        demos = Demonstrations(lasa.DataSet.GShape)
+        n_demos = len(demos.positions)
 
         curves = list[mn.VMobject]()
         curve_colors = mn.color_gradient(
             [mn.RED, mn.ORANGE, mn.YELLOW, mn.GREEN, mn.BLUE, mn.PURPLE], n_demos
         )
-        for i in demo_indices:
-            pos = Demo(data.demos[i].__getattribute__("pos"))
-            n_points = pos.shape[1]  # T_i
-            points = Points3D([(pos[0, t], pos[1, t], 0.0) for t in range(n_points)])
-
+        for points, color in zip(demos.positions, curve_colors):
             curve = mn.VMobject()
             curve.set_points_smoothly(points)
-            curve.set_stroke(color=curve_colors[i], width=3, opacity=0.7)
+            curve.set_stroke(color=color, width=3, opacity=0.7)
             curves.append(curve)
 
         curves_group = mn.VGroup(*curves)
         curves_group.center()
         curves_group.scale_to_fit_width(5)  # type: ignore
-        self.play(
-            *[mn.Create(curve) for curve in curves],
-            run_time=3,
-        )
+        self.play(*[mn.Create(curve) for curve in curves])
 
         # ── Phase slider ─────────────────────────────────────────────────────────
         # Animate phase variable on the demonstrations
@@ -104,9 +118,7 @@ class DemonstrationScene(mn.Scene):
 
         velocity_vectors = list[mn.Mobject]()
         vec_scale = 0.03  # Purely for visual
-        for i, curve in enumerate(curves):
-            pos = Demo(data.demos[i].__getattribute__("pos"))
-            vel = Demo(data.demos[i].__getattribute__("vel"))
+        for pos, vel, curve in zip(demos.positions, demos.velocities, curves):
             vector = mn.always_redraw(
                 lambda pos=pos, vel=vel, curve=curve: (
                     lambda idx: (
