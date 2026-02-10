@@ -85,7 +85,7 @@ class DemonstrationScene(mn.Scene):
         self.next_section(skip_animations=False)
 
         old_heading = heading
-        heading = mn.Text("Phase Alignment", font_size=36, color=mn.WHITE)
+        heading = mn.Text("Phase", font_size=36, color=mn.WHITE)
         heading.to_corner(mn.UL)
         self.play(mn.ReplacementTransform(old_heading, heading))
 
@@ -101,7 +101,6 @@ class DemonstrationScene(mn.Scene):
                 )
             )
             curve_dots.append(dot)
-        self.add(*curve_dots)
 
         velocity_vectors = list[mn.Mobject]()
         vec_scale = 0.03  # Purely for visual
@@ -125,7 +124,6 @@ class DemonstrationScene(mn.Scene):
                 )(min(int(tau.get_value() * (pos.shape[1] - 1)), pos.shape[1] - 1))
             )
             velocity_vectors.append(vector)
-        self.add(*velocity_vectors)
 
         progress_line = mn.NumberLine(
             x_range=[0, 1, 0.1],
@@ -137,9 +135,12 @@ class DemonstrationScene(mn.Scene):
         )
         tau_label = mn.MathTex(r"\tau", color=mn.WHITE)
         tau_label.next_to(progress_line, mn.LEFT)
-        self.add(progress_line, progress_dot, tau_label)
 
-        self.wait()
+        self.play(
+            mn.FadeIn(*curve_dots),
+            mn.FadeIn(*velocity_vectors),
+            mn.FadeIn(progress_line, progress_dot, tau_label, shift=mn.UP),
+        )
         self.play(tau.animate.set_value(1), run_time=4, rate_func=mn.linear)
         self.wait()
 
