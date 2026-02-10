@@ -1,4 +1,4 @@
-from typing import Any, Literal, TypeAlias, TypeVar
+from typing import Literal, TypeAlias, TypeVar
 
 import manim as mn  # type: ignore
 import manim.typing as mnt  # type: ignore
@@ -24,35 +24,6 @@ Point2D: TypeAlias = Array1D[TWO]
 Point3D: TypeAlias = Array1D[THREE]
 Points2D: TypeAlias = Array2D[THOUSAND, TWO]
 Points3D: TypeAlias = Array2D[THOUSAND, THREE]
-
-
-class StateDot(mn.Dot):
-    def __init__(
-        self,
-        curve: mn.VMobject,
-        tau: mn.ValueTracker,
-        radius: float = mn.DEFAULT_DOT_RADIUS,
-        stroke_width: float = 0,
-        fill_opacity: float | None = None,
-        color: mn.ParsableManimColor | None = None,
-        **kwargs: Any,
-    ) -> None:
-        fill_opacity = fill_opacity or curve.stroke_opacity
-        color = color or curve.color
-        super().__init__(
-            point=curve.point_from_proportion(0),
-            radius=radius,
-            stroke_width=stroke_width,
-            fill_opacity=fill_opacity,
-            color=color,
-            **kwargs,
-        )
-        self.curve = curve
-        self.tau = tau
-        self.add_updater(self._update)  # type: ignore
-
-    def _update(self, m: mn.Dot) -> None:
-        m.move_to(self.curve.point_from_proportion(self.tau.get_value()))
 
 
 class Demonstrations:
@@ -133,26 +104,47 @@ class DemonstrationScene(mn.Scene):
         self.play(mn.ReplacementTransform(old_heading, heading))
 
         tau = mn.ValueTracker(0)
-        curve_dots = [StateDot(curve, tau) for curve in curves]
 
-        velocity_vectors = list[mn.Mobject]()
+        curve_dots = list[mn.Dot]()
+        velocity_vectors = list[mn.Arrow]()
         vec_scale = 0.03  # Purely for visual
-        for vels, curve in zip(demos.velocities, curves):
-            T = vels.shape[0]  # T_i
-            vector = mn.always_redraw(
-                lambda vels=vels, curve=curve, T=T: (
-                    lambda t: (
-                        lambda p, v: mn.Arrow(
-                            start=p,
-                            end=p + v,
-                            buff=0,
-                            stroke_width=3,
-                            color=curve.color,
-                        )
-                    )(p=curve.point_from_proportion(t / (T - 1)), v=vec_scale * vels[t])
-                )(t=min(int(tau.get_value() * (T - 1)), T - 1))
+        for curve in curves:
+            dot = mn.Dot(
+                point=curve.point_from_proportion(0),
+                fill_opacity=curve.stroke_opacity,
+                color=curve.color,
             )
-            velocity_vectors.append(vector)
+            curve_dots.append(dot)
+            arrow = mn.Arrow(
+                start=curve.point_from_proportion(0),
+                end=curve.point_from_proportion(0) + 1e-3 * mn.RIGHT,
+                buff=0,
+                stroke_width=3,
+                color=curve.color,
+            )
+            velocity_vectors.append(arrow)
+        curve_dots_group = mn.VGroup(*curve_dots)
+        all_arrows_group = mn.VGroup(*velocity_vectors)
+
+        def update_curve_dots(group: mn.VGroup) -> None:
+            for dot, curve in zip(group, curves):
+                dot.move_to(curve.point_from_proportion(tau.get_value()))
+
+        def update_all_arrows(_) -> None:
+            for arrow, vels, curve in zip(velocity_vectors, demos.velocities, curves):
+                T = vels.shape[0]
+                t = min(int(tau.get_value() * (T - 1)), T - 1)
+                p = curve.point_from_proportion(t / (T - 1))
+                v = vec_scale * vels[t]
+
+                if np.linalg.norm(v) < 1e-6:
+                    arrow.set_opacity(0)
+                else:
+                    arrow.set_opacity(1)
+                    arrow.put_start_and_end_on(p, p + v)
+
+        curve_dots_group.add_updater(update_curve_dots)  # type: ignore
+        all_arrows_group.add_updater(update_all_arrows)  # type: ignore
 
         progress_line = mn.NumberLine(
             x_range=(0, 1, 0.1), length=10, include_numbers=True
@@ -164,22 +156,19 @@ class DemonstrationScene(mn.Scene):
         tau_label.next_to(progress_line, mn.LEFT)
 
         self.play(
-            mn.FadeIn(*curve_dots),
-            mn.FadeIn(*velocity_vectors),
+            mn.FadeIn(curve_dots_group, all_arrows_group),
             mn.FadeIn(progress_line, progress_dot, tau_label, shift=mn.UP),
         )
         self.play(tau.animate.set_value(1), run_time=4, rate_func=mn.linear)
+        for mobj in (progress_dot, curve_dots_group, all_arrows_group):
+            mobj.clear_updaters()
         self.wait()
 
         # ── Binning ──────────────────────────────────────────────────────────────
         # Divide phase into B equal bins
         self.next_section(skip_animations=False)
 
-        for dot in curve_dots:
-            dot.clear_updaters()
-        self.remove(*curve_dots)
-        progress_dot.clear_updaters()
-        self.remove(progress_dot)
+        self.remove(progress_dot, curve_dots_group, all_arrows_group)
         for curve in curves:
             curve.set_color(mn.WHITE)
 
