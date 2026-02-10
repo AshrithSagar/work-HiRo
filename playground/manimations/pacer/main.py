@@ -137,10 +137,11 @@ class DemonstrationScene(mn.Scene):
 
         velocity_vectors = list[mn.Mobject]()
         vec_scale = 0.03  # Purely for visual
-        for pos, vel, curve in zip(demos.positions, demos.velocities, curves):
+        for vels, curve in zip(demos.velocities, curves):
+            T = vels.shape[0]  # T_i
             vector = mn.always_redraw(
-                lambda pos=pos, vel=vel, curve=curve: (
-                    lambda idx: (
+                lambda vels=vels, curve=curve, T=T: (
+                    lambda t: (
                         lambda p, v: mn.Arrow(
                             start=p,
                             end=p + v,
@@ -148,18 +149,13 @@ class DemonstrationScene(mn.Scene):
                             stroke_width=3,
                             color=curve.color,
                         )
-                    )(
-                        curve.point_from_proportion(idx / (pos.shape[1] - 1)),
-                        vec_scale * np.array([vel[0, idx], vel[1, idx], 0.0]),
-                    )
-                )(min(int(tau.get_value() * (pos.shape[1] - 1)), pos.shape[1] - 1))
+                    )(p=curve.point_from_proportion(t / (T - 1)), v=vec_scale * vels[t])
+                )(t=min(int(tau.get_value() * (T - 1)), T - 1))
             )
             velocity_vectors.append(vector)
 
         progress_line = mn.NumberLine(
-            x_range=[0, 1, 0.1],
-            length=10,
-            include_numbers=True,
+            x_range=(0, 1, 0.1), length=10, include_numbers=True
         ).to_edge(mn.DOWN)
         progress_dot = mn.always_redraw(
             lambda: mn.Dot(progress_line.n2p(tau.get_value()), color=mn.YELLOW)
