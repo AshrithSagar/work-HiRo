@@ -12,6 +12,8 @@ from pyLasaDataset.dataset import _Data  # type: ignore
 from typed_numpy._typed import TypedNDArray
 from typed_numpy._typed.helpers import THREE, TWO
 
+from .base import Demonstration, Demonstrations
+
 SEVEN = Literal[7]
 THOUSAND = Literal[1000]
 
@@ -39,4 +41,18 @@ class LASADemonstrations:
         self.velocities = Ar7k2([demo.__getattribute__("vel").T for demo in data.demos])
         self.positions_diff = np.diff(
             self.positions, axis=-2, append=np.zeros((7, 1, 2), dtype=DType)
+        )
+
+    def to_demonstrations(self) -> Demonstrations[TWO, TWO]:
+        return Demonstrations(
+            [
+                Demonstration(
+                    index=index,  # i
+                    states=[state for state in states],
+                    actions=[action for action in actions],
+                )
+                for index, (states, actions) in enumerate(
+                    zip(self.positions, self.velocities)
+                )
+            ]
         )
