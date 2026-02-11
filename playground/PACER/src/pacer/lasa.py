@@ -10,7 +10,7 @@ import numpy as np
 import pyLasaDataset as lasa  # type: ignore
 from pyLasaDataset.dataset import _Data  # type: ignore
 from typed_numpy._typed import TypedNDArray
-from typed_numpy._typed.shapes import THREE, TWO
+from typed_numpy._typed.helpers import THREE, TWO
 
 SEVEN = Literal[7]
 THOUSAND = Literal[1000]
