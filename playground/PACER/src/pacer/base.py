@@ -29,7 +29,7 @@ import numpy.typing as npt
 import optype.numpy as onp
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+import torch.nn.functional as F  # type: ignore  # noqa: F401
 from deprecated import deprecated  # type: ignore
 from torch import Tensor
 from typed_numpy._typed import TypedNDArray
@@ -48,10 +48,6 @@ type DemoIndex = int  # i \i {0, 1, ..., N-1}
 type TimeIndex = int  # t \i {0, 1, ..., T_i-1}
 type BinIndex = int  # b \in {0, 1, ..., B-1}
 type SampleIndex = tuple[DemoIndex, TimeIndex]  # (i, t)
-
-# (x_{i, t}, a_{i, t})
-StateActionPair: TypeAlias = tuple[State[DimState], Action[DimAction]]
-Sample: TypeAlias = StateActionPair[DimState, DimAction]
 
 States: TypeAlias = list[State[DimState]]
 Actions: TypeAlias = list[Action[DimAction]]
@@ -82,6 +78,15 @@ def normalise(
             min_: float = vec.min()
             max_: float = vec.max()
             return (vec - min_) / (max_ - min_ + EPS)
+
+
+# (x_{i, t}, a_{i, t})
+@dataclass
+class Sample(Generic[DimState, DimAction]):
+    """A container for a State-Action pair"""
+
+    state: State[DimState]  # x_{i, t}
+    action: Action[DimAction]  # a_{i, t}
 
 
 @dataclass
@@ -115,11 +120,11 @@ class Samples(Generic[DimState, DimAction]):
 
     @enforce_shapes
     def states(self) -> States[DimState]:
-        return list(state for state, _ in self.samples)
+        return list(sample.state for sample in self.samples)
 
     @enforce_shapes
     def actions(self) -> Actions[DimAction]:
-        return list(action for _, action in self.samples)
+        return list(sample.action for sample in self.samples)
 
 
 @dataclass
@@ -181,12 +186,16 @@ class SamplesCollection(Generic[DimState, DimAction]):
     @enforce_shapes
     def states(self, *, LOO_demo_index: DemoIndex | None = None) -> States[DimState]:
         # (N x T_) or (N-1 x T_)
-        return list(state for state, _ in self.samples(LOO_demo_index=LOO_demo_index))
+        return list(
+            sample.state for sample in self.samples(LOO_demo_index=LOO_demo_index)
+        )
 
     @enforce_shapes
     def actions(self, *, LOO_demo_index: DemoIndex | None = None) -> Actions[DimAction]:
         # (N x T_) or (N-1 x T_)
-        return list(action for _, action in self.samples(LOO_demo_index=LOO_demo_index))
+        return list(
+            sample.action for sample in self.samples(LOO_demo_index=LOO_demo_index)
+        )
 
 
 # Behaves like Samples
@@ -206,11 +215,11 @@ class Demonstration(Generic[DimState, DimAction]):  # D_i
     @enforce_shapes
     def __getitem__(
         self, t: TimeIndex, /
-    ) -> StateActionPair[DimState, DimAction]:  # (x_{i, t}, a_{i, t})
-        return (self.states[t], self.actions[t])
+    ) -> Sample[DimState, DimAction]:  # (x_{i, t}, a_{i, t})
+        return Sample(self.states[t], self.actions[t])
 
     @enforce_shapes
-    def __iter__(self) -> Iterator[StateActionPair[DimState, DimAction]]:
+    def __iter__(self) -> Iterator[Sample[DimState, DimAction]]:
         # [(x_{i, t}, a_{i, t})]_{t = 1}^{T_i}
         for t in range(self.n_pairs):
             yield self[t]
@@ -233,8 +242,8 @@ class Demonstration(Generic[DimState, DimAction]):  # D_i
     def from_samples(
         cls, index: DemoIndex, samples: Samples[DimState, DimAction]
     ) -> Self:
-        states = list(state for state, _ in samples)
-        actions = list(action for _, action in samples)
+        states = list(sample.state for sample in samples)
+        actions = list(sample.action for sample in samples)
         return cls(index=index, states=states, actions=actions)
 
 
@@ -770,7 +779,7 @@ class PACER(Generic[DimState, DimAction]):
             self.optimiser.zero_grad()
             for demo in self.demonstrations:
                 for state in demo.states:
-                    preds = self.policy(state)
+                    _preds = self.policy(state)
             loss = self.compute_huber_loss()
             loss.backward()  # type: ignore
             self.optimiser.step()  # type: ignore
