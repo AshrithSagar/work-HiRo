@@ -33,22 +33,10 @@ Points3D: TypeAlias = Array2D[NumPoints, THREE]
 class LASADemonstrations:
     def __init__(self, data: _Data = lasa.DataSet.GShape) -> None:
         self.data = data
-        positions = list[Points3D[THOUSAND]]()
-        velocities = list[Points3D[THOUSAND]]()
-        for demo in data.demos:
-            pos = Array2D[TWO, THOUSAND](demo.__getattribute__("pos"))
-            vel = Array2D[TWO, THOUSAND](demo.__getattribute__("vel"))
-            n_points = pos.shape[1]  # T_i
-            poss = Points3D[THOUSAND](
-                [(pos[0, t], pos[1, t], 0.0) for t in range(n_points)]
-            )
-            vels = Points3D[THOUSAND](
-                [(vel[0, t], vel[1, t], 0.0) for t in range(n_points)]
-            )
-            positions.append(poss)
-            velocities.append(vels)
-        self.positions = Array3D[SEVEN, THOUSAND, THREE](positions)
-        self.velocities = Array3D[SEVEN, THOUSAND, THREE](velocities)
+
+        Ar7k2 = Array3D[SEVEN, THOUSAND, TWO]
+        self.positions = Ar7k2([demo.__getattribute__("pos").T for demo in data.demos])
+        self.velocities = Ar7k2([demo.__getattribute__("vel").T for demo in data.demos])
         self.positions_diff = np.diff(
-            self.positions, axis=-2, append=np.zeros((7, 1, 3), dtype=DType)
+            self.positions, axis=-2, append=np.zeros((7, 1, 2), dtype=DType)
         )
