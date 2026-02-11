@@ -342,12 +342,11 @@ class PhaseEstimator(Generic[DimState, DimAction]):
         ranking_loss = torch.tensor(0.0, device=self.device)
         for demo in self.demonstrations:
             states = Tensor(np.array(demo.states)).float().to(self.device)
-            scores: Tensor = self.scorer(states)
-            for t in range(len(scores)):
-                for t_prime in range(t):
-                    score_diff = scores[t] - scores[t_prime]
-                    loss = torch.log(1 + torch.exp(self.margin - score_diff))
-                    ranking_loss += loss
+            scores: Tensor = self.scorer(states)  # (T_i,)
+            diff = scores.unsqueeze(1) - scores.unsqueeze(0)  # (T_i, T_i)
+            mask = torch.triu(torch.ones_like(diff), diagonal=1)
+            loss_matrix = torch.log1p(torch.exp(self.margin - diff)) * mask
+            ranking_loss += loss_matrix.sum()
         return ranking_loss
 
     def train(self) -> None:
