@@ -8,7 +8,6 @@ https://openreview.net/forum?id=gaYyBvP2Rz
 """
 # src/pacer/base.py
 
-import math
 from dataclasses import dataclass, field
 from typing import (
     Generic,
@@ -29,7 +28,7 @@ import numpy.typing as npt
 import optype.numpy as onp
 import torch
 import torch.nn as nn
-import torch.nn.functional as F  # type: ignore  # noqa: F401
+import torch.nn.functional as F
 from deprecated import deprecated  # type: ignore
 from torch import Tensor
 from typed_numpy._typed import TypedNDArray
@@ -118,11 +117,11 @@ class Samples(Generic[DimState, DimAction]):
     def extend(self, samples: Iterable[Sample[DimState, DimAction]]) -> None:
         self.samples.extend(samples)
 
-    @enforce_shapes
+    # @enforce_shapes
     def states(self) -> States[DimState]:
         return list(sample.state for sample in self.samples)
 
-    @enforce_shapes
+    # @enforce_shapes
     def actions(self) -> Actions[DimAction]:
         return list(sample.action for sample in self.samples)
 
@@ -183,14 +182,14 @@ class SamplesCollection(Generic[DimState, DimAction]):
             for sample in samples:
                 yield sample
 
-    @enforce_shapes
+    # @enforce_shapes
     def states(self, *, LOO_demo_index: DemoIndex | None = None) -> States[DimState]:
         # (N x T_) or (N-1 x T_)
         return list(
             sample.state for sample in self.samples(LOO_demo_index=LOO_demo_index)
         )
 
-    @enforce_shapes
+    # @enforce_shapes
     def actions(self, *, LOO_demo_index: DemoIndex | None = None) -> Actions[DimAction]:
         # (N x T_) or (N-1 x T_)
         return list(
@@ -345,8 +344,8 @@ class PhaseEstimator(Generic[DimState, DimAction]):
             scores: Tensor = self.scorer(states)  # (T_i,)
             diff = scores.unsqueeze(1) - scores.unsqueeze(0)  # (T_i, T_i)
             mask = torch.triu(torch.ones_like(diff), diagonal=1)
-            loss_matrix = torch.log1p(torch.exp(self.margin - diff)) * mask
-            ranking_loss += loss_matrix.sum()
+            loss_matrix = F.softplus(self.margin - diff) * mask
+            ranking_loss += loss_matrix.mean()
         return ranking_loss
 
     def train(self) -> None:
@@ -354,6 +353,7 @@ class PhaseEstimator(Generic[DimState, DimAction]):
             self.optimiser.zero_grad()
             loss = self.compute_ranking_loss()
             loss.backward()  # type: ignore
+            torch.nn.utils.clip_grad_norm_(self.scorer.parameters(), 1.0)
             self.optimiser.step()  # type: ignore
 
     @enforce_shapes
@@ -389,8 +389,8 @@ class RobustStatistics(Generic[DimState, DimAction]):
     # Captures typical rate of state change
 
     ## Local task dynamics
-    action_tangent: Action[DimAction]  # t_a[b] <- diff{ alpha_a[b] }
-    state_tangent: State[DimState] | None = None  # t_s[b] <- diff{ alpha_s[b] }
+    # NOTE: `action_tangent` and `state_tangent` are not stored here,
+    # but instead, computed and stored in RibbonToken.
 
 
 @dataclass(kw_only=True)
@@ -404,8 +404,13 @@ class RibbonToken(Generic[DimState, DimAction]):  # z_b
     median_action_strength: DType  # beta_a[b]
     median_state: State[DimState]  # alpha_s[b]
     median_state_change: DType  # beta_s[b]
-    action_tangent: Action[DimAction]  # t_a[b]
-    state_tangent: State[DimState] | None = None  # t_s[b]
+
+    ## Local task dynamics
+    action_tangent: Action[DimAction] = field(init=False)
+    # t_a[b] <- diff{ alpha_a[b] }
+    state_tangent: State[DimState] | None = field(init=False)
+    # t_s[b] <- diff{ alpha_s[b] }
+
     MAD_action_residual: DType  # Median Absolute Deviation of action residuals
 
 
@@ -451,12 +456,18 @@ class BinHandler(Generic[DimState, DimAction]):
     def make_bins(self) -> None:
         phases = self.phase_estimator.estimate_phases()
         self.bins = [
-            Bin[DimState, DimAction](index=bin_idx) for bin_idx in range(self.n_bins)
+            Bin[DimState, DimAction](
+                index=bin_idx,
+                samples_collection=SamplesCollection(
+                    collection=[Samples() for _ in range(len(self.demonstrations))]
+                ),
+            )
+            for bin_idx in range(self.n_bins)
         ]
         for i in range(len(phases)):
             for t in range(len(phases[i])):
                 tau: Phase = phases[i][t]
-                bin_idx: BinIndex = math.floor(tau * self.n_bins)
+                bin_idx: BinIndex = min(int(tau * self.n_bins), self.n_bins - 1)
                 assert bin_idx < self.n_bins
                 bin = self.bins[bin_idx]
                 sample_idx: SampleIndex = (i, t)
@@ -478,16 +489,12 @@ class BinHandler(Generic[DimState, DimAction]):
         median_state = State[DimState](median(states, axis=0))
         median_action_strength = DType(median(action_norms, axis=0))
         median_state_change = DType(median(state_change_norms, axis=0))
-        action_tangent = np.diff(median_action, axis=0)
-        state_tangent = np.diff(median_state, axis=0)
 
         return RobustStatistics(
             median_action=median_action,
             median_state=median_state,
             median_action_strength=median_action_strength,
             median_state_change=median_state_change,
-            action_tangent=action_tangent,
-            state_tangent=state_tangent,
         )
 
     def LOO_sample_indices(
@@ -597,6 +604,9 @@ class BinHandler(Generic[DimState, DimAction]):
 
     @enforce_shapes
     def consolidate_ribbon_tokens(self) -> None:
+        bin_median_actions = list[Action[DimAction]]()
+        bin_median_states = list[State[DimState]]()
+
         for bin in self.bins:
             stats = self.compute_robust_consensus_statistics(bin.samples())
 
@@ -617,12 +627,28 @@ class BinHandler(Generic[DimState, DimAction]):
                 median_action_strength=stats.median_action_strength,
                 median_state=stats.median_state,
                 median_state_change=stats.median_state_change,
-                action_tangent=stats.action_tangent,
-                state_tangent=stats.state_tangent,
                 MAD_action_residual=MAD_action_residual,
             )
+            bin_median_actions.append(stats.median_action)
+            bin_median_states.append(stats.median_state)
 
-    @enforce_shapes
+        for b, bin in enumerate(self.bins):
+            if b == 0:
+                p, q, f = b + 1, b, 1.0
+            elif b == self.n_bins - 1:
+                p, q, f = b, b - 1, 1.0
+            else:
+                p, q, f = b, b - 1, 0.5
+            action_tangent = Action[DimAction](
+                f * (bin_median_actions[p] - bin_median_actions[q])
+            )
+            state_tangent = State[DimState](
+                f * (bin_median_states[p] - bin_median_states[q])
+            )
+            bin.ribbon_token.action_tangent = action_tangent
+            bin.ribbon_token.state_tangent = state_tangent
+
+    # @enforce_shapes
     def compute_pseudo_labels(
         self,
         *,
@@ -634,9 +660,9 @@ class BinHandler(Generic[DimState, DimAction]):
         temporal_smoothing_weight: DType | float = 0.0,  # kappa
     ) -> list[Actions[DimAction]]:  # (N x T_)
         N = len(self.demonstrations)
-        pseudo_labels = [Actions[DimAction]() for _ in range(N)]
+        pseudo_labels = [list[Action[DimAction]]() for _ in range(N)]
         _labels = [
-            Actions[DimAction]() for _ in range(N)
+            list[Action[DimAction]]() for _ in range(N)
         ]  # [[y^{(3)}_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
         trust_values = self.compute_trust_values(cutoff=cutoff, min_trust=min_trust)
         self.consolidate_ribbon_tokens()
@@ -649,7 +675,11 @@ class BinHandler(Generic[DimState, DimAction]):
         for bin in self.bins:
             # Alignment with ribbon tangent
             token = bin.ribbon_token  # z_b
-            tangent = token.state_tangent or token.action_tangent
+            tangent = (
+                token.state_tangent
+                if token.state_tangent is not None
+                else token.action_tangent
+            )
             unit_tangent = Array1D[int](normalise(tangent, method="NORM"))  # t_{dir}[b]
 
             for j in range(N):
