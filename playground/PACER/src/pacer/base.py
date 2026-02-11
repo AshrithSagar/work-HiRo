@@ -360,14 +360,16 @@ class PhaseEstimator(Generic[DimState, DimAction]):
             ranking_loss += loss_matrix.mean()
         return ranking_loss
 
-    def train(self) -> None:
+    def train(self) -> Tensor | None:
         self.scorer.train()
+        loss = None
         for _epoch in range(self.epochs):
             self.optimiser.zero_grad()
             loss = self.compute_ranking_loss()
             loss.backward()  # type: ignore
             torch.nn.utils.clip_grad_norm_(self.scorer.parameters(), 1.0)
             self.optimiser.step()  # type: ignore
+        return loss
 
     @enforce_shapes
     def estimate_phases(
@@ -840,15 +842,17 @@ class PACER(Generic[DimState, DimAction]):
             loss /= total_weight
         return loss
 
-    def train(self) -> None:
+    def train(self) -> Tensor | None:
         """Train PACER policy using weighted Huber loss with pseudo-labels."""
         self.policy.train()
+        loss = None
         for _epoch in range(self.epochs):
             self.optimiser.zero_grad()
             loss = self.compute_huber_loss()
             loss.backward()  # type: ignore
             torch.nn.utils.clip_grad_norm_(self.policy.parameters(), 1.0)
             self.optimiser.step()  # type: ignore
+        return loss
 
     @enforce_shapes
     def predict(self, states: States[DimState]) -> Actions[DimAction]:
