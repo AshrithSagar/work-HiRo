@@ -34,9 +34,11 @@ from torch import Tensor
 from typed_numpy._typed import TypedNDArray
 from typed_numpy._typed.context import enforce_shapes  # type: ignore
 
-DType: TypeAlias = np.float32
+npDType: TypeAlias = np.float32
+torchDType = torch.float32
+
 Dim1 = TypeVar("Dim1", bound=int, default=int)
-Array1D: TypeAlias = TypedNDArray[tuple[Dim1], np.dtype[DType]]
+Array1D: TypeAlias = TypedNDArray[tuple[Dim1], np.dtype[npDType]]
 
 DimState = TypeVar("DimState", bound=int, default=int)  # d_x
 DimAction = TypeVar("DimAction", bound=int, default=int)  # d_a
@@ -68,7 +70,7 @@ def median(
 def normalise(
     vec: onp.ToArray1D, /, method: Literal["NORM", "MINMAX", "ZSCORE"]
 ) -> np.ndarray:
-    vec = np.asarray(vec, dtype=DType)
+    vec = np.asarray(vec, dtype=npDType)
     match method:
         case "NORM":
             norm = la.norm(vec)
@@ -349,6 +351,7 @@ class PhaseEstimator(Generic[DimState, DimAction]):
         return ranking_loss
 
     def train(self) -> None:
+        self.scorer.train()
         for _epoch in range(self.epochs):
             self.optimiser.zero_grad()
             loss = self.compute_ranking_loss()
@@ -381,10 +384,10 @@ class RobustStatistics(Generic[DimState, DimAction]):
     median_state: State[DimState]  # alpha_s[b] = median{ x_{i, t} : (i, t) \in I_b }
 
     ## Pace
-    median_action_strength: DType
+    median_action_strength: npDType
     # beta_a[b] = median{ ||a_{i, t}|| : (i, t) \in I_b }
     # Captures strength of actions
-    median_state_change: DType
+    median_state_change: npDType
     # beta_s[b] = median{ ||xdot_{i, t}|| : (i, t) \in I_b }
     # Captures typical rate of state change
 
@@ -401,9 +404,9 @@ class RibbonToken(Generic[DimState, DimAction]):  # z_b
     """
 
     median_action: Action[DimAction]  # alpha_a[b]
-    median_action_strength: DType  # beta_a[b]
+    median_action_strength: npDType  # beta_a[b]
     median_state: State[DimState]  # alpha_s[b]
-    median_state_change: DType  # beta_s[b]
+    median_state_change: npDType  # beta_s[b]
 
     ## Local task dynamics
     action_tangent: Action[DimAction] = field(init=False)
@@ -411,7 +414,7 @@ class RibbonToken(Generic[DimState, DimAction]):  # z_b
     state_tangent: State[DimState] | None = field(init=False)
     # t_s[b] <- diff{ alpha_s[b] }
 
-    MAD_action_residual: DType  # Median Absolute Deviation of action residuals
+    MAD_action_residual: npDType  # Median Absolute Deviation of action residuals
 
 
 @dataclass(kw_only=True)
@@ -487,8 +490,8 @@ class BinHandler(Generic[DimState, DimAction]):
 
         median_action = Action[DimAction](median(actions, axis=0))
         median_state = State[DimState](median(states, axis=0))
-        median_action_strength = DType(median(action_norms, axis=0))
-        median_state_change = DType(median(state_change_norms, axis=0))
+        median_action_strength = npDType(median(action_norms, axis=0))
+        median_state_change = npDType(median(state_change_norms, axis=0))
 
         return RobustStatistics(
             median_action=median_action,
@@ -530,22 +533,22 @@ class BinHandler(Generic[DimState, DimAction]):
         return loo_samples, demo_samples
 
     @enforce_shapes
-    def compute_z_scores(self) -> list[list[DType]]:  # (N x T_)
+    def compute_z_scores(self) -> list[list[npDType]]:  # (N x T_)
         N = len(self.demonstrations)
 
         # (N x N x T_)
         # [[[r^{(-j)}_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}]_{j = 1}^{N}
-        _action_residuals = [[list[DType]() for _ in range(N)] for _ in range(N)]
+        _action_residuals = [[list[npDType]() for _ in range(N)] for _ in range(N)]
 
         # (N x T_)
         # [[r^{(-i)}_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}]
-        self_action_residuals = [list[DType]() for _ in range(N)]
+        self_action_residuals = [list[npDType]() for _ in range(N)]
 
         # (N,)
-        MAD_residuals = list[DType]()
+        MAD_residuals = list[npDType]()
 
         # (N x T_)
-        z_scores = [list[DType]() for _ in range(N)]
+        z_scores = [list[npDType]() for _ in range(N)]
 
         for bin in self.bins:
             for j in range(N):
@@ -558,17 +561,17 @@ class BinHandler(Generic[DimState, DimAction]):
                     residual = la.norm(action - bin_median_action)  # r^{-i}_{i, t}
                     self_action_residuals[j].append(residual)
 
-                bin_action_residuals = list[DType]()  # LOO
+                bin_action_residuals = list[npDType]()  # LOO
                 for action in bin.actions(LOO_demo_index=j):
                     residual = la.norm(action - bin_median_action)  # r^{-j}_{i, t}
                     bin_action_residuals.append(residual)
 
-                bin_median_action_residual = DType(median(bin_action_residuals))
-                abs_deviations = list[DType]()
+                bin_median_action_residual = npDType(median(bin_action_residuals))
+                abs_deviations = list[npDType]()
                 for residual in bin_action_residuals:
-                    abs_deviation = DType(abs(residual - bin_median_action_residual))
+                    abs_deviation = npDType(abs(residual - bin_median_action_residual))
                     abs_deviations.append(abs_deviation)
-                MAD_residual = DType(MAD_SCALE * median(abs_deviations))
+                MAD_residual = npDType(MAD_SCALE * median(abs_deviations))
                 MAD_residuals.append(MAD_residual)
 
         for i in range(N):
@@ -584,21 +587,21 @@ class BinHandler(Generic[DimState, DimAction]):
     def compute_trust_values(
         self,
         *,
-        cutoff: DType | float,  # c
-        min_trust: DType | float,  # w_min
-    ) -> list[list[DType]]:  # (N x T_)
+        cutoff: npDType | float,  # c
+        min_trust: npDType | float,  # w_min
+    ) -> list[list[npDType]]:  # (N x T_)
         assert 3 <= cutoff <= 5
         N = len(self.demonstrations)
-        trust_values = [list[DType]() for _ in range(N)]  # (N x T_)
+        trust_values = [list[npDType]() for _ in range(N)]  # (N x T_)
         z_scores = self.compute_z_scores()
         for i, scores in enumerate(z_scores):
             for _t, z_score in enumerate(scores):
                 if z_score <= cutoff:
                     trust_value = (1 - (z_score / cutoff) ** 2) ** 2
                 else:
-                    trust_value = DType(0)
+                    trust_value = npDType(0)
                 if trust_value < min_trust:
-                    trust_value = DType(min_trust)
+                    trust_value = npDType(min_trust)
                 trust_values[i].append(trust_value)
         return trust_values  # [[w_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
 
@@ -611,16 +614,16 @@ class BinHandler(Generic[DimState, DimAction]):
             stats = self.compute_robust_consensus_statistics(bin.samples())
 
             bin_median_action = stats.median_action  # alpha_a[b]
-            bin_action_residuals = list[DType]()
+            bin_action_residuals = list[npDType]()
             for action in bin.actions():
                 residual = la.norm(action - bin_median_action)  # r_{i, t}
                 bin_action_residuals.append(residual)
-            bin_median_action_residual = DType(median(bin_action_residuals))
-            abs_deviations = list[DType]()
+            bin_median_action_residual = npDType(median(bin_action_residuals))
+            abs_deviations = list[npDType]()
             for residual in bin_action_residuals:
-                abs_deviation = DType(abs(residual - bin_median_action_residual))
+                abs_deviation = npDType(abs(residual - bin_median_action_residual))
                 abs_deviations.append(abs_deviation)
-            MAD_action_residual = DType(MAD_SCALE * median(abs_deviations))
+            MAD_action_residual = npDType(MAD_SCALE * median(abs_deviations))
 
             bin.ribbon_token = RibbonToken(
                 median_action=stats.median_action,
@@ -651,20 +654,18 @@ class BinHandler(Generic[DimState, DimAction]):
     # @enforce_shapes
     def compute_pseudo_labels(
         self,
+        trust_values: list[list[npDType]],
         *,
-        cutoff: DType | float,  # c
-        min_trust: DType | float,  # w_min
-        debias_weight: DType | float,  # lambda_{debias}
-        sideways_attenuation_shrinkage: DType | float = 0.5,  # rho_0
-        speed_regularisation_influence: DType | float = 0.5,  # eta_0
-        temporal_smoothing_weight: DType | float = 0.0,  # kappa
+        debias_weight: npDType | float,  # lambda_{debias}
+        sideways_attenuation_shrinkage: npDType | float = 0.5,  # rho_0
+        speed_regularisation_influence: npDType | float = 0.5,  # eta_0
+        temporal_smoothing_weight: npDType | float = 0.0,  # kappa
     ) -> list[Actions[DimAction]]:  # (N x T_)
         N = len(self.demonstrations)
         pseudo_labels = [list[Action[DimAction]]() for _ in range(N)]
         _labels = [
             list[Action[DimAction]]() for _ in range(N)
         ]  # [[y^{(3)}_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
-        trust_values = self.compute_trust_values(cutoff=cutoff, min_trust=min_trust)
         self.consolidate_ribbon_tokens()
         rho_0 = sideways_attenuation_shrinkage
         assert 0 <= rho_0 <= 1
@@ -702,7 +703,7 @@ class BinHandler(Generic[DimState, DimAction]):
                     y1_pll = Action[DimAction](np.dot(y1, unit_tangent) * tangent)
                     y1_perp = Action[DimAction](y1 - y1_pll)
                     has_state_tangent = token.state_tangent is not None
-                    rho = rho_0 * (1 - w) if has_state_tangent else DType(0)
+                    rho = rho_0 * (1 - w) if has_state_tangent else npDType(0)
                     y2 = Action[DimAction](
                         y1_pll + (1 - rho) * y1_perp
                     )  # y^{(2)}_{i, t}
@@ -768,11 +769,12 @@ class PACER(Generic[DimState, DimAction]):
         self.epochs = epochs
         self.device = device
 
-        self.policy = BCPolicy(
+        policy = BCPolicy(
             state_dim=self.demonstrations.state_dim,
             action_dim=self.demonstrations.action_dim,
             hidden_dim=128,
         )
+        self.policy = policy.to(self.device)
         self.optimiser = torch.optim.Adam(self.policy.parameters(), lr=1e-3)
 
     def prepare(self) -> None:
@@ -787,9 +789,12 @@ class PACER(Generic[DimState, DimAction]):
         self.phase_estimator.train()
         self.binner = BinHandler(self.phase_estimator, n_bins=96)
         self.binner.make_bins()
-        self.binner.compute_pseudo_labels(
+        self.trust_values = self.binner.compute_trust_values(
             cutoff=4.685,
             min_trust=0.02,
+        )
+        self.pseudo_labels = self.binner.compute_pseudo_labels(
+            self.trust_values,
             debias_weight=0.5,
             sideways_attenuation_shrinkage=0.5,
             speed_regularisation_influence=0.5,
@@ -797,18 +802,42 @@ class PACER(Generic[DimState, DimAction]):
         )
 
     def compute_huber_loss(self) -> Tensor:  # L
-        loss = torch.tensor(0.0, device=self.device)
-        raise NotImplementedError
+        loss = torch.tensor(0.0, dtype=torchDType, device=self.device)
+        total_weight = torch.tensor(0.0, dtype=torchDType, device=self.device)
+        for i, demo in enumerate(self.demonstrations):
+            states = torch.tensor(
+                np.array(demo.states), dtype=torchDType, device=self.device
+            )  # (T_i, state_dim)
+            targets = torch.tensor(
+                np.array(self.pseudo_labels[i]), dtype=torchDType, device=self.device
+            )  # (T_i, action_dim)
+            weights = torch.tensor(
+                np.array(self.trust_values[i]), dtype=torchDType, device=self.device
+            )  # (T_i,)
+            preds = self.policy(states)  # (T_i, action_dim)
+
+            diffs = preds - targets  # (T_i, action_dim)
+            huber_losses = F.smooth_l1_loss(
+                diffs, torch.zeros_like(diffs), reduction="none"
+            )  # (T_i, action_dim)
+            huber_losses = huber_losses.mean(dim=1)  # (T_i,)
+            weighted_losses = huber_losses * weights  # (T_i,)
+
+            loss += weighted_losses.sum()
+            total_weight += weights.sum()
+
+        if total_weight > 0:
+            loss /= total_weight
         return loss
 
     def train(self) -> None:
+        """Train PACER policy using weighted Huber loss with pseudo-labels."""
+        self.policy.train()
         for _epoch in range(self.epochs):
             self.optimiser.zero_grad()
-            for demo in self.demonstrations:
-                for state in demo.states:
-                    _preds = self.policy(state)
             loss = self.compute_huber_loss()
             loss.backward()  # type: ignore
+            torch.nn.utils.clip_grad_norm_(self.policy.parameters(), 1.0)
             self.optimiser.step()  # type: ignore
 
     @enforce_shapes
