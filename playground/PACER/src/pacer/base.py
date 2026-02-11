@@ -341,8 +341,7 @@ class PhaseEstimator(Generic[DimState, DimAction]):
     def compute_ranking_loss(self) -> Tensor:  # L_rank
         ranking_loss = torch.tensor(0.0, device=self.device)
         for demo in self.demonstrations:
-            states = torch.from_numpy(demo.states)  # type: ignore
-            states = states.float().to(self.device)
+            states = Tensor(np.array(demo.states)).float().to(self.device)
             scores: Tensor = self.scorer(states)
             for t in range(len(scores)):
                 for t_prime in range(t):
@@ -366,8 +365,7 @@ class PhaseEstimator(Generic[DimState, DimAction]):
         phases = list[Array1D[int]]()
         with torch.no_grad():
             for demo in self.demonstrations:
-                states = torch.from_numpy(demo.states)  # type: ignore
-                states = states.float().to(self.device)
+                states = Tensor(np.array(demo.states)).float().to(self.device)
                 scores: Tensor = self.scorer(states)
                 _scores = scores.cpu().numpy()
                 normalised = Array1D(normalise(_scores, method="MINMAX"))
@@ -788,8 +786,7 @@ class PACER(Generic[DimState, DimAction]):
     def predict(self, states: States[DimState]) -> Actions[DimAction]:
         self.policy.eval()
         with torch.no_grad():
-            states_tensor = torch.from_numpy(states)  # type: ignore
-            states_tensor = states_tensor.float().to(self.device)
+            states_tensor = Tensor(np.array(states)).float().to(self.device)
             actions_tensor: Tensor = self.policy(states_tensor)
             actions_np = actions_tensor.cpu().numpy()
         actions = list(Action[DimAction](action_np) for action_np in actions_np)
