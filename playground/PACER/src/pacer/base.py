@@ -8,6 +8,7 @@ https://openreview.net/forum?id=gaYyBvP2Rz
 """
 # src/pacer/base.py
 
+import random
 from dataclasses import dataclass, field
 from typing import (
     Generic,
@@ -58,8 +59,20 @@ SampleIndices: TypeAlias = list[SampleIndex]
 
 ## Utils
 
+SEED = 42
 EPS: float = 1e-8
 MAD_SCALE: float = 1.4826  # Gaussian consistency factor for MAD
+
+
+def set_seed(seed: int = SEED):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)  # type: ignore
+    torch.cuda.manual_seed_all(seed)
+    torch.use_deterministic_algorithms(True)
+
+
+set_seed(SEED)
 
 if torch.backends.mps.is_available():
     torch_device_auto = torch.device("mps")
@@ -829,7 +842,7 @@ class PACER(Generic[DimState, DimAction]):
             preds = self.policy(states)  # (T_i, action_dim)
 
             diffs = preds - targets  # (T_i, action_dim)
-            huber_losses = F.smooth_l1_loss(
+            huber_losses = F.huber_loss(
                 diffs, torch.zeros_like(diffs), reduction="none"
             )  # (T_i, action_dim)
             huber_losses = huber_losses.mean(dim=1)  # (T_i,)
