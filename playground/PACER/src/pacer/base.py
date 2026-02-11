@@ -34,6 +34,8 @@ from torch import Tensor
 from typed_numpy._typed import TypedNDArray
 from typed_numpy._typed.context import enforce_shapes  # type: ignore
 
+from pacer import console
+
 npDType: TypeAlias = np.float32
 torchDType = torch.float32
 
@@ -58,6 +60,14 @@ SampleIndices: TypeAlias = list[SampleIndex]
 
 EPS: float = 1e-8
 MAD_SCALE: float = 1.4826  # Gaussian consistency factor for MAD
+
+if torch.backends.mps.is_available():
+    torch_device_auto = torch.device("mps")
+elif torch.cuda.is_available():
+    torch_device_auto = torch.device("cuda")
+else:
+    torch_device_auto = torch.device("cpu")
+console.print(f"Using device: [green]{torch_device_auto}[/green]")
 
 
 def median(
@@ -326,7 +336,7 @@ class PhaseEstimator(Generic[DimState, DimAction]):
         margin: float = 1.0,
         lr: float = 1e-3,
         epochs: int = 240,
-        device: torch.device = torch.device("cpu"),
+        device: torch.device = torch_device_auto,
     ) -> None:
         self.demonstrations = demonstrations
         self.margin = margin
@@ -762,7 +772,7 @@ class PACER(Generic[DimState, DimAction]):
         *,
         lr: float = 1e-3,
         epochs: int = 240,
-        device: torch.device = torch.device("cpu"),
+        device: torch.device = torch_device_auto,
     ) -> None:
         self.demonstrations = demonstrations
         self.lr = lr
