@@ -42,10 +42,15 @@ npDType: TypeAlias = np.float32
 torchDType = torch.float32
 
 Dim1 = TypeVar("Dim1", bound=int, default=int)
+Dim2 = TypeVar("Dim2", bound=int, default=int)
+Dim3 = TypeVar("Dim3", bound=int, default=int)
 Array1D: TypeAlias = TypedNDArray[tuple[Dim1], np.dtype[npDType]]
+Array2D: TypeAlias = TypedNDArray[tuple[Dim1, Dim2], np.dtype[npDType]]
+Array3D: TypeAlias = TypedNDArray[tuple[Dim1, Dim2, Dim3], np.dtype[npDType]]
 
 DimState = TypeVar("DimState", bound=int, default=int)  # d_x
 DimAction = TypeVar("DimAction", bound=int, default=int)  # d_a
+NumPoints = TypeVar("NumPoints", bound=int, default=int)  # T_i
 State: TypeAlias = Array1D[DimState]  # x_{i, t} \in R^{d_x}
 Action: TypeAlias = Array1D[DimAction]  # a_{i, t} \in R^{d_a}
 type Phase = float  # tau \in [0, 1]
