@@ -31,6 +31,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from deprecated import deprecated  # type: ignore
+from rich.progress import track
 from torch import Tensor
 from typed_numpy._typed import TypedNDArray
 from typed_numpy._typed.context import enforce_shapes  # type: ignore
@@ -80,7 +81,7 @@ elif torch.cuda.is_available():
     torch_device_auto = torch.device("cuda")
 else:
     torch_device_auto = torch.device("cpu")
-console.print(f"Using device: [green]{torch_device_auto}[/green]")
+console.print(f"Using device: [green]{torch_device_auto}[/]")
 
 
 def median(
@@ -376,7 +377,7 @@ class PhaseEstimator(Generic[DimState, DimAction]):
 
         self.scorer.train()
         loss = self.compute_ranking_loss(margin=margin)
-        for _epoch in range(epochs):
+        for _epoch in track(range(epochs), description="[bold]Phase training[/]"):
             self.optimiser.zero_grad()
             loss = self.compute_ranking_loss(margin=margin)
             loss.backward()  # type: ignore
@@ -804,9 +805,9 @@ class PACER(Generic[DimState, DimAction]):
         sideways_attenuation_shrinkage: npDType | float = 0.5,  # rho_0
         speed_regularisation_influence: npDType | float = 0.5,  # eta_0
         temporal_smoothing_weight: npDType | float = 0.0,  # kappa
-    ) -> None:
+    ) -> Tensor:
         self.phase_estimator = PhaseEstimator(self.demonstrations, device=self.device)
-        self.phase_estimator.train(
+        loss = self.phase_estimator.train(
             hidden_dim=phase_hidden_dim,
             margin=phase_margin,
             lr=phase_lr,
@@ -825,6 +826,7 @@ class PACER(Generic[DimState, DimAction]):
             speed_regularisation_influence=speed_regularisation_influence,
             temporal_smoothing_weight=temporal_smoothing_weight,
         )
+        return loss
 
     def compute_huber_loss(self) -> Tensor:  # L
         loss = torch.tensor(0.0, dtype=torchDType, device=self.device)
@@ -873,7 +875,9 @@ class PACER(Generic[DimState, DimAction]):
 
         self.policy.train()
         loss = self.compute_huber_loss()
-        for _epoch in range(policy_epochs):
+        for _epoch in track(
+            range(policy_epochs), description="[bold]Policy training[/]"
+        ):
             self.optimiser.zero_grad()
             loss = self.compute_huber_loss()
             loss.backward()  # type: ignore

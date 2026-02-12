@@ -1,6 +1,7 @@
 # tests/test_lasa.py
 
 import pyLasaDataset as lasa  # type: ignore
+from pacer import console
 from pacer.base import PACER
 from pacer.lasa import LASADemonstrations
 
@@ -8,8 +9,28 @@ from pacer.lasa import LASADemonstrations
 def test_lasa() -> None:
     demonstrations = LASADemonstrations(lasa.DataSet.GShape).to_demonstrations()
     pacer = PACER(demonstrations)
-    pacer.prepare()
-    pacer.train()
+
+    phase_loss = pacer.prepare(
+        phase_hidden_dim=128,
+        phase_margin=1.0,  # m
+        phase_lr=1e-3,
+        phase_epochs=240,
+        n_bins=96,  # B
+        tukey_cutoff=4.685,  # c
+        min_trust=0.02,  # w_min
+        debias_weight=0.5,  # lambda_{debias}
+        sideways_attenuation_shrinkage=0.5,  # rho_0
+        speed_regularisation_influence=0.5,  # eta_0
+        temporal_smoothing_weight=0.0,  # kappa
+    )
+    console.print(f"Phase scorer loss: {phase_loss}")
+
+    policy_loss = pacer.train(
+        policy_hidden_dim=128,
+        policy_lr=1e-3,
+        policy_epochs=240,
+    )
+    console.print(f"Policy loss: {policy_loss}")
 
 
 if __name__ == "__main__":
