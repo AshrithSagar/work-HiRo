@@ -345,40 +345,40 @@ class PhaseEstimator(Generic[DimState, DimAction]):
         self,
         demonstrations: Demonstrations[DimState, DimAction],
         *,
-        hidden_dim: int = 128,
-        margin: float = 1.0,
-        lr: float = 1e-3,
-        epochs: int = 240,
         device: torch.device = torch_device_auto,
     ) -> None:
         self.demonstrations = demonstrations
-        self.margin = margin
-        self.lr = lr
-        self.epochs = epochs
         self.device = device
 
-        state_dim = self.demonstrations.state_dim
-        scorer = PhaseScorer(state_dim=state_dim, hidden_dim=hidden_dim)
-        self.scorer = scorer.to(self.device)
-        self.optimiser = torch.optim.Adam(self.scorer.parameters(), lr=self.lr)
-
-    def compute_ranking_loss(self) -> Tensor:  # L_rank
+    def compute_ranking_loss(self, margin: float = 1.0) -> Tensor:  # L_rank
         ranking_loss = torch.tensor(0.0, device=self.device)
         for demo in self.demonstrations:
             states = Tensor(np.array(demo.states)).float().to(self.device)
             scores: Tensor = self.scorer(states)  # (T_i,)
             diff = scores.unsqueeze(1) - scores.unsqueeze(0)  # (T_i, T_i)
             mask = torch.triu(torch.ones_like(diff), diagonal=1)
-            loss_matrix = F.softplus(self.margin - diff) * mask
+            loss_matrix = F.softplus(margin - diff) * mask
             ranking_loss += loss_matrix.mean()
         return ranking_loss
 
-    def train(self) -> Tensor | None:
+    def train(
+        self,
+        *,
+        hidden_dim: int = 128,
+        margin: float = 1.0,
+        lr: float = 1e-3,
+        epochs: int = 240,
+    ) -> Tensor:
+        state_dim = self.demonstrations.state_dim
+        scorer = PhaseScorer(state_dim=state_dim, hidden_dim=hidden_dim)
+        self.scorer = scorer.to(self.device)
+        self.optimiser = torch.optim.Adam(self.scorer.parameters(), lr=lr)
+
         self.scorer.train()
-        loss = None
-        for _epoch in range(self.epochs):
+        loss = self.compute_ranking_loss(margin=margin)
+        for _epoch in range(epochs):
             self.optimiser.zero_grad()
-            loss = self.compute_ranking_loss()
+            loss = self.compute_ranking_loss(margin=margin)
             loss.backward()  # type: ignore
             torch.nn.utils.clip_grad_norm_(self.scorer.parameters(), 1.0)
             self.optimiser.step()  # type: ignore
@@ -785,45 +785,45 @@ class PACER(Generic[DimState, DimAction]):
         self,
         demonstrations: Demonstrations[DimState, DimAction],
         *,
-        lr: float = 1e-3,
-        epochs: int = 240,
         device: torch.device = torch_device_auto,
     ) -> None:
         self.demonstrations = demonstrations
-        self.lr = lr
-        self.epochs = epochs
         self.device = device
 
-        policy = BCPolicy(
-            state_dim=self.demonstrations.state_dim,
-            action_dim=self.demonstrations.action_dim,
-            hidden_dim=128,
+    def prepare(
+        self,
+        *,
+        phase_hidden_dim: int = 128,
+        phase_margin: float = 1.0,
+        phase_lr: float = 1e-3,
+        phase_epochs: int = 240,
+        n_bins: int = 96,
+        tukey_cutoff: npDType | float = 4.685,  # c
+        min_trust: npDType | float = 0.02,  # w_min
+        debias_weight: npDType | float = 0.5,  # lambda_{debias}
+        sideways_attenuation_shrinkage: npDType | float = 0.5,  # rho_0
+        speed_regularisation_influence: npDType | float = 0.5,  # eta_0
+        temporal_smoothing_weight: npDType | float = 0.0,  # kappa
+    ) -> None:
+        self.phase_estimator = PhaseEstimator(self.demonstrations, device=self.device)
+        self.phase_estimator.train(
+            hidden_dim=phase_hidden_dim,
+            margin=phase_margin,
+            lr=phase_lr,
+            epochs=phase_epochs,
         )
-        self.policy = policy.to(self.device)
-        self.optimiser = torch.optim.Adam(self.policy.parameters(), lr=1e-3)
-
-    def prepare(self) -> None:
-        self.phase_estimator = PhaseEstimator(
-            self.demonstrations,
-            hidden_dim=128,
-            margin=1,
-            lr=1e-3,
-            epochs=240,
-            device=self.device,
-        )
-        self.phase_estimator.train()
-        self.binner = BinHandler(self.phase_estimator, n_bins=96)
+        self.binner = BinHandler(self.phase_estimator, n_bins=n_bins)
         self.binner.make_bins()
         self.trust_values = self.binner.compute_trust_values(
-            cutoff=4.685,
-            min_trust=0.02,
+            cutoff=tukey_cutoff,
+            min_trust=min_trust,
         )
         self.pseudo_labels = self.binner.compute_pseudo_labels(
             self.trust_values,
-            debias_weight=0.5,
-            sideways_attenuation_shrinkage=0.5,
-            speed_regularisation_influence=0.5,
-            temporal_smoothing_weight=0.0,
+            debias_weight=debias_weight,
+            sideways_attenuation_shrinkage=sideways_attenuation_shrinkage,
+            speed_regularisation_influence=speed_regularisation_influence,
+            temporal_smoothing_weight=temporal_smoothing_weight,
         )
 
     def compute_huber_loss(self) -> Tensor:  # L
@@ -855,11 +855,25 @@ class PACER(Generic[DimState, DimAction]):
             loss /= total_weight
         return loss
 
-    def train(self) -> Tensor | None:
+    def train(
+        self,
+        *,
+        policy_hidden_dim: int = 128,
+        policy_lr: float = 1e-3,
+        policy_epochs: int = 240,
+    ) -> Tensor:
         """Train PACER policy using weighted Huber loss with pseudo-labels."""
+        policy = BCPolicy(
+            state_dim=self.demonstrations.state_dim,
+            action_dim=self.demonstrations.action_dim,
+            hidden_dim=policy_hidden_dim,
+        )
+        self.policy = policy.to(self.device)
+        self.optimiser = torch.optim.Adam(self.policy.parameters(), lr=policy_lr)
+
         self.policy.train()
-        loss = None
-        for _epoch in range(self.epochs):
+        loss = self.compute_huber_loss()
+        for _epoch in range(policy_epochs):
             self.optimiser.zero_grad()
             loss = self.compute_huber_loss()
             loss.backward()  # type: ignore
