@@ -54,8 +54,8 @@ NumPoints = TypeVar("NumPoints", bound=int, default=int)  # T_i
 State: TypeAlias = Array1D[DimState]  # x_{i, t} \in R^{d_x}
 Action: TypeAlias = Array1D[DimAction]  # a_{i, t} \in R^{d_a}
 type Phase = float  # tau \in [0, 1]
-type DemoIndex = int  # i \i {0, 1, ..., N-1}
-type TimeIndex = int  # t \i {0, 1, ..., T_i-1}
+type DemoIndex = int  # i \in {0, 1, ..., N-1}
+type TimeIndex = int  # t \in {0, 1, ..., T_i-1}
 type BinIndex = int  # b \in {0, 1, ..., B-1}
 type SampleIndex = tuple[DemoIndex, TimeIndex]  # (i, t)
 

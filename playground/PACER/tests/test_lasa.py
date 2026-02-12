@@ -4,6 +4,7 @@ import pyLasaDataset as lasa  # type: ignore
 from pacer import console
 from pacer.base import PACER
 from pacer.lasa import LASADemonstrations
+from pacer.plotting import full_diagnostic
 
 
 def test_lasa() -> None:
@@ -31,6 +32,8 @@ def test_lasa() -> None:
         policy_epochs=240,
     )
     console.print(f"Policy loss: {policy_loss}")
+
+    full_diagnostic(pacer)
 
 
 if __name__ == "__main__":
