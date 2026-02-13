@@ -2,14 +2,22 @@
 
 import pyLasaDataset as lasa  # type: ignore
 from pacer import console
-from pacer.base import PACER
+from pacer.base import PACER, DemonstrationCorrupter
 from pacer.lasa import LASADemonstrations
 from pacer.plotting import full_diagnostic
 
 
 def test_lasa() -> None:
     demonstrations = LASADemonstrations(lasa.DataSet.GShape).to_demonstrations()
-    pacer = PACER(demonstrations)
+    corrupter = DemonstrationCorrupter(
+        demonstrations=demonstrations,
+        noise_std=0.2,
+        outlier_fraction=0.2,
+        outlier_scale=5.0,
+        bias_strength=0.2,
+    )
+    corrupted_demonstrations = corrupter.inject_corruptions()
+    pacer = PACER(corrupted_demonstrations)
 
     phase_loss = pacer.prepare(
         phase_hidden_dim=128,
