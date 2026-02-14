@@ -1,6 +1,6 @@
 # tests/test_lasa.py
 
-import pyLasaDataset as lasa  # type: ignore
+import pyLasaDataset as lasa  # type: ignore[import-untyped]  # ty: ignore[unused-ignore-comment]
 from pacer import console
 from pacer.base import PACER, DemonstrationCorrupter
 from pacer.lasa import LASADemonstrations

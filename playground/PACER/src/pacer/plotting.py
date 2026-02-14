@@ -9,7 +9,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 from typed_numpy._typed.helpers import TWO
 
-from .base import PACER, Actions, Array1D, BinHandler, Demonstrations, DimAction
+from .base import (
+    PACER,
+    Actions,
+    Array1D,
+    BinHandler,
+    Demonstrations,
+    DimAction,
+    npDType,
+)
 
 
 def plot_trajectories(
@@ -49,7 +57,7 @@ def plot_phases(
 
 
 def plot_trust_values(
-    trust_values: list[list[float]],
+    trust_values: list[list[npDType]],
     *,
     title: str = "Trust values",
 ) -> None:
@@ -76,9 +84,8 @@ def plot_action_comparison(
     _pseudo = np.array(pseudo)
     dim = _original.shape[1]
 
-    fig, axes = plt.subplots(dim, 1, figsize=(8, 3 * dim))
-    if dim == 1:
-        axes = [axes]
+    fig, _axes = plt.subplots(dim, 1, figsize=(8, 3 * dim))
+    axes = [_axes] if dim == 1 else _axes
 
     for d in range(dim):
         axes[d].plot(_original[:, d], label="Original", alpha=0.8)

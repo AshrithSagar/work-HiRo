@@ -7,8 +7,10 @@ LASA Dataset
 from typing import Literal
 
 import numpy as np
-import pyLasaDataset as lasa  # type: ignore
-from pyLasaDataset.dataset import _Data  # type: ignore
+import pyLasaDataset as lasa  # type: ignore[import-untyped]  # ty: ignore[unused-ignore-comment]
+from pyLasaDataset.dataset import (  # type: ignore[import-untyped]  # ty: ignore[unused-ignore-comment]
+    _Data,
+)
 from typed_numpy._typed.helpers import TWO
 
 from .base import Array3D, Demonstration, Demonstrations, npDType

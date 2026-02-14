@@ -30,11 +30,11 @@ import optype.numpy as onp
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from deprecated import deprecated  # type: ignore
+from deprecated import deprecated
 from rich.progress import track
 from torch import Tensor
 from typed_numpy._typed import TypedNDArray
-from typed_numpy._typed.context import enforce_shapes  # type: ignore
+from typed_numpy._typed.context import enforce_shapes
 
 from pacer import console
 
@@ -70,10 +70,10 @@ EPS: float = 1e-8
 MAD_SCALE: float = 1.4826  # Gaussian consistency factor for MAD
 
 
-def set_seed(seed: int = SEED):
+def set_seed(seed: int = SEED) -> None:
     random.seed(seed)
     np.random.seed(seed)
-    torch.manual_seed(seed)  # type: ignore
+    torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     torch.use_deterministic_algorithms(True)
 
@@ -175,7 +175,7 @@ class SamplesCollection(Generic[DimState, DimAction]):
         index: DemoIndex,  # i
     ) -> Samples[DimState, DimAction]: ...  # [(x_{i, t}, a_{i, t})]_{t = 1}^{T_i}
     @overload
-    def __getitem__(
+    def __getitem__(  # ty: ignore[invalid-overload]
         self,
         index: SampleIndex,  # (i, t)
     ) -> Sample[DimState, DimAction]: ...  # (x_{i, t}, a_{i, t})
@@ -289,7 +289,7 @@ class Demonstrations(Generic[DimState, DimAction]):  # [D_i]_{i = 1}^{N}
     @overload
     def __getitem__(self, index: DemoIndex) -> Demonstration[DimState, DimAction]: ...
     @overload
-    def __getitem__(self, index: SampleIndex) -> Sample[DimState, DimAction]: ...
+    def __getitem__(self, index: SampleIndex) -> Sample[DimState, DimAction]: ...  # ty: ignore[invalid-overload]
     #
     def __getitem__(
         self, index: DemoIndex | SampleIndex
@@ -385,9 +385,9 @@ class PhaseEstimator(Generic[DimState, DimAction]):
         for _epoch in track(range(epochs), description="[bold]Phase training[/]"):
             self.optimiser.zero_grad()
             loss = self.compute_ranking_loss(margin=margin)
-            loss.backward()  # type: ignore
+            loss.backward()
             torch.nn.utils.clip_grad_norm_(self.scorer.parameters(), 1.0)
-            self.optimiser.step()  # type: ignore
+            self.optimiser.step()
         return loss
 
     @enforce_shapes
@@ -793,8 +793,8 @@ class PACER(Generic[DimState, DimAction]):
         *,
         device: torch.device = torch_device_auto,
     ) -> None:
-        self.demonstrations = demonstrations
-        self.device = device
+        self.demonstrations: Demonstrations[DimState, DimAction] = demonstrations
+        self.device: torch.device = device
 
     def prepare(
         self,
@@ -846,9 +846,9 @@ class PACER(Generic[DimState, DimAction]):
             weights = torch.tensor(
                 np.array(self.trust_values[i]), dtype=torchDType, device=self.device
             )  # (T_i,)
-            preds = self.policy(states)  # (T_i, action_dim)
+            preds: Tensor = self.policy(states)  # (T_i, action_dim)
 
-            diffs = preds - targets  # (T_i, action_dim)
+            diffs: Tensor = preds - targets  # (T_i, action_dim)
             huber_losses = F.huber_loss(
                 diffs, torch.zeros_like(diffs), reduction="none"
             )  # (T_i, action_dim)
@@ -885,9 +885,9 @@ class PACER(Generic[DimState, DimAction]):
         ):
             self.optimiser.zero_grad()
             loss = self.compute_huber_loss()
-            loss.backward()  # type: ignore
+            loss.backward()
             torch.nn.utils.clip_grad_norm_(self.policy.parameters(), 1.0)
-            self.optimiser.step()  # type: ignore
+            self.optimiser.step()
         return loss
 
     @enforce_shapes
