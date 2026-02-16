@@ -4,6 +4,8 @@ LASA Dataset
 """
 # src/pacer/lasa.py
 
+# pyright: reportPrivateUsage = false
+
 from typing import Literal
 
 import numpy as np

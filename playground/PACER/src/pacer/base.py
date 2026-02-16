@@ -73,7 +73,7 @@ MAD_SCALE: float = 1.4826  # Gaussian consistency factor for MAD
 def set_seed(seed: int = SEED) -> None:
     random.seed(seed)
     np.random.seed(seed)
-    torch.manual_seed(seed)
+    torch.manual_seed(seed)  # type: ignore  # ty: ignore[unused-ignore-comment]
     torch.cuda.manual_seed_all(seed)
     torch.use_deterministic_algorithms(True)
 
@@ -385,9 +385,9 @@ class PhaseEstimator(Generic[DimState, DimAction]):
         for _epoch in track(range(epochs), description="[bold]Phase training[/]"):
             self.optimiser.zero_grad()
             loss = self.compute_ranking_loss(margin=margin)
-            loss.backward()
+            loss.backward()  # type: ignore  # ty: ignore[unused-ignore-comment]
             torch.nn.utils.clip_grad_norm_(self.scorer.parameters(), 1.0)
-            self.optimiser.step()
+            self.optimiser.step()  # type: ignore  # ty: ignore[unused-ignore-comment]
         return loss
 
     @enforce_shapes
@@ -500,7 +500,7 @@ class BinHandler(Generic[DimState, DimAction]):
         ]
         for i in range(len(phases)):
             for t in range(len(phases[i])):
-                tau: Phase = phases[i][t]
+                tau: Phase = float(phases[i][t])
                 bin_idx: BinIndex = min(int(tau * self.n_bins), self.n_bins - 1)
                 assert bin_idx < self.n_bins
                 bin = self.bins[bin_idx]
@@ -589,12 +589,16 @@ class BinHandler(Generic[DimState, DimAction]):
 
                 demo_samples = bin.samples_collection.collection[j]
                 for action in demo_samples.actions():
-                    residual = la.norm(action - bin_median_action)  # r^{-i}_{i, t}
+                    residual = npDType(
+                        la.norm(action - bin_median_action)
+                    )  # r^{-i}_{i, t}
                     self_action_residuals[j].append(residual)
 
                 bin_action_residuals = list[npDType]()  # LOO
                 for action in bin.actions(LOO_demo_index=j):
-                    residual = la.norm(action - bin_median_action)  # r^{-j}_{i, t}
+                    residual = npDType(
+                        la.norm(action - bin_median_action)
+                    )  # r^{-j}_{i, t}
                     bin_action_residuals.append(residual)
 
                 bin_median_action_residual = npDType(median(bin_action_residuals))
@@ -647,7 +651,7 @@ class BinHandler(Generic[DimState, DimAction]):
             bin_median_action = stats.median_action  # alpha_a[b]
             bin_action_residuals = list[npDType]()
             for action in bin.actions():
-                residual = la.norm(action - bin_median_action)  # r_{i, t}
+                residual = npDType(la.norm(action - bin_median_action))  # r_{i, t}
                 bin_action_residuals.append(residual)
             bin_median_action_residual = npDType(median(bin_action_residuals))
             abs_deviations = list[npDType]()
@@ -885,9 +889,9 @@ class PACER(Generic[DimState, DimAction]):
         ):
             self.optimiser.zero_grad()
             loss = self.compute_huber_loss()
-            loss.backward()
+            loss.backward()  # type: ignore  # ty: ignore[unused-ignore-comment]
             torch.nn.utils.clip_grad_norm_(self.policy.parameters(), 1.0)
-            self.optimiser.step()
+            self.optimiser.step()  # type: ignore  # ty: ignore[unused-ignore-comment]
         return loss
 
     @enforce_shapes
