@@ -7,17 +7,18 @@ from pacer.lasa import LASADemonstrations
 from pacer.plotting import full_diagnostic
 
 
-def test_lasa() -> None:
+def test_lasa(use_corruptions: bool = False) -> None:
     demonstrations = LASADemonstrations(lasa.DataSet.GShape).to_demonstrations()
-    corrupter = DemonstrationCorrupter(
-        demonstrations=demonstrations,
-        noise_std=0.2,
-        outlier_fraction=0.2,
-        outlier_scale=5.0,
-        bias_strength=0.2,
-    )
-    corrupted_demonstrations = corrupter.inject_corruptions()
-    pacer = PACER(corrupted_demonstrations)
+    if use_corruptions:
+        corrupter = DemonstrationCorrupter(
+            demonstrations=demonstrations,
+            noise_std=0.2,
+            outlier_fraction=0.2,
+            outlier_scale=5.0,
+            bias_strength=0.2,
+        )
+        demonstrations = corrupter.inject_corruptions()
+    pacer = PACER(demonstrations)
 
     phase_loss = pacer.prepare(
         phase_hidden_dim=128,
