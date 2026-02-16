@@ -78,15 +78,18 @@ def set_seed(seed: int = SEED) -> None:
     torch.use_deterministic_algorithms(True)
 
 
-set_seed(SEED)
+def get_torch_device_auto() -> torch.device:
+    if torch.backends.mps.is_available():
+        torch_device_auto = torch.device("mps")
+    elif torch.cuda.is_available():
+        torch_device_auto = torch.device("cuda")
+    else:
+        torch_device_auto = torch.device("cpu")
+    console.print(f"Using device: [green]{torch_device_auto}[/]")
+    return torch_device_auto
 
-if torch.backends.mps.is_available():
-    torch_device_auto = torch.device("mps")
-elif torch.cuda.is_available():
-    torch_device_auto = torch.device("cuda")
-else:
-    torch_device_auto = torch.device("cpu")
-console.print(f"Using device: [green]{torch_device_auto}[/]")
+
+set_seed(SEED)
 
 
 def median(
@@ -351,10 +354,10 @@ class PhaseEstimator(Generic[DimState, DimAction]):
         self,
         demonstrations: Demonstrations[DimState, DimAction],
         *,
-        device: torch.device = torch_device_auto,
+        device: torch.device | None = None,
     ) -> None:
         self.demonstrations = demonstrations
-        self.device = device
+        self.device = device or get_torch_device_auto()
 
     def compute_ranking_loss(self, margin: float = 1.0) -> Tensor:  # L_rank
         ranking_loss = torch.tensor(0.0, device=self.device)
@@ -795,10 +798,10 @@ class PACER(Generic[DimState, DimAction]):
         self,
         demonstrations: Demonstrations[DimState, DimAction],
         *,
-        device: torch.device = torch_device_auto,
+        device: torch.device | None = None,
     ) -> None:
         self.demonstrations: Demonstrations[DimState, DimAction] = demonstrations
-        self.device: torch.device = device
+        self.device: torch.device = device or get_torch_device_auto()
 
     def prepare(
         self,
