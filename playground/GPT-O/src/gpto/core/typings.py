@@ -7,7 +7,7 @@ src/gpto/core/typings.py
 from typing import Any, Protocol, TypeAlias, TypeVar
 
 from typed_numpy._typed import TypedNDArray
-from typed_numpy._typed.shapes import THREE, TWO
+from typed_numpy._typed.helpers import THREE, TWO
 
 DimSpace = TypeVar("DimSpace", bound=int, default=int)
 """TypeVar denoting dimension of the space"""

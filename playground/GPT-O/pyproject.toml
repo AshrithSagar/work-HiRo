@@ -8,24 +8,24 @@ authors = [{ name = "Ashrith Sagar", email = "ashrithy@iisc.ac.in" }]
 dependencies = [
     "matplotlib>=3.10.8",
     "microsoft-python-type-stubs",
-    "numpy>=2.4.1",
-    "rich>=14.2.0",
+    "numpy>=2.4.2",
+    "rich>=14.3.2",
     "scikit-learn>=1.8.0",
     "scipy>=1.17.0",
-    "scipy-stubs>=1.17.0.0",
+    "scipy-stubs>=1.17.0.2",
     "typed-numpy",
-    "viser>=1.0.17",
+    "viser>=1.0.21",
 ]
 
 [dependency-groups]
-lint = ["ruff>=0.14.11"]
-notebook = ["jupyter>=1.1.1", "nbdime>=4.0.2", "nbstripout>=0.8.2"]
-typecheck = ["basedpyright>=1.37.1", "mypy>=1.19.1", "pyright>=1.1.408"]
+lint = ["ruff>=0.15.1"]
+notebook = ["jupyter>=1.1.1", "nbdime>=4.0.4", "nbstripout>=0.9.0"]
+typecheck = ["basedpyright>=1.38.1", "mypy>=1.19.1", "pyright>=1.1.408"]
 
 [build-system]
-requires = ["uv_build>=0.9.25,<0.10.0"]
+requires = ["uv_build>=0.10.4"]
 build-backend = "uv_build"
 
 [tool.uv.sources]
 microsoft-python-type-stubs = { git = "https://github.com/microsoft/python-type-stubs.git" }
-typed-numpy = { git = "https://github.com/AshrithSagar/typed-numpy.git", rev = "main" }
+typed-numpy = { git = "https://github.com/AshrithSagar/typed-numpy.git", rev = "develop" }
