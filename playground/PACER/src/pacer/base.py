@@ -8,6 +8,8 @@ https://openreview.net/forum?id=gaYyBvP2Rz
 """
 # src/pacer/base.py
 
+## ── Imports ──────────────────────────────────────────────────────────────────
+
 import random
 from dataclasses import dataclass, field
 from typing import (
@@ -37,6 +39,8 @@ from typed_numpy._typed.context import enforce_shapes
 
 from pacer import console
 
+## ── Typings ──────────────────────────────────────────────────────────────────
+
 npDType: TypeAlias = np.float32
 torchDType = torch.float32
 
@@ -62,7 +66,7 @@ States: TypeAlias = list[State[DimState]]
 Actions: TypeAlias = list[Action[DimAction]]
 SampleIndices: TypeAlias = list[SampleIndex]
 
-## Utils
+## ── Utils ────────────────────────────────────────────────────────────────────
 
 SEED = 42
 EPS: float = 1e-8
@@ -110,6 +114,9 @@ def normalise(
             min_: float = vec.min()
             max_: float = vec.max()
             return (vec - min_) / (max_ - min_ + EPS)
+
+
+## ── Base ─────────────────────────────────────────────────────────────────────
 
 
 # (x_{i, t}, a_{i, t})
@@ -327,6 +334,9 @@ class Demonstrations(Generic[DimState, DimAction]):  # [D_i]_{i = 1}^{N}
         return cls(demos=demos)
 
 
+## ── Phase Alignment ──────────────────────────────────────────────────────────
+
+
 class PhaseScorer(nn.Module, Generic[DimState]):
     """A small neural network (MLP) to estimate state-dependent phase score `g_psi`."""
 
@@ -406,6 +416,9 @@ class PhaseEstimator(Generic[DimState, DimAction]):
                 normalised = Array1D(normalise(_scores, method="MINMAX"))
                 phases.append(normalised)
         return phases
+
+
+## ── PACER ────────────────────────────────────────────────────────────────────
 
 
 @dataclass(kw_only=True)
@@ -772,6 +785,9 @@ class BinHandler(Generic[DimState, DimAction]):
         return pseudo_labels
 
 
+## ── Policies ─────────────────────────────────────────────────────────────────
+
+
 class BCPolicy(nn.Module, Generic[DimState, DimAction]):
     """Behavioral cloning policy that maps states to actions"""
 
@@ -909,6 +925,9 @@ class PACER(Generic[DimState, DimAction]):
         return actions
 
 
+## ── Corruptions ──────────────────────────────────────────────────────────────
+
+
 @dataclass
 class DemonstrationCorrupter(Generic[DimState, DimAction]):
     demonstrations: Demonstrations[DimState, DimAction]
@@ -958,3 +977,6 @@ class DemonstrationCorrupter(Generic[DimState, DimAction]):
                 )
             )
         return Demonstrations(demos=corrupted_demos)
+
+
+## ─────────────────────────────────────────────────────────────────────────────
