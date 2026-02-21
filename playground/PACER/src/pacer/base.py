@@ -19,7 +19,6 @@ from typing import (
     Sequence,
     TypeAlias,
     TypeVar,
-    cast,
     overload,
 )
 
@@ -259,11 +258,11 @@ class Demonstration(Generic[DimState, DimAction]):  # D_i
 
     @property
     def state_dim(self) -> DimState:  # d_x
-        return cast(DimState, self.states[0].shape[0])
+        return self.states[0].shape[0]
 
     @property
     def action_dim(self) -> DimAction:  # d_a
-        return cast(DimAction, self.actions[0].shape[0])
+        return self.actions[0].shape[0]
 
     def sample(self, t: TimeIndex, /) -> Sample[DimState, DimAction]:
         return self[t]  # (x_{i, t}, a_{i, t})
@@ -751,7 +750,7 @@ class BinHandler(Generic[DimState, DimAction]):
                     beta_a = bin.ribbon_token.median_action_strength
                     s = (1 - eta) * la.norm(y2) + eta * beta_a  # s_{i, t}
                     y3 = Action[DimAction](
-                        s * (y2 / la.norm(y2) + EPS)
+                        s * (y2 / la.norm(y2) + EPS), dtype=npDType
                     )  # y^{(3)}_{i, t}
 
                     _labels[j].append(y3)
@@ -764,7 +763,9 @@ class BinHandler(Generic[DimState, DimAction]):
                 y3 = _labels[i][t]
                 if ystar_prev is None:  # t = 0
                     ystar_prev = y3
-                ystar = Action[DimAction]((1 - kappa) * y3 + kappa * ystar_prev)
+                ystar = Action[DimAction](
+                    (1 - kappa) * y3 + kappa * ystar_prev, dtype=npDType
+                )
                 pseudo_labels[i].append(ystar)
                 ystar_prev = ystar
 
