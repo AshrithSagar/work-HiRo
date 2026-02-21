@@ -17,6 +17,11 @@ from typed_numpy._typed.helpers import TWO
 
 from .base import Array3D, Demonstration, Demonstrations, npDType
 
+# [TEMP]
+from .base2 import Actions, States
+from .base2 import Demonstration as Demonstration2
+from .base2 import Demonstrations as Demonstrations2
+
 SEVEN = Literal[7]
 THOUSAND = Literal[1000]
 
@@ -39,6 +44,21 @@ class LASADemonstrations:
                     index=index,  # i
                     states=[state for state in states],
                     actions=[action for action in actions],
+                )
+                for index, (states, actions) in enumerate(
+                    zip(self.positions, self.velocities)
+                )
+            ]
+        )
+
+    # [TEMP]
+    def to_demonstrations2(self) -> Demonstrations2[TWO, TWO]:
+        return Demonstrations2(
+            [
+                Demonstration2[int, TWO, TWO](
+                    index=index,  # i
+                    states=States[THOUSAND, TWO]([state for state in states]),
+                    actions=Actions[THOUSAND, TWO]([action for action in actions]),
                 )
                 for index, (states, actions) in enumerate(
                     zip(self.positions, self.velocities)
