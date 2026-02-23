@@ -39,6 +39,8 @@ Actions: TypeAlias = Array2D[NumPoints, DimAction, DType]
 
 # (i, t)
 class SampleIndex(NamedTuple):
+    """Represents the index of a `Sample` in the context of a `Demonstration`."""
+
     demo: DemoIndex  # i
     time: TimeIndex  # t
 
@@ -46,13 +48,13 @@ class SampleIndex(NamedTuple):
 SampleIndices: TypeAlias = list[SampleIndex]
 
 
-# (x_{i, t}, a_{i, t})
+# (x, a)
 @dataclass
 class StateActionPair(Generic[DimState, DimAction]):
-    """A container for a State-Action pair"""
+    """A container for a State-Action pair."""
 
-    state: State[DimState]  # x_{i, t}
-    action: Action[DimAction]  # a_{i, t}
+    state: State[DimState]  # x
+    action: Action[DimAction]  # a
 
     @property
     def state_dim(self) -> DimState:
@@ -63,12 +65,22 @@ class StateActionPair(Generic[DimState, DimAction]):
         return self.action.shape[0]
 
 
-Sample: TypeAlias = StateActionPair[DimState, DimAction]
+# (x_{t}, a_{t})
+@dataclass(kw_only=True)
+class Sample(StateActionPair[DimState, DimAction]):
+    """
+    A `StateActionPair` along with a time index `t`.\\
+    When used in context of a `Demonstration`, also has an associated demo index `i`.
+    """
+
+    index: TimeIndex  # t
 
 
 # [(x_{t}, a_{t})]_{t = 1}^{T}
 @dataclass
-class StateActionPairs(Generic[NumPoints, DimState, DimAction]):
+class Samples(Generic[NumPoints, DimState, DimAction]):
+    """A collection of `Sample`."""
+
     states: States[NumPoints, DimState]  # [x_{t}]_{t = 1}^{T}
     actions: Actions[NumPoints, DimAction]  # [a_{t}]_{t = 1}^{T}
 
@@ -78,7 +90,7 @@ class StateActionPairs(Generic[NumPoints, DimState, DimAction]):
 
     @enforce_shapes
     def __getitem__(self, t: TimeIndex, /) -> Sample[DimState, DimAction]:
-        return StateActionPair(state=self.states[t], action=self.actions[t])
+        return Sample(index=t, state=self.states[t], action=self.actions[t])
 
     def __iter__(self) -> Iterator[Sample[DimState, DimAction]]:
         for t in range(len(self)):
@@ -93,17 +105,17 @@ class StateActionPairs(Generic[NumPoints, DimState, DimAction]):
         return self.actions.shape[1]
 
 
-Samples: TypeAlias = StateActionPairs[NumPoints, DimState, DimAction]
-
-
+# [(x_{i, t}, a_{i, t})]_{t = 1}^{T}
 @dataclass(kw_only=True)
 class Demonstration(Samples[NumPoints, DimState, DimAction]):
-    index: DemoIndex
+    """A collection of `Sample` with a demo index."""
+
+    index: DemoIndex  # i
 
 
 @dataclass
 class SamplesCollection(Generic[DimState, DimAction]):
-    """A collection of state-action pairs (a sequence of state-action pair)."""
+    """A collection of `Samples`."""
 
     collection: list[Samples[int, DimState, DimAction]] = field(
         default_factory=list[Samples[int, DimState, DimAction]]
@@ -140,6 +152,12 @@ class SamplesCollection(Generic[DimState, DimAction]):
         for samples in self.collection:
             yield samples
 
+    @property
+    def samples(self) -> Iterator[Sample[DimState, DimAction]]:
+        for i in range(len(self)):
+            for t in range(len(self[i])):
+                yield self[SampleIndex(i, t)]
+
     @enforce_shapes
     def append(self, samples: Samples[int, DimState, DimAction]) -> None:
         self.collection.append(samples)
@@ -151,6 +169,8 @@ class SamplesCollection(Generic[DimState, DimAction]):
 
 @dataclass
 class Demonstrations(Generic[DimState, DimAction]):
+    """A collection of `Demonstration`."""
+
     demos: list[Demonstration[int, DimState, DimAction]]
 
     def __len__(self) -> NumPoints:  # type: ignore[misc, type-var]
@@ -182,3 +202,11 @@ class Demonstrations(Generic[DimState, DimAction]):
         for i in range(len(self)):
             for t in range(len(self[i])):
                 yield self[SampleIndex(i, t)]
+
+    @enforce_shapes
+    def append(self, demo: Demonstration[int, DimState, DimAction]) -> None:
+        self.demos.append(demo)
+
+    @enforce_shapes
+    def extend(self, demo: Iterable[Demonstration[int, DimState, DimAction]]) -> None:
+        self.demos.extend(demo)
