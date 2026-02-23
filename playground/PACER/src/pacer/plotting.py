@@ -13,9 +13,9 @@ from .base import (
     PACER,
     Actions,
     Array1D,
-    BinHandler,
     Demonstrations,
     DimAction,
+    PACERBCTrainer,
     npDType,
 )
 
@@ -88,19 +88,19 @@ def plot_action_comparison(
     axes = [_axes] if dim == 1 else _axes
 
     for d in range(dim):
-        axes[d].plot(_original[:, d], label="Original", alpha=0.8)
-        axes[d].plot(_pseudo[:, d], label="Pseudo", alpha=0.8)
-        axes[d].set_ylabel(f"Action dim {d}")
-        axes[d].legend()
+        axes[d].plot(_original[:, d], label="Original", alpha=0.8)  # type: ignore
+        axes[d].plot(_pseudo[:, d], label="Pseudo", alpha=0.8)  # type: ignore
+        axes[d].set_ylabel(f"Action dim {d}")  # type: ignore
+        axes[d].legend()  # type: ignore
 
-    axes[-1].set_xlabel("Time index t")
+    axes[-1].set_xlabel("Time index t")  # type: ignore
     fig.suptitle(title)
     plt.tight_layout()
     plt.show()
 
 
 def plot_ribbon_action_field(
-    binner: BinHandler[TWO, TWO],
+    pacer: PACER[TWO, TWO],
     *,
     title: str = "Ribbon Median Action Field",
     scale: float = 1.0,
@@ -114,7 +114,7 @@ def plot_ribbon_action_field(
     us = []
     vs = []
 
-    for bin in binner.bins:
+    for bin in pacer.bins:
         token = bin.ribbon_token
         state = token.median_state
         action = token.median_action
@@ -134,13 +134,13 @@ def plot_ribbon_action_field(
     plt.show()
 
 
-def full_diagnostic(pacer: PACER[TWO, TWO]) -> None:
-    plot_trajectories(pacer.demonstrations)
-    plot_phases(pacer.phase_estimator.estimate_phases())
-    plot_trust_values(pacer.trust_values)
-    plot_ribbon_action_field(pacer.binner)
+def full_diagnostic(trainer: PACERBCTrainer[TWO, TWO]) -> None:
+    plot_trajectories(trainer.demonstrations)
+    plot_phases(trainer.phase_estimator.estimate_phases())
+    plot_trust_values(trainer.trust_values)
+    plot_ribbon_action_field(trainer.pacer)
     plot_action_comparison(
-        pacer.demonstrations.demos[0].actions,
-        pacer.pseudo_labels[0],
+        trainer.demonstrations.demos[0].actions,
+        trainer.pseudo_labels[0],
         title="Demo 0: Action refinement",
     )

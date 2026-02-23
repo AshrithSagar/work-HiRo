@@ -2,7 +2,7 @@
 
 import pyLasaDataset as lasa  # type: ignore[import-untyped]  # ty: ignore[unused-ignore-comment]
 from pacer import console
-from pacer.base import PACER, DemonstrationCorrupter
+from pacer.base import DemonstrationCorrupter, PACERBCTrainer
 from pacer.lasa import LASADemonstrations
 from pacer.plotting import full_diagnostic
 
@@ -18,9 +18,10 @@ def test_lasa(use_corruptions: bool = False) -> None:
             bias_strength=0.2,
         )
         demonstrations = corrupter.inject_corruptions()
-    pacer = PACER(demonstrations)
+    trainer = PACERBCTrainer(demonstrations)
 
-    phase_loss = pacer.prepare(
+    # PACER
+    phase_loss = trainer.prepare(
         phase_hidden_dim=128,
         phase_margin=1.0,  # m
         phase_lr=1e-3,
@@ -35,14 +36,15 @@ def test_lasa(use_corruptions: bool = False) -> None:
     )
     console.print(f"Phase scorer loss: {phase_loss}")
 
-    policy_loss = pacer.train(
+    # Behavioral cloning
+    policy_loss = trainer.train(
         policy_hidden_dim=128,
         policy_lr=1e-3,
         policy_epochs=240,
     )
     console.print(f"Policy loss: {policy_loss}")
 
-    full_diagnostic(pacer)
+    full_diagnostic(trainer)
 
 
 if __name__ == "__main__":

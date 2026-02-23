@@ -490,7 +490,7 @@ class Bin(Generic[DimState, DimAction]):
 
 
 @dataclass
-class BinHandler(Generic[DimState, DimAction]):
+class PACER(Generic[DimState, DimAction]):
     phase_estimator: PhaseEstimator[DimState, DimAction]
     n_bins: int = field(default=96, kw_only=True)  # B
     bins: list[Bin[DimState, DimAction]] = field(init=False)
@@ -789,7 +789,7 @@ class BinHandler(Generic[DimState, DimAction]):
 
 
 class BCPolicy(nn.Module, Generic[DimState, DimAction]):
-    """Behavioral cloning policy that maps states to actions"""
+    """Behavioral cloning policy that maps states to actions."""
 
     def __init__(
         self, state_dim: DimState, action_dim: DimAction, hidden_dim: int = 128
@@ -810,7 +810,9 @@ class BCPolicy(nn.Module, Generic[DimState, DimAction]):
         return self.network(states)
 
 
-class PACER(Generic[DimState, DimAction]):
+class PACERBCTrainer(Generic[DimState, DimAction]):
+    """PACER + Behavioral cloning policy trainer"""
+
     def __init__(
         self,
         demonstrations: Demonstrations[DimState, DimAction],
@@ -842,13 +844,13 @@ class PACER(Generic[DimState, DimAction]):
             lr=phase_lr,
             epochs=phase_epochs,
         )
-        self.binner = BinHandler(self.phase_estimator, n_bins=n_bins)
-        self.binner.make_bins()
-        self.trust_values = self.binner.compute_trust_values(
+        self.pacer = PACER(self.phase_estimator, n_bins=n_bins)
+        self.pacer.make_bins()
+        self.trust_values = self.pacer.compute_trust_values(
             cutoff=tukey_cutoff,
             min_trust=min_trust,
         )
-        self.pseudo_labels = self.binner.compute_pseudo_labels(
+        self.pseudo_labels = self.pacer.compute_pseudo_labels(
             self.trust_values,
             debias_weight=debias_weight,
             sideways_attenuation_shrinkage=sideways_attenuation_shrinkage,
