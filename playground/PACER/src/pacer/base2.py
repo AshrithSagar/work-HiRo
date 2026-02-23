@@ -48,7 +48,7 @@ SampleIndices: TypeAlias = list[SampleIndex]
 
 # (x_{i, t}, a_{i, t})
 @dataclass
-class Sample(Generic[DimState, DimAction]):
+class StateActionPair(Generic[DimState, DimAction]):
     """A container for a State-Action pair"""
 
     state: State[DimState]  # x_{i, t}
@@ -63,12 +63,12 @@ class Sample(Generic[DimState, DimAction]):
         return self.action.shape[0]
 
 
-StateActionPair: TypeAlias = Sample[DimState, DimAction]
+Sample: TypeAlias = StateActionPair[DimState, DimAction]
 
 
 # [(x_{t}, a_{t})]_{t = 1}^{T}
 @dataclass
-class Samples(Generic[NumPoints, DimState, DimAction]):
+class StateActionPairs(Generic[NumPoints, DimState, DimAction]):
     states: States[NumPoints, DimState]  # [x_{t}]_{t = 1}^{T}
     actions: Actions[NumPoints, DimAction]  # [a_{t}]_{t = 1}^{T}
 
@@ -78,7 +78,7 @@ class Samples(Generic[NumPoints, DimState, DimAction]):
 
     @enforce_shapes
     def __getitem__(self, t: TimeIndex, /) -> Sample[DimState, DimAction]:
-        return Sample(state=self.states[t], action=self.actions[t])
+        return StateActionPair(state=self.states[t], action=self.actions[t])
 
     def __iter__(self) -> Iterator[Sample[DimState, DimAction]]:
         for t in range(len(self)):
@@ -93,7 +93,7 @@ class Samples(Generic[NumPoints, DimState, DimAction]):
         return self.actions.shape[1]
 
 
-StateActionPairs: TypeAlias = Samples[NumPoints, DimState, DimAction]
+Samples: TypeAlias = StateActionPairs[NumPoints, DimState, DimAction]
 
 
 @dataclass(kw_only=True)
