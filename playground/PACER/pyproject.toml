@@ -57,6 +57,9 @@ build-backend = "uv_build"
 module = "pylasadataset.*"
 ignore_missing_imports = true
 
+[tool.ruff.lint]
+ignore = ["F403", "F405"]
+
 [tool.uv.sources]
 microsoft-python-type-stubs = { git = "https://github.com/microsoft/python-type-stubs.git" }
 typed-numpy = { git = "https://github.com/AshrithSagar/typed-numpy.git", rev = "main" }
