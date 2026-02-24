@@ -5,11 +5,15 @@ PACER Base2
 """
 # src/pacer/base2.py
 
+## ── Imports ──────────────────────────────────────────────────────────────────
+
+import random
 from dataclasses import dataclass, field
 from typing import (
     Generic,
     Iterable,
     Iterator,
+    Literal,
     NamedTuple,
     TypeAlias,
     TypeVar,
@@ -17,11 +21,19 @@ from typing import (
     overload,
 )
 
-from rich.console import Console
+import numpy as np
+import numpy.linalg as la
+import optype.numpy as onp
+import torch
 from typed_numpy._typed.context import enforce_shapes
 from typed_numpy._typed.helpers import Array1D, Array2D, DType
 
-console = Console()
+from pacer import console
+
+## ── Typings ──────────────────────────────────────────────────────────────────
+
+npDType: TypeAlias = np.float32
+torchDType = torch.float32
 
 Phase: TypeAlias = float  # tau \in [0, 1]
 DemoIndex: TypeAlias = int  # i \in {0, 1, ..., N-1}
@@ -31,6 +43,7 @@ BinIndex: TypeAlias = int  # b \in {0, 1, ..., B-1}
 DimState = TypeVar("DimState", bound=int, default=int)  # d_x
 DimAction = TypeVar("DimAction", bound=int, default=int)  # d_a
 NumPoints = TypeVar("NumPoints", bound=int, default=int)  # T_i
+NumDemos = TypeVar("NumDemos", bound=int, default=int)  # N
 State: TypeAlias = Array1D[DimState, DType]  # x_{i, t} \in R^{d_x}
 Action: TypeAlias = Array1D[DimAction, DType]  # a_{i, t} \in R^{d_a}
 States: TypeAlias = Array2D[NumPoints, DimState, DType]
@@ -46,6 +59,50 @@ class SampleIndex(NamedTuple):
 
 
 SampleIndices: TypeAlias = list[SampleIndex]
+
+## ── Utils ────────────────────────────────────────────────────────────────────
+
+SEED = 42
+EPS: float = 1e-8
+
+
+def set_seed(seed: int = SEED) -> None:
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)  # type: ignore  # ty: ignore[unused-ignore-comment]
+    torch.cuda.manual_seed_all(seed)
+    torch.use_deterministic_algorithms(True)
+
+
+def get_torch_device_auto() -> torch.device:
+    if torch.backends.mps.is_available():
+        torch_device_auto = torch.device("mps")
+    elif torch.cuda.is_available():
+        torch_device_auto = torch.device("cuda")
+    else:
+        torch_device_auto = torch.device("cpu")
+    console.print(f"Using device: [green]{torch_device_auto}[/]")
+    return torch_device_auto
+
+
+set_seed(SEED)
+
+
+def normalise(
+    vec: onp.ToArray1D, /, method: Literal["NORM", "MINMAX", "ZSCORE"]
+) -> np.ndarray:
+    vec = np.asarray(vec, dtype=npDType)
+    match method:
+        case "NORM":
+            norm = la.norm(vec)
+            return vec / (norm + EPS)
+        case "MINMAX" | "ZSCORE":
+            min_: float = vec.min()
+            max_: float = vec.max()
+            return (vec - min_) / (max_ - min_ + EPS)
+
+
+## ── Base ─────────────────────────────────────────────────────────────────────
 
 
 # (x, a)
@@ -77,7 +134,7 @@ class Sample(StateActionPair[DimState, DimAction]):
 
 
 # [(x_{t}, a_{t})]_{t = 1}^{T}
-@dataclass
+@dataclass(kw_only=True)
 class Samples(Generic[NumPoints, DimState, DimAction]):
     """A collection of `Sample`."""
 
@@ -113,16 +170,19 @@ class Demonstration(Samples[NumPoints, DimState, DimAction]):
     index: DemoIndex  # i
 
 
+# NOTE: `SamplesCollection` and `Demonstrations` can be made DRY if we had HKTs prolly.
+
+
 @dataclass
-class SamplesCollection(Generic[DimState, DimAction]):
+class SamplesCollection(Generic[NumDemos, DimState, DimAction]):
     """A collection of `Samples`."""
 
     collection: list[Samples[int, DimState, DimAction]] = field(
         default_factory=list[Samples[int, DimState, DimAction]]
     )  # [[(x_{i, t}, a_{i, t})]_{t = 1}^{T_i}]_{i = 1}^{N}
 
-    def __len__(self) -> int:
-        return len(self.collection)  # N
+    def __len__(self) -> NumDemos:
+        return cast(NumDemos, len(self.collection))  # N
 
     @enforce_shapes
     @overload
@@ -166,15 +226,23 @@ class SamplesCollection(Generic[DimState, DimAction]):
     def extend(self, samples: Iterable[Samples[int, DimState, DimAction]]) -> None:
         self.collection.extend(samples)
 
+    @property
+    def state_dim(self) -> DimState:
+        return self[SampleIndex(0, 0)].state_dim
+
+    @property
+    def action_dim(self) -> DimAction:
+        return self[SampleIndex(0, 0)].action_dim
+
 
 @dataclass
-class Demonstrations(Generic[DimState, DimAction]):
+class Demonstrations(Generic[NumDemos, DimState, DimAction]):
     """A collection of `Demonstration`."""
 
     demos: list[Demonstration[int, DimState, DimAction]]
 
-    def __len__(self) -> NumPoints:  # type: ignore[misc, type-var]
-        return cast(NumPoints, len(self.demos))
+    def __len__(self) -> NumDemos:
+        return cast(NumDemos, len(self.demos))
 
     @enforce_shapes
     @overload
@@ -210,3 +278,14 @@ class Demonstrations(Generic[DimState, DimAction]):
     @enforce_shapes
     def extend(self, demo: Iterable[Demonstration[int, DimState, DimAction]]) -> None:
         self.demos.extend(demo)
+
+    @property
+    def state_dim(self) -> DimState:
+        return self[SampleIndex(0, 0)].state_dim
+
+    @property
+    def action_dim(self) -> DimAction:
+        return self[SampleIndex(0, 0)].action_dim
+
+
+## ─────────────────────────────────────────────────────────────────────────────
