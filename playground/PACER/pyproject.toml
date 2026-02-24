@@ -18,6 +18,9 @@ dependencies = [
     "typed-numpy",
 ]
 
+[project.optional-dependencies]
+manim = ["manim>=0.20.0"]
+
 [dependency-groups]
 dev = [
     "microsoft-python-type-stubs",
