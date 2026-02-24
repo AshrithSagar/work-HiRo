@@ -157,11 +157,11 @@ class Samples(Generic[DimState, DimAction]):
     def extend(self, samples: Iterable[Sample[DimState, DimAction]]) -> None:
         self.samples.extend(samples)
 
-    # @enforce_shapes
+    @enforce_shapes
     def states(self) -> States[DimState]:
         return list(sample.state for sample in self.samples)
 
-    # @enforce_shapes
+    @enforce_shapes
     def actions(self) -> Actions[DimAction]:
         return list(sample.action for sample in self.samples)
 
@@ -222,14 +222,14 @@ class SamplesCollection(Generic[DimState, DimAction]):
             for sample in samples:
                 yield sample
 
-    # @enforce_shapes
+    @enforce_shapes
     def states(self, *, LOO_demo_index: DemoIndex | None = None) -> States[DimState]:
         # (N x T_) or (N-1 x T_)
         return list(
             sample.state for sample in self.samples(LOO_demo_index=LOO_demo_index)
         )
 
-    # @enforce_shapes
+    @enforce_shapes
     def actions(self, *, LOO_demo_index: DemoIndex | None = None) -> Actions[DimAction]:
         # (N x T_) or (N-1 x T_)
         return list(
@@ -701,7 +701,7 @@ class PACER(Generic[DimState, DimAction]):
             bin.ribbon_token.action_tangent = action_tangent
             bin.ribbon_token.state_tangent = state_tangent
 
-    # @enforce_shapes
+    @enforce_shapes
     def compute_pseudo_labels(
         self,
         trust_values: list[list[npDType]],
