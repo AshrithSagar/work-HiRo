@@ -31,7 +31,6 @@ import optype.numpy as onp
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from deprecated import deprecated
 from rich.progress import track
 from torch import Tensor
 from typed_numpy._typed import TypedNDArray
@@ -466,7 +465,6 @@ class RibbonToken(Generic[DimState, DimAction]):  # z_b
 @dataclass(kw_only=True)
 class Bin(Generic[DimState, DimAction]):
     index: BinIndex  # b
-    sample_indices: SampleIndices = field(default_factory=SampleIndices)  # I_b
     samples_collection: SamplesCollection[DimState, DimAction] = field(
         default_factory=SamplesCollection[DimState, DimAction]
     )
@@ -520,7 +518,6 @@ class PACER(Generic[DimState, DimAction]):
                 assert bin_idx < self.n_bins
                 bin = self.bins[bin_idx]
                 sample_idx: SampleIndex = (i, t)
-                bin.sample_indices.append(sample_idx)
                 sample = self.demonstrations[sample_idx]
                 collection = bin.samples_collection.collection[i]
                 collection.append(sample)
@@ -545,38 +542,6 @@ class PACER(Generic[DimState, DimAction]):
             median_action_strength=median_action_strength,
             median_state_change=median_state_change,
         )
-
-    def LOO_sample_indices(
-        self,
-        bin_idx: BinIndex,  # b
-        demo_idx: int,  # i
-    ) -> SampleIndices:  # I_b^{(-i)}
-        bin = self.bins[bin_idx]
-        sample_indices = SampleIndices()
-        for sample_idx in bin.sample_indices:
-            i, _t = sample_idx
-            if i == demo_idx:
-                continue
-            sample_indices.append(sample_idx)
-        return sample_indices
-
-    @deprecated
-    def LOO_split_samples(
-        self,
-        bin_idx: BinIndex,  # b
-        demo_idx: int,  # i
-    ) -> tuple[Samples[DimState, DimAction], Samples[DimState, DimAction]]:
-        bin = self.bins[bin_idx]
-        sample_indices = self.LOO_sample_indices(bin_idx, demo_idx)
-        demo_indices = list(i for i, _t in sample_indices)
-        loo_samples = Samples[DimState, DimAction]()
-        demo_samples = Samples[DimState, DimAction]()
-        for i, sample in enumerate(bin.samples()):
-            if i not in demo_indices:
-                loo_samples.append(sample)
-            else:
-                demo_samples.append(sample)
-        return loo_samples, demo_samples
 
     @enforce_shapes
     def compute_z_scores(self) -> list[list[npDType]]:  # (N x T_)

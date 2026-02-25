@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from typed_numpy._typed.helpers import TWO
 
-from .base import (
+from pacer.base import (
     PACER,
     Actions,
     Array1D,
