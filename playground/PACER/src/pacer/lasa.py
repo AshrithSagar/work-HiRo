@@ -31,8 +31,12 @@ class LASADemonstrations:
         self.data = data
 
         Ar7k2 = Array3D[SEVEN, THOUSAND, TWO]
-        self.positions = Ar7k2([demo.__getattribute__("pos").T for demo in data.demos])
-        self.velocities = Ar7k2([demo.__getattribute__("vel").T for demo in data.demos])
+        self.positions = Ar7k2(
+            [demo.__getattribute__("pos").T for demo in data.demos], dtype=npDType
+        )
+        self.velocities = Ar7k2(
+            [demo.__getattribute__("vel").T for demo in data.demos], dtype=npDType
+        )
         self.positions_diff = np.diff(
             self.positions, axis=-2, append=np.zeros((7, 1, 2), dtype=npDType)
         )
@@ -52,7 +56,7 @@ class LASADemonstrations:
         )
 
     # [TEMP]
-    def to_demonstrations2(self) -> Demonstrations2[TWO, TWO]:
+    def to_demonstrations2(self) -> Demonstrations2[SEVEN, TWO, TWO]:
         return Demonstrations2(
             [
                 Demonstration2[int, TWO, TWO](
