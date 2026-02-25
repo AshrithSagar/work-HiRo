@@ -6,6 +6,8 @@ LASA Dataset
 
 # pyright: reportPrivateUsage = false
 
+## ── Imports ──────────────────────────────────────────────────────────────────
+
 from typing import Literal
 
 import numpy as np
@@ -22,8 +24,12 @@ from .base2 import Actions, States
 from .base2 import Demonstration as Demonstration2
 from .base2 import Demonstrations as Demonstrations2
 
+## ── Typings ──────────────────────────────────────────────────────────────────
+
 SEVEN = Literal[7]
 THOUSAND = Literal[1000]
+
+## ── LASA ─────────────────────────────────────────────────────────────────────
 
 
 class LASADemonstrations:
@@ -69,3 +75,6 @@ class LASADemonstrations:
                 )
             ]
         )
+
+
+## ─────────────────────────────────────────────────────────────────────────────
