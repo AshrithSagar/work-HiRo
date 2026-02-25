@@ -8,14 +8,29 @@ PACER Base2
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
 import random
-from dataclasses import dataclass
-from typing import Generic, Iterator, Literal, NamedTuple, TypeAlias, TypeVar, overload
+from dataclasses import dataclass, field
+from typing import (
+    Generic,
+    Iterator,
+    Literal,
+    NamedTuple,
+    Self,
+    Sequence,
+    TypeAlias,
+    TypeVar,
+    overload,
+)
 
 import numpy as np
 import numpy.linalg as la
 import optype.numpy as onp
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from rich.progress import track
+from torch import Tensor
 from typed_numpy._typed.context import enforce_shapes
+from typed_numpy._typed.dimexpr import MinusOne, Mul
 from typed_numpy._typed.helpers import Array1D, Array2D, Array3D, DType
 
 from pacer import console
@@ -122,6 +137,13 @@ class Samples(Generic[NumPoints, DimState, DimAction]):
     states: States[NumPoints, DimState]  # [x_{t}]_{t = 1}^{T}
     actions: Actions[NumPoints, DimAction]  # [a_{t}]_{t = 1}^{T}
 
+    @enforce_shapes
+    @classmethod
+    def from_sample(cls, samples: Sequence[Sample[DimState, DimAction]]) -> Self:
+        states = States[NumPoints, DimState]([sample.state for sample in samples])
+        actions = Actions[NumPoints, DimAction]([sample.action for sample in samples])
+        return cls(states=states, actions=actions)
+
     def __len__(self) -> NumPoints:
         assert self.states.shape[0] == self.actions.shape[0]
         return self.states.shape[0]  # T
@@ -151,6 +173,20 @@ class SamplesCollection(Generic[NumDemos, NumPoints, DimState, DimAction]):
     states_collection: StatesCollection[NumDemos, NumPoints, DimState]
     # [a_{t}]_{t = 1}^{T}
     actions_collection: ActionsCollection[NumDemos, NumPoints, DimAction]
+
+    @enforce_shapes
+    @classmethod
+    def from_samples(
+        cls, samples_collection: Sequence[Samples[NumPoints, DimState, DimAction]]
+    ) -> Self:
+        return cls(
+            states_collection=StatesCollection[NumDemos, NumPoints, DimState](
+                [samples.states for samples in samples_collection]
+            ),
+            actions_collection=ActionsCollection[NumDemos, NumPoints, DimAction](
+                [samples.actions for samples in samples_collection]
+            ),
+        )
 
     def __len__(self) -> NumDemos:
         assert self.states_collection.shape[0] == self.actions_collection.shape[0]
@@ -191,18 +227,326 @@ class SamplesCollection(Generic[NumDemos, NumPoints, DimState, DimAction]):
             yield Samples(states=states, actions=actions)
 
     @property
-    def samples(self) -> Iterator[Sample[DimState, DimAction]]:
-        for i in range(len(self)):
-            for t in range(len(self[i])):
-                yield self[SampleIndex(i, t)]
-
-    @property
     def state_dim(self) -> DimState:
         return self[SampleIndex(0, 0)].state_dim
 
     @property
     def action_dim(self) -> DimAction:
         return self[SampleIndex(0, 0)].action_dim
+
+    @overload
+    @enforce_shapes
+    def samples(
+        self, *, LOO_demo_index: None = None
+    ) -> Samples[Mul[NumDemos, NumPoints], DimState, DimAction]: ...
+    @overload
+    @enforce_shapes
+    def samples(
+        self, *, LOO_demo_index: DemoIndex
+    ) -> Samples[Mul[MinusOne[NumDemos], NumPoints], DimState, DimAction]: ...
+    #
+    @enforce_shapes
+    def samples(
+        self, *, LOO_demo_index: DemoIndex | None = None
+    ) -> (
+        Samples[Mul[NumDemos, NumPoints], DimState, DimAction]
+        | Samples[Mul[MinusOne[NumDemos], NumPoints], DimState, DimAction]
+    ):
+        # (N x T_) or (N-1 x T_)
+        if LOO_demo_index is None:
+            states = self.states_collection
+            actions = self.actions_collection
+            return Samples[Mul[NumDemos, NumPoints], DimState, DimAction](
+                states=States[Mul[NumDemos, NumPoints], DimState](np.vstack(states)),  # type: ignore
+                actions=Actions[Mul[NumDemos, NumPoints], DimAction](
+                    np.vstack(actions)  # type: ignore
+                ),
+            )
+        else:
+            states = StatesCollection[MinusOne[NumDemos], NumPoints, DimState](
+                np.delete(self.states_collection, LOO_demo_index, axis=0)  # type: ignore
+            )
+            actions = ActionsCollection[MinusOne[NumDemos], NumPoints, DimAction](
+                np.delete(self.actions_collection, LOO_demo_index, axis=0)  # type: ignore
+            )
+            return Samples[Mul[MinusOne[NumDemos], NumPoints], DimState, DimAction](
+                states=States[Mul[MinusOne[NumDemos], NumPoints], DimState](
+                    np.vstack(states)  # type: ignore
+                ),
+                actions=Actions[Mul[MinusOne[NumDemos], NumPoints], DimAction](
+                    np.vstack(actions)  # type: ignore
+                ),
+            )
+
+    @overload
+    @enforce_shapes
+    def states(
+        self, *, LOO_demo_index: None = None
+    ) -> States[Mul[NumDemos, NumPoints], DimState]: ...
+    @overload
+    @enforce_shapes
+    def states(
+        self, *, LOO_demo_index: DemoIndex
+    ) -> States[Mul[MinusOne[NumDemos], NumPoints], DimState]: ...
+    #
+    @enforce_shapes
+    def states(
+        self, *, LOO_demo_index: DemoIndex | None = None
+    ) -> (
+        States[Mul[NumDemos, NumPoints], DimState]
+        | States[Mul[MinusOne[NumDemos], NumPoints], DimState]
+    ):
+        # (N x T_) or (N-1 x T_)
+        return self.samples(LOO_demo_index=LOO_demo_index).states
+
+    @overload
+    @enforce_shapes
+    def actions(
+        self, *, LOO_demo_index: None = None
+    ) -> Actions[Mul[NumDemos, NumPoints], DimAction]: ...
+    @overload
+    @enforce_shapes
+    def actions(
+        self, *, LOO_demo_index: DemoIndex
+    ) -> Actions[Mul[MinusOne[NumDemos], NumPoints], DimAction]: ...
+    #
+    @enforce_shapes
+    def actions(
+        self, *, LOO_demo_index: DemoIndex | None = None
+    ) -> (
+        Actions[Mul[NumDemos, NumPoints], DimAction]
+        | Actions[Mul[MinusOne[NumDemos], NumPoints], DimAction]
+    ):
+        # (N x T_) or (N-1 x T_)
+        return self.samples(LOO_demo_index=LOO_demo_index).actions
+
+    @enforce_shapes
+    def LOO(
+        self, *, LOO_demo_index: DemoIndex
+    ) -> SamplesCollection[MinusOne[NumDemos], NumPoints, DimState, DimAction]:
+        return SamplesCollection[MinusOne[NumDemos], NumPoints, DimState, DimAction](
+            states_collection=StatesCollection[MinusOne[NumDemos], NumPoints, DimState](
+                np.delete(self.states_collection, LOO_demo_index, axis=0)
+            ),
+            actions_collection=ActionsCollection[
+                MinusOne[NumDemos], NumPoints, DimAction
+            ](np.delete(self.actions_collection, LOO_demo_index, axis=0)),
+        )
+
+
+@dataclass
+class Demonstrations(SamplesCollection[NumDemos, NumPoints, DimState, DimAction]):
+    def __init__(
+        self,
+        states_collection: onp.ToArrayStrict3D,
+        actions_collection: onp.ToArrayStrict3D,
+    ) -> None:
+        self.states_collection = StatesCollection[NumDemos, NumPoints, DimState](
+            states_collection
+        )
+        self.actions_collection = ActionsCollection[NumDemos, NumPoints, DimAction](
+            actions_collection
+        )
+
+
+## ── Phase Alignment ──────────────────────────────────────────────────────────
+
+
+class PhaseScorer(nn.Module, Generic[DimState]):
+    """A small neural network (MLP) to estimate state-dependent phase score `g_psi`."""
+
+    def __init__(self, state_dim: DimState, hidden_dim: int = 64):
+        super().__init__()
+        self.network = nn.Sequential(
+            nn.Linear(state_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, 1),
+        )
+
+    def forward(
+        self,
+        states: Tensor,  # (batch, state_dim)
+    ) -> Tensor:  # (batch,) unnormalized phase scores
+        forward: Tensor = self.network(states)
+        return forward.squeeze(-1)
+
+
+class PhaseEstimator(Generic[NumDemos, NumPoints, DimState, DimAction]):
+    def __init__(
+        self,
+        demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction],
+        *,
+        device: torch.device | None = None,
+    ) -> None:
+        self.demonstrations = demonstrations
+        self.device = device or get_torch_device_auto()
+
+    def compute_ranking_loss(self, margin: float = 1.0) -> Tensor:  # L_rank
+        ranking_loss = torch.tensor(0.0, device=self.device)
+        for demo in self.demonstrations:
+            states = Tensor(np.array(demo.states)).float().to(self.device)
+            scores: Tensor = self.scorer(states)  # (T_i,)
+            diff = scores.unsqueeze(1) - scores.unsqueeze(0)  # (T_i, T_i)
+            mask = torch.triu(torch.ones_like(diff), diagonal=1)
+            loss_matrix = F.softplus(margin - diff) * mask
+            ranking_loss += loss_matrix.mean()
+        return ranking_loss
+
+    def train(
+        self,
+        *,
+        hidden_dim: int = 128,
+        margin: float = 1.0,
+        lr: float = 1e-3,
+        epochs: int = 240,
+    ) -> Tensor:
+        state_dim = self.demonstrations.state_dim
+        scorer = PhaseScorer(state_dim=state_dim, hidden_dim=hidden_dim)
+        self.scorer = scorer.to(self.device)
+        self.optimiser = torch.optim.Adam(self.scorer.parameters(), lr=lr)
+
+        self.scorer.train()
+        loss = self.compute_ranking_loss(margin=margin)
+        for _epoch in track(range(epochs), description="[bold]Phase training[/]"):
+            self.optimiser.zero_grad()
+            loss = self.compute_ranking_loss(margin=margin)
+            loss.backward()  # type: ignore  # ty: ignore[unused-ignore-comment]
+            torch.nn.utils.clip_grad_norm_(self.scorer.parameters(), 1.0)
+            self.optimiser.step()  # type: ignore  # ty: ignore[unused-ignore-comment]
+        return loss
+
+    @enforce_shapes
+    def estimate_phases(
+        self,
+    ) -> list[Array1D[int]]:  # [[tau_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
+        self.scorer.eval()
+        phases = list[Array1D[int]]()
+        with torch.no_grad():
+            for demo in self.demonstrations:
+                states = Tensor(np.array(demo.states)).float().to(self.device)
+                scores: Tensor = self.scorer(states)
+                _scores = scores.cpu().numpy()
+                normalised = Array1D(normalise(_scores, method="MINMAX"))
+                phases.append(normalised)
+        return phases
+
+
+## ── PACER ────────────────────────────────────────────────────────────────────
+
+
+@dataclass(kw_only=True)
+class RobustStatistics(Generic[DimState, DimAction]):
+    """Robust consensus statistics for a set of samples."""
+
+    ## Stable anchors
+    median_action: Action[DimAction]  # alpha_a[b] = median{ a_{i, t} : (i, t) \in I_b }
+    median_state: State[DimState]  # alpha_s[b] = median{ x_{i, t} : (i, t) \in I_b }
+
+    ## Pace
+    median_action_strength: npDType
+    # beta_a[b] = median{ ||a_{i, t}|| : (i, t) \in I_b }
+    # Captures strength of actions
+    median_state_change: npDType
+    # beta_s[b] = median{ ||xdot_{i, t}|| : (i, t) \in I_b }
+    # Captures typical rate of state change
+
+    ## Local task dynamics
+    # NOTE: `action_tangent` and `state_tangent` are not stored here,
+    # but instead, computed and stored in RibbonToken.
+
+
+@dataclass(kw_only=True)
+class RibbonToken(Generic[DimState, DimAction]):  # z_b
+    """
+    Robust structured descriptor for a single phase bin `b`.\\
+    Encodes both consensus behaviour and degree of variability present at phase `b`.
+    """
+
+    median_action: Action[DimAction]  # alpha_a[b]
+    median_action_strength: npDType  # beta_a[b]
+    median_state: State[DimState]  # alpha_s[b]
+    median_state_change: npDType  # beta_s[b]
+
+    ## Local task dynamics
+    action_tangent: Action[DimAction] = field(init=False)
+    # t_a[b] <- diff{ alpha_a[b] }
+    state_tangent: State[DimState] | None = field(init=False)
+    # t_s[b] <- diff{ alpha_s[b] }
+
+    MAD_action_residual: npDType  # Median Absolute Deviation of action residuals
+
+
+@dataclass(kw_only=True)
+class Bin(Generic[NumDemos, NumPoints, DimState, DimAction]):
+    index: BinIndex  # b
+    sample_indices: SampleIndices  # I_b
+    samples_collection: SamplesCollection[NumDemos, NumPoints, DimState, DimAction]
+    ribbon_token: RibbonToken[DimState, DimAction] = field(init=False)
+
+    @overload
+    @enforce_shapes
+    def samples(
+        self, *, LOO_demo_index: None = None
+    ) -> Samples[Mul[NumDemos, NumPoints], DimState, DimAction]: ...
+    @overload
+    @enforce_shapes
+    def samples(
+        self, *, LOO_demo_index: DemoIndex
+    ) -> Samples[Mul[MinusOne[NumDemos], NumPoints], DimState, DimAction]: ...
+    #
+    @enforce_shapes
+    def samples(
+        self, *, LOO_demo_index: DemoIndex | None = None
+    ) -> (
+        Samples[Mul[NumDemos, NumPoints], DimState, DimAction]
+        | Samples[Mul[MinusOne[NumDemos], NumPoints], DimState, DimAction]
+    ):
+        # (N x T_) or (N-1 x T_)
+        return self.samples_collection.samples(LOO_demo_index=LOO_demo_index)
+
+    @overload
+    @enforce_shapes
+    def states(
+        self, *, LOO_demo_index: None = None
+    ) -> States[Mul[NumDemos, NumPoints], DimState]: ...
+    @overload
+    @enforce_shapes
+    def states(
+        self, *, LOO_demo_index: DemoIndex
+    ) -> States[Mul[MinusOne[NumDemos], NumPoints], DimState]: ...
+    #
+    @enforce_shapes
+    def states(
+        self, *, LOO_demo_index: DemoIndex | None = None
+    ) -> (
+        States[Mul[NumDemos, NumPoints], DimState]
+        | States[Mul[MinusOne[NumDemos], NumPoints], DimState]
+    ):
+        # (N x T_) or (N-1 x T_)
+        return self.samples_collection.states(LOO_demo_index=LOO_demo_index)
+
+    @overload
+    @enforce_shapes
+    def actions(
+        self, *, LOO_demo_index: None = None
+    ) -> Actions[Mul[NumDemos, NumPoints], DimAction]: ...
+    @overload
+    @enforce_shapes
+    def actions(
+        self, *, LOO_demo_index: DemoIndex
+    ) -> Actions[Mul[MinusOne[NumDemos], NumPoints], DimAction]: ...
+    #
+    @enforce_shapes
+    def actions(
+        self, *, LOO_demo_index: DemoIndex | None = None
+    ) -> (
+        Actions[Mul[NumDemos, NumPoints], DimAction]
+        | Actions[Mul[MinusOne[NumDemos], NumPoints], DimAction]
+    ):
+        # (N x T_) or (N-1 x T_)
+        return self.samples_collection.actions(LOO_demo_index=LOO_demo_index)
 
 
 ## ─────────────────────────────────────────────────────────────────────────────
