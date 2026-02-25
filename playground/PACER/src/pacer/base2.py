@@ -23,6 +23,7 @@ from typing import (
 
 import numpy as np
 import numpy.linalg as la
+import numpy.typing as npt
 import optype.numpy as onp
 import torch
 import torch.nn as nn
@@ -31,7 +32,7 @@ from rich.progress import track
 from torch import Tensor
 from typed_numpy._typed.context import enforce_shapes
 from typed_numpy._typed.dimexpr import MinusOne, Mul
-from typed_numpy._typed.helpers import Array1D, Array2D, Array3D, DType
+from typed_numpy._typed.helpers import Array0D, Array1D, Array2D, Array3D, DType
 
 from pacer import console
 
@@ -40,21 +41,25 @@ from pacer import console
 npDType: TypeAlias = np.float32
 torchDType = torch.float32
 
-Phase: TypeAlias = float  # tau \in [0, 1]
-DemoIndex: TypeAlias = int  # i \in {0, 1, ..., N-1}
-TimeIndex: TypeAlias = int  # t \in {0, 1, ..., T_i-1}
-BinIndex: TypeAlias = int  # b \in {0, 1, ..., B-1}
-
 DimState = TypeVar("DimState", bound=int, default=int)  # d_x
 DimAction = TypeVar("DimAction", bound=int, default=int)  # d_a
 NumPoints = TypeVar("NumPoints", bound=int, default=int)  # T_i
 NumDemos = TypeVar("NumDemos", bound=int, default=int)  # N
+
+DemoIndex: TypeAlias = int  # i \in {0, 1, ..., N-1}
+TimeIndex: TypeAlias = int  # t \in {0, 1, ..., T_i-1}
+BinIndex: TypeAlias = int  # b \in {0, 1, ..., B-1}
+
 State: TypeAlias = Array1D[DimState, DType]  # x_{i, t} \in R^{d_x}
 Action: TypeAlias = Array1D[DimAction, DType]  # a_{i, t} \in R^{d_a}
 States: TypeAlias = Array2D[NumPoints, DimState, DType]
 Actions: TypeAlias = Array2D[NumPoints, DimAction, DType]
 StatesCollection: TypeAlias = Array3D[NumDemos, NumPoints, DimState, DType]
 ActionsCollection: TypeAlias = Array3D[NumDemos, NumPoints, DimAction, DType]
+
+Phase: TypeAlias = Array0D[np.dtype[npDType]]  # tau \in [0, 1]
+Phases: TypeAlias = Array1D[NumPoints, np.dtype[npDType]]
+PhasesCollection: TypeAlias = Array2D[NumDemos, NumPoints, np.dtype[npDType]]
 
 
 # (i, t)
@@ -93,6 +98,13 @@ def get_torch_device_auto() -> torch.device:
 
 
 set_seed(SEED)
+
+
+def median(
+    arr: npt.ArrayLike, /, axis: int | Sequence[int] | None = None
+) -> np.ndarray:
+    arr = np.asarray(arr)
+    return np.median(arr, axis=axis)
 
 
 def normalise(
@@ -436,6 +448,22 @@ class Bin(Generic[NumDemos, NumPoints, DimState, DimAction]):
     @enforce_shapes
     def actions(self) -> Actions[Mul[NumDemos, NumPoints], DimAction]:
         return self.samples_collection.actions  # (N x T_)
+
+
+@dataclass
+class PACER(Generic[NumDemos, NumPoints, DimState, DimAction]):
+    phase_estimator: PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]
+    n_bins: int = field(default=96, kw_only=True)  # B
+    bins: list[Bin[NumDemos, NumPoints, DimState, DimAction]] = field(init=False)
+
+    @property
+    def demonstrations(
+        self,
+    ) -> Demonstrations[NumDemos, NumPoints, DimState, DimAction]:
+        return self.phase_estimator.demonstrations
+
+    def phase_range(self, bin_idx: BinIndex) -> tuple[Phase, Phase]:
+        return (Phase(bin_idx / self.n_bins), Phase((bin_idx + 1) / self.n_bins))
 
 
 ## ─────────────────────────────────────────────────────────────────────────────
