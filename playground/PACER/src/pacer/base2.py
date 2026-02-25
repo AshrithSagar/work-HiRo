@@ -1,32 +1,22 @@
 """
 PACER Base2
 =======
-[TEMP][WIP]: A refactor preferring 2D numpy arrays over list of 1D numpy arrays.
+[TEMP][WIP]: A refactor preferring dense tensors over lists.
 """
 # src/pacer/base2.py
 
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
 import random
-from dataclasses import dataclass, field
-from typing import (
-    Generic,
-    Iterable,
-    Iterator,
-    Literal,
-    NamedTuple,
-    TypeAlias,
-    TypeVar,
-    cast,
-    overload,
-)
+from dataclasses import dataclass
+from typing import Generic, Iterator, Literal, NamedTuple, TypeAlias, TypeVar, overload
 
 import numpy as np
 import numpy.linalg as la
 import optype.numpy as onp
 import torch
 from typed_numpy._typed.context import enforce_shapes
-from typed_numpy._typed.helpers import Array1D, Array2D, DType
+from typed_numpy._typed.helpers import Array1D, Array2D, Array3D, DType
 
 from pacer import console
 
@@ -48,6 +38,8 @@ State: TypeAlias = Array1D[DimState, DType]  # x_{i, t} \in R^{d_x}
 Action: TypeAlias = Array1D[DimAction, DType]  # a_{i, t} \in R^{d_a}
 States: TypeAlias = Array2D[NumPoints, DimState, DType]
 Actions: TypeAlias = Array2D[NumPoints, DimAction, DType]
+StatesCollection: TypeAlias = Array3D[NumDemos, NumPoints, DimState, DType]
+ActionsCollection: TypeAlias = Array3D[NumDemos, NumPoints, DimAction, DType]
 
 
 # (i, t)
@@ -107,7 +99,7 @@ def normalise(
 
 # (x, a)
 @dataclass
-class StateActionPair(Generic[DimState, DimAction]):
+class Sample(Generic[DimState, DimAction]):
     """A container for a State-Action pair."""
 
     state: State[DimState]  # x
@@ -122,19 +114,8 @@ class StateActionPair(Generic[DimState, DimAction]):
         return self.action.shape[0]
 
 
-# (x_{t}, a_{t})
-@dataclass(kw_only=True)
-class Sample(StateActionPair[DimState, DimAction]):
-    """
-    A `StateActionPair` along with a time index `t`.\\
-    When used in context of a `Demonstration`, also has an associated demo index `i`.
-    """
-
-    index: TimeIndex  # t
-
-
 # [(x_{t}, a_{t})]_{t = 1}^{T}
-@dataclass(kw_only=True)
+@dataclass
 class Samples(Generic[NumPoints, DimState, DimAction]):
     """A collection of `Sample`."""
 
@@ -147,7 +128,7 @@ class Samples(Generic[NumPoints, DimState, DimAction]):
 
     @enforce_shapes
     def __getitem__(self, t: TimeIndex, /) -> Sample[DimState, DimAction]:
-        return Sample(index=t, state=self.states[t], action=self.actions[t])
+        return Sample(state=self.states[t], action=self.actions[t])
 
     def __iter__(self) -> Iterator[Sample[DimState, DimAction]]:
         for t in range(len(self)):
@@ -162,27 +143,18 @@ class Samples(Generic[NumPoints, DimState, DimAction]):
         return self.actions.shape[1]
 
 
-# [(x_{i, t}, a_{i, t})]_{t = 1}^{T}
-@dataclass(kw_only=True)
-class Demonstration(Samples[NumPoints, DimState, DimAction]):
-    """A collection of `Sample` with a demo index."""
-
-    index: DemoIndex  # i
-
-
-# NOTE: `SamplesCollection` and `Demonstrations` can be made DRY if we had HKTs prolly.
-
-
 @dataclass
-class SamplesCollection(Generic[NumDemos, DimState, DimAction]):
+class SamplesCollection(Generic[NumDemos, NumPoints, DimState, DimAction]):
     """A collection of `Samples`."""
 
-    collection: list[Samples[int, DimState, DimAction]] = field(
-        default_factory=list[Samples[int, DimState, DimAction]]
-    )  # [[(x_{i, t}, a_{i, t})]_{t = 1}^{T_i}]_{i = 1}^{N}
+    # [x_{t}]_{t = 1}^{T}
+    states_collection: StatesCollection[NumDemos, NumPoints, DimState]
+    # [a_{t}]_{t = 1}^{T}
+    actions_collection: ActionsCollection[NumDemos, NumPoints, DimAction]
 
     def __len__(self) -> NumDemos:
-        return cast(NumDemos, len(self.collection))  # N
+        assert self.states_collection.shape[0] == self.actions_collection.shape[0]
+        return self.states_collection.shape[0]  # N
 
     @enforce_shapes
     @overload
@@ -190,7 +162,7 @@ class SamplesCollection(Generic[NumDemos, DimState, DimAction]):
         self,
         index: DemoIndex,  # i
         /,
-    ) -> Samples[int, DimState, DimAction]: ...
+    ) -> Samples[NumPoints, DimState, DimAction]: ...
     @overload
     def __getitem__(
         self,
@@ -200,84 +172,29 @@ class SamplesCollection(Generic[NumDemos, DimState, DimAction]):
     #
     def __getitem__(
         self, index: DemoIndex | SampleIndex, /
-    ) -> Samples[int, DimState, DimAction] | Sample[DimState, DimAction]:
+    ) -> Samples[NumPoints, DimState, DimAction] | Sample[DimState, DimAction]:
         match index:
             case DemoIndex() as i:
-                return self.collection[i]
+                return Samples(
+                    states=States[NumPoints, DimState](self.states_collection[i]),
+                    actions=Actions[NumPoints, DimAction](self.actions_collection[i]),
+                )
             case SampleIndex(i, t):
-                return self.collection[i][t]
+                return Sample(
+                    state=State[DimState](self.states_collection[i][t]),
+                    action=Action[DimAction](self.actions_collection[i][t]),
+                )
 
     @enforce_shapes
-    def __iter__(self) -> Iterator[Samples[int, DimState, DimAction]]:
-        for samples in self.collection:
-            yield samples
+    def __iter__(self) -> Iterator[Samples[NumPoints, DimState, DimAction]]:
+        for states, actions in zip(self.states_collection, self.actions_collection):
+            yield Samples(states=states, actions=actions)
 
     @property
     def samples(self) -> Iterator[Sample[DimState, DimAction]]:
         for i in range(len(self)):
             for t in range(len(self[i])):
                 yield self[SampleIndex(i, t)]
-
-    @enforce_shapes
-    def append(self, samples: Samples[int, DimState, DimAction]) -> None:
-        self.collection.append(samples)
-
-    @enforce_shapes
-    def extend(self, samples: Iterable[Samples[int, DimState, DimAction]]) -> None:
-        self.collection.extend(samples)
-
-    @property
-    def state_dim(self) -> DimState:
-        return self[SampleIndex(0, 0)].state_dim
-
-    @property
-    def action_dim(self) -> DimAction:
-        return self[SampleIndex(0, 0)].action_dim
-
-
-@dataclass
-class Demonstrations(Generic[NumDemos, DimState, DimAction]):
-    """A collection of `Demonstration`."""
-
-    demos: list[Demonstration[int, DimState, DimAction]]
-
-    def __len__(self) -> NumDemos:
-        return cast(NumDemos, len(self.demos))
-
-    @enforce_shapes
-    @overload
-    def __getitem__(
-        self, index: DemoIndex, /
-    ) -> Demonstration[int, DimState, DimAction]: ...
-    @overload
-    def __getitem__(self, index: SampleIndex, /) -> Sample[DimState, DimAction]: ...
-    #
-    def __getitem__(
-        self, index: DemoIndex | SampleIndex, /
-    ) -> Demonstration[int, DimState, DimAction] | Sample[DimState, DimAction]:
-        match index:
-            case DemoIndex() as i:
-                return self.demos[i]
-            case SampleIndex(i, t):
-                return self.demos[i][t]
-
-    def __iter__(self) -> Iterator[Demonstration[int, DimState, DimAction]]:
-        for i in range(len(self)):
-            yield self[DemoIndex(i)]
-
-    @property
-    def samples(self) -> Iterator[Sample[DimState, DimAction]]:
-        for i in range(len(self)):
-            for t in range(len(self[i])):
-                yield self[SampleIndex(i, t)]
-
-    @enforce_shapes
-    def append(self, demo: Demonstration[int, DimState, DimAction]) -> None:
-        self.demos.append(demo)
-
-    @enforce_shapes
-    def extend(self, demo: Iterable[Demonstration[int, DimState, DimAction]]) -> None:
-        self.demos.extend(demo)
 
     @property
     def state_dim(self) -> DimState:
