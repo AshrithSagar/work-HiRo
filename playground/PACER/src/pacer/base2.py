@@ -234,103 +234,40 @@ class SamplesCollection(Generic[NumDemos, NumPoints, DimState, DimAction]):
     def action_dim(self) -> DimAction:
         return self[SampleIndex(0, 0)].action_dim
 
-    @overload
+    @property
     @enforce_shapes
-    def samples(
-        self, *, LOO_demo_index: None = None
-    ) -> Samples[Mul[NumDemos, NumPoints], DimState, DimAction]: ...
-    @overload
-    @enforce_shapes
-    def samples(
-        self, *, LOO_demo_index: DemoIndex
-    ) -> Samples[Mul[MinusOne[NumDemos], NumPoints], DimState, DimAction]: ...
-    #
-    @enforce_shapes
-    def samples(
-        self, *, LOO_demo_index: DemoIndex | None = None
-    ) -> (
-        Samples[Mul[NumDemos, NumPoints], DimState, DimAction]
-        | Samples[Mul[MinusOne[NumDemos], NumPoints], DimState, DimAction]
-    ):
-        # (N x T_) or (N-1 x T_)
-        if LOO_demo_index is None:
-            states = self.states_collection
-            actions = self.actions_collection
-            return Samples[Mul[NumDemos, NumPoints], DimState, DimAction](
-                states=States[Mul[NumDemos, NumPoints], DimState](np.vstack(states)),  # type: ignore
-                actions=Actions[Mul[NumDemos, NumPoints], DimAction](
-                    np.vstack(actions)  # type: ignore
-                ),
-            )
-        else:
-            states = StatesCollection[MinusOne[NumDemos], NumPoints, DimState](
-                np.delete(self.states_collection, LOO_demo_index, axis=0)  # type: ignore
-            )
-            actions = ActionsCollection[MinusOne[NumDemos], NumPoints, DimAction](
-                np.delete(self.actions_collection, LOO_demo_index, axis=0)  # type: ignore
-            )
-            return Samples[Mul[MinusOne[NumDemos], NumPoints], DimState, DimAction](
-                states=States[Mul[MinusOne[NumDemos], NumPoints], DimState](
-                    np.vstack(states)  # type: ignore
-                ),
-                actions=Actions[Mul[MinusOne[NumDemos], NumPoints], DimAction](
-                    np.vstack(actions)  # type: ignore
-                ),
-            )
+    def samples(self) -> Samples[Mul[NumDemos, NumPoints], DimState, DimAction]:
+        # (N x T_)
+        return Samples[Mul[NumDemos, NumPoints], DimState, DimAction](
+            states=States[Mul[NumDemos, NumPoints], DimState](
+                np.vstack(self.states_collection)  # type: ignore
+            ),
+            actions=Actions[Mul[NumDemos, NumPoints], DimAction](
+                np.vstack(self.actions_collection)  # type: ignore
+            ),
+        )
 
-    @overload
+    @property
     @enforce_shapes
-    def states(
-        self, *, LOO_demo_index: None = None
-    ) -> States[Mul[NumDemos, NumPoints], DimState]: ...
-    @overload
-    @enforce_shapes
-    def states(
-        self, *, LOO_demo_index: DemoIndex
-    ) -> States[Mul[MinusOne[NumDemos], NumPoints], DimState]: ...
-    #
-    @enforce_shapes
-    def states(
-        self, *, LOO_demo_index: DemoIndex | None = None
-    ) -> (
-        States[Mul[NumDemos, NumPoints], DimState]
-        | States[Mul[MinusOne[NumDemos], NumPoints], DimState]
-    ):
-        # (N x T_) or (N-1 x T_)
-        return self.samples(LOO_demo_index=LOO_demo_index).states
+    def states(self) -> States[Mul[NumDemos, NumPoints], DimState]:
+        return self.samples.states  # (N x T_)
 
-    @overload
+    @property
     @enforce_shapes
-    def actions(
-        self, *, LOO_demo_index: None = None
-    ) -> Actions[Mul[NumDemos, NumPoints], DimAction]: ...
-    @overload
-    @enforce_shapes
-    def actions(
-        self, *, LOO_demo_index: DemoIndex
-    ) -> Actions[Mul[MinusOne[NumDemos], NumPoints], DimAction]: ...
-    #
-    @enforce_shapes
-    def actions(
-        self, *, LOO_demo_index: DemoIndex | None = None
-    ) -> (
-        Actions[Mul[NumDemos, NumPoints], DimAction]
-        | Actions[Mul[MinusOne[NumDemos], NumPoints], DimAction]
-    ):
-        # (N x T_) or (N-1 x T_)
-        return self.samples(LOO_demo_index=LOO_demo_index).actions
+    def actions(self) -> Actions[Mul[NumDemos, NumPoints], DimAction]:
+        return self.samples.actions  # (N x T_)
 
     @enforce_shapes
     def LOO(
-        self, *, LOO_demo_index: DemoIndex
+        self, index: DemoIndex
     ) -> SamplesCollection[MinusOne[NumDemos], NumPoints, DimState, DimAction]:
         return SamplesCollection[MinusOne[NumDemos], NumPoints, DimState, DimAction](
             states_collection=StatesCollection[MinusOne[NumDemos], NumPoints, DimState](
-                np.delete(self.states_collection, LOO_demo_index, axis=0)
+                np.delete(self.states_collection, index, axis=0)
             ),
             actions_collection=ActionsCollection[
                 MinusOne[NumDemos], NumPoints, DimAction
-            ](np.delete(self.actions_collection, LOO_demo_index, axis=0)),
+            ](np.delete(self.actions_collection, index, axis=0)),
         )
 
 
@@ -485,68 +422,20 @@ class Bin(Generic[NumDemos, NumPoints, DimState, DimAction]):
     samples_collection: SamplesCollection[NumDemos, NumPoints, DimState, DimAction]
     ribbon_token: RibbonToken[DimState, DimAction] = field(init=False)
 
-    @overload
+    @property
     @enforce_shapes
-    def samples(
-        self, *, LOO_demo_index: None = None
-    ) -> Samples[Mul[NumDemos, NumPoints], DimState, DimAction]: ...
-    @overload
-    @enforce_shapes
-    def samples(
-        self, *, LOO_demo_index: DemoIndex
-    ) -> Samples[Mul[MinusOne[NumDemos], NumPoints], DimState, DimAction]: ...
-    #
-    @enforce_shapes
-    def samples(
-        self, *, LOO_demo_index: DemoIndex | None = None
-    ) -> (
-        Samples[Mul[NumDemos, NumPoints], DimState, DimAction]
-        | Samples[Mul[MinusOne[NumDemos], NumPoints], DimState, DimAction]
-    ):
-        # (N x T_) or (N-1 x T_)
-        return self.samples_collection.samples(LOO_demo_index=LOO_demo_index)
+    def samples(self) -> Samples[Mul[NumDemos, NumPoints], DimState, DimAction]:
+        return self.samples_collection.samples  # (N x T_)
 
-    @overload
+    @property
     @enforce_shapes
-    def states(
-        self, *, LOO_demo_index: None = None
-    ) -> States[Mul[NumDemos, NumPoints], DimState]: ...
-    @overload
-    @enforce_shapes
-    def states(
-        self, *, LOO_demo_index: DemoIndex
-    ) -> States[Mul[MinusOne[NumDemos], NumPoints], DimState]: ...
-    #
-    @enforce_shapes
-    def states(
-        self, *, LOO_demo_index: DemoIndex | None = None
-    ) -> (
-        States[Mul[NumDemos, NumPoints], DimState]
-        | States[Mul[MinusOne[NumDemos], NumPoints], DimState]
-    ):
-        # (N x T_) or (N-1 x T_)
-        return self.samples_collection.states(LOO_demo_index=LOO_demo_index)
+    def states(self) -> States[Mul[NumDemos, NumPoints], DimState]:
+        return self.samples_collection.states  # (N x T_)
 
-    @overload
+    @property
     @enforce_shapes
-    def actions(
-        self, *, LOO_demo_index: None = None
-    ) -> Actions[Mul[NumDemos, NumPoints], DimAction]: ...
-    @overload
-    @enforce_shapes
-    def actions(
-        self, *, LOO_demo_index: DemoIndex
-    ) -> Actions[Mul[MinusOne[NumDemos], NumPoints], DimAction]: ...
-    #
-    @enforce_shapes
-    def actions(
-        self, *, LOO_demo_index: DemoIndex | None = None
-    ) -> (
-        Actions[Mul[NumDemos, NumPoints], DimAction]
-        | Actions[Mul[MinusOne[NumDemos], NumPoints], DimAction]
-    ):
-        # (N x T_) or (N-1 x T_)
-        return self.samples_collection.actions(LOO_demo_index=LOO_demo_index)
+    def actions(self) -> Actions[Mul[NumDemos, NumPoints], DimAction]:
+        return self.samples_collection.actions  # (N x T_)
 
 
 ## ─────────────────────────────────────────────────────────────────────────────
