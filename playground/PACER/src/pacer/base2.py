@@ -332,7 +332,9 @@ class PhaseEstimator(Generic[NumDemos, NumPoints, DimState, DimAction]):
             diff = scores.unsqueeze(1) - scores.unsqueeze(0)  # (T_i, T_i)
             mask = torch.ones_like(diff).triu(diagonal=1)  # Enforces `t > t'`
             loss_matrix = F.softplus(margin - diff) * mask
-            loss += loss_matrix.mean()
+            loss += loss_matrix.sum() / (mask.sum() + EPS)  # Normalise over valid pairs
+        if (n_demos := len(self.demonstrations)) > 0:
+            loss /= n_demos  # Normalise over demonstrations
         return loss
 
     def train(
