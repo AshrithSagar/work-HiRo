@@ -38,9 +38,9 @@ DimState = TypeVar("DimState", bound=int, default=int)  # d_x
 DimAction = TypeVar("DimAction", bound=int, default=int)  # d_a
 NumPoints = TypeVar("NumPoints", bound=int, default=int)  # T_i
 
-type DemoIndex = int  # i \in {0, 1, ..., N-1}
-type TimeIndex = int  # t \in {0, 1, ..., T_i-1}
-type BinIndex = int  # b \in {0, 1, ..., B-1}
+DemoIndex: TypeAlias = int  # i \in {0, 1, ..., N-1}
+TimeIndex: TypeAlias = int  # t \in {0, 1, ..., T_i-1}
+BinIndex: TypeAlias = int  # b \in {0, 1, ..., B-1}
 
 State: TypeAlias = Array1D[DimState, np.dtype[npDType]]  # x_{i, t} \in R^{d_x}
 Action: TypeAlias = Array1D[DimAction, np.dtype[npDType]]  # a_{i, t} \in R^{d_a}
@@ -53,7 +53,7 @@ Phase: TypeAlias = npDType  # tau \in [0, 1]
 Phases: TypeAlias = list[Phase]
 PhasesCollection: TypeAlias = list[Phases]
 
-type SampleIndex = tuple[DemoIndex, TimeIndex]  # (i, t)
+SampleIndex: TypeAlias = tuple[DemoIndex, TimeIndex]  # (i, t)
 SampleIndices: TypeAlias = list[SampleIndex]
 
 ## ── Utils ────────────────────────────────────────────────────────────────────
@@ -186,7 +186,7 @@ class SamplesCollection(Generic[DimState, DimAction]):
             case tuple():
                 i, t = index
                 return self.collection[i][t]
-            case int():
+            case DemoIndex():
                 return self.collection[index]
         raise IndexError
 
@@ -289,7 +289,7 @@ class Demonstrations(Generic[DimState, DimAction]):  # [D_i]_{i = 1}^{N}
             case tuple():
                 i, t = index
                 return self.demos[i][t]
-            case int():
+            case DemoIndex():
                 return self.demos[index]
         raise IndexError
 
