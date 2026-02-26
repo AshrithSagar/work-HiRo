@@ -5,12 +5,12 @@ import pyLasaDataset as lasa  # type: ignore[import-untyped]  # ty: ignore[unuse
 from pacer import console
 from pacer.base import PACERBCTrainer
 from pacer.corruptions import DemonstrationCorrupter
-from pacer.lasa import LASADemonstrations
+from pacer.lasa import LASADataSet
 from pacer.plotting import full_diagnostic
 
 
 def test_lasa(use_corruptions: bool = False) -> None:
-    demonstrations = LASADemonstrations(lasa.DataSet.GShape).to_demonstrations()
+    demonstrations = LASADataSet(lasa.DataSet.GShape).to_demonstrations()
     if use_corruptions:
         corrupter = DemonstrationCorrupter(
             demonstrations=demonstrations,

@@ -8,34 +8,36 @@ LASA Dataset
 
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
-from typing import Literal
+from typing import Literal, TypeAlias
 
 import numpy as np
 import pyLasaDataset as lasa  # type: ignore[import-untyped]  # ty: ignore[unused-ignore-comment]
 from pyLasaDataset.dataset import (  # type: ignore[import-untyped]  # ty: ignore[unused-ignore-comment]
     _Data,
 )
-from typed_numpy._typed.helpers import TWO, Array3D
+from typed_numpy._typed.helpers import THREE, TWO, Array3D
 
 from pacer.base import Demonstration, Demonstrations, npDType
 
 ## ── Typings ──────────────────────────────────────────────────────────────────
 
-SEVEN = Literal[7]
-THOUSAND = Literal[1000]
+SEVEN: TypeAlias = Literal[7]
+THOUSAND: TypeAlias = Literal[1000]
+
+Array_7x1000x2: TypeAlias = Array3D[SEVEN, THOUSAND, TWO, np.dtype[npDType]]
+Array_7x1000x3: TypeAlias = Array3D[SEVEN, THOUSAND, THREE, np.dtype[npDType]]
 
 ## ── LASA ─────────────────────────────────────────────────────────────────────
 
 
-class LASADemonstrations:
+class LASADataSet:
     def __init__(self, data: _Data = lasa.DataSet.GShape) -> None:
         self.data = data
 
-        Ar7k2 = Array3D[SEVEN, THOUSAND, TWO, np.dtype[npDType]]
-        self.positions = Ar7k2(
+        self.positions = Array_7x1000x2(
             [demo.__getattribute__("pos").T for demo in data.demos], dtype=npDType
         )
-        self.velocities = Ar7k2(
+        self.velocities = Array_7x1000x2(
             [demo.__getattribute__("vel").T for demo in data.demos], dtype=npDType
         )
         self.positions_diff = np.diff(
@@ -55,6 +57,20 @@ class LASADemonstrations:
                 )
             ]
         )
+
+
+class LASADataSet3D:
+    def __init__(self, data: _Data = lasa.DataSet.GShape) -> None:
+        dataset = LASADataSet(data)
+
+        def pad(arr: Array_7x1000x2) -> Array_7x1000x3:
+            out = Array_7x1000x3(np.zeros((7, 1000, 3), dtype=npDType))
+            out[:, :, :2] = arr
+            return out
+
+        self.positions = pad(dataset.positions)
+        self.velocities = pad(dataset.velocities)
+        self.positions_diff = pad(dataset.positions_diff)
 
 
 ## ─────────────────────────────────────────────────────────────────────────────
