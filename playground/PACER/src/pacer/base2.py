@@ -81,7 +81,7 @@ EPS: float = 1e-8
 def set_seed(seed: int = SEED) -> None:
     random.seed(seed)
     np.random.seed(seed)
-    torch.manual_seed(seed)  # type: ignore  # ty: ignore[unused-ignore-comment]
+    torch.manual_seed(seed)  # pyright: ignore[reportUnknownMemberType]
     torch.cuda.manual_seed_all(seed)
     torch.use_deterministic_algorithms(True)
 
@@ -204,7 +204,6 @@ class SamplesCollection(Generic[NumDemos, NumPoints, DimState, DimAction]):
         assert self.states_collection.shape[0] == self.actions_collection.shape[0]
         return self.states_collection.shape[0]  # N
 
-    @enforce_shapes
     @overload
     def __getitem__(
         self,
@@ -218,6 +217,7 @@ class SamplesCollection(Generic[NumDemos, NumPoints, DimState, DimAction]):
         /,
     ) -> Sample[DimState, DimAction]: ...
     #
+    @enforce_shapes
     def __getitem__(
         self, index: DemoIndex | SampleIndex, /
     ) -> Samples[NumPoints, DimState, DimAction] | Sample[DimState, DimAction]:
@@ -252,10 +252,10 @@ class SamplesCollection(Generic[NumDemos, NumPoints, DimState, DimAction]):
         # (N x T_)
         return Samples[Mul[NumDemos, NumPoints], DimState, DimAction](
             states=States[Mul[NumDemos, NumPoints], DimState](
-                np.vstack(self.states_collection)  # type: ignore
+                np.vstack(self.states_collection)  # type: ignore[call-overload]
             ),
             actions=Actions[Mul[NumDemos, NumPoints], DimAction](
-                np.vstack(self.actions_collection)  # type: ignore
+                np.vstack(self.actions_collection)  # type: ignore[call-overload]
             ),
         )
 
@@ -285,6 +285,7 @@ class SamplesCollection(Generic[NumDemos, NumPoints, DimState, DimAction]):
 
 @dataclass
 class Demonstrations(SamplesCollection[NumDemos, NumPoints, DimState, DimAction]):
+    # [FIXME]: Handle padding, and masks
     def __init__(
         self,
         states_collection: onp.ToArrayStrict3D,
@@ -361,9 +362,9 @@ class PhaseEstimator(Generic[NumDemos, NumPoints, DimState, DimAction]):
         for _epoch in track(range(epochs), description="[bold]Phase training[/]"):
             self.optimiser.zero_grad()
             loss = self.compute_ranking_loss(margin=margin)
-            loss.backward()  # type: ignore  # ty: ignore[unused-ignore-comment]
+            loss.backward()  # pyright: ignore[reportUnknownMemberType]
             torch.nn.utils.clip_grad_norm_(self.scorer.parameters(), 1.0)
-            self.optimiser.step()  # type: ignore  # ty: ignore[unused-ignore-comment]
+            self.optimiser.step()  # pyright: ignore[reportUnknownMemberType]
         return loss
 
     @enforce_shapes

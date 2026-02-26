@@ -11,17 +11,9 @@ https://openreview.net/forum?id=gaYyBvP2Rz
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
 import random
+from collections.abc import Iterable, Iterator, Sequence
 from dataclasses import dataclass, field
-from typing import (
-    Generic,
-    Iterable,
-    Iterator,
-    Literal,
-    Sequence,
-    TypeAlias,
-    TypeVar,
-    overload,
-)
+from typing import Generic, Literal, TypeAlias, TypeVar, overload
 
 import numpy as np
 import numpy.linalg as la
@@ -68,7 +60,7 @@ MAD_SCALE: float = 1.4826  # Gaussian consistency factor for MAD
 def set_seed(seed: int = SEED) -> None:
     random.seed(seed)
     np.random.seed(seed)
-    torch.manual_seed(seed)  # type: ignore  # ty: ignore[unused-ignore-comment]
+    torch.manual_seed(seed)  # pyright: ignore[reportUnknownMemberType]
     torch.cuda.manual_seed_all(seed)
     torch.use_deterministic_algorithms(True)
 
@@ -91,7 +83,7 @@ def median(
     arr: npt.ArrayLike, /, axis: int | Sequence[int] | None = None
 ) -> np.ndarray:
     arr = np.asarray(arr)
-    return np.median(arr, axis=axis)
+    return np.median(arr, axis=axis)  # type: ignore[no-any-return]  # ty: ignore[unused-ignore-comment]
 
 
 def normalise(
@@ -101,7 +93,7 @@ def normalise(
     match method:
         case "NORM":
             norm = la.norm(vec)
-            return vec / (norm + EPS)
+            return vec / (norm + EPS)  # type: ignore[no-any-return]  # ty: ignore[unused-ignore-comment]
         case "MINMAX" | "ZSCORE":
             min_: float = vec.min()
             max_: float = vec.max()
@@ -190,6 +182,7 @@ class SamplesCollection(Generic[DimState, DimAction]):
                 return self.collection[i][t]
             case int():
                 return self.collection[index]
+        raise IndexError
 
     @enforce_shapes
     def __iter__(self) -> Iterator[Samples[DimState, DimAction]]:
@@ -238,10 +231,9 @@ class Demonstration(Generic[DimState, DimAction]):  # D_i
 
     def __post_init__(self) -> None:
         assert len(self.states) == len(self.actions)
-        self.n_pairs = len(self.states)  # T_i
 
     def __len__(self) -> int:
-        return self.n_pairs
+        return len(self.states)  # T_i
 
     @enforce_shapes
     def __getitem__(
@@ -252,7 +244,7 @@ class Demonstration(Generic[DimState, DimAction]):  # D_i
     @enforce_shapes
     def __iter__(self) -> Iterator[Sample[DimState, DimAction]]:
         # [(x_{i, t}, a_{i, t})]_{t = 1}^{T_i}
-        for t in range(self.n_pairs):
+        for t in range(len(self)):
             yield self[t]
 
     @property
@@ -293,6 +285,7 @@ class Demonstrations(Generic[DimState, DimAction]):  # [D_i]_{i = 1}^{N}
                 return self.demos[i][t]
             case int():
                 return self.demos[index]
+        raise IndexError
 
     @enforce_shapes
     def __iter__(self) -> Iterator[Demonstration[DimState, DimAction]]:
@@ -336,6 +329,9 @@ class PhaseScorer(nn.Module, Generic[DimState]):
 class PhaseEstimator(Generic[DimState, DimAction]):
     demonstrations: Demonstrations[DimState, DimAction]
     device: torch.device = field(kw_only=True, default_factory=get_torch_device_auto)
+    ##
+    scorer: PhaseScorer[DimState] = field(init=False)
+    optimiser: torch.optim.Optimizer = field(init=False)
 
     def compute_ranking_loss(self, margin: float = 1.0) -> Tensor:  # L_rank
         ranking_loss = torch.tensor(0.0, device=self.device)
@@ -366,9 +362,9 @@ class PhaseEstimator(Generic[DimState, DimAction]):
         for _epoch in track(range(epochs), description="[bold]Phase training[/]"):
             self.optimiser.zero_grad()
             loss = self.compute_ranking_loss(margin=margin)
-            loss.backward()  # type: ignore  # ty: ignore[unused-ignore-comment]
+            loss.backward()  # type: ignore[no-untyped-call]  # ty: ignore[unused-ignore-comment]
             torch.nn.utils.clip_grad_norm_(self.scorer.parameters(), 1.0)
-            self.optimiser.step()  # type: ignore  # ty: ignore[unused-ignore-comment]
+            self.optimiser.step()  # pyright: ignore[reportUnknownMemberType]
         return loss
 
     @enforce_shapes
@@ -438,6 +434,7 @@ class Bin(Generic[DimState, DimAction]):
     samples_collection: SamplesCollection[DimState, DimAction] = field(
         default_factory=SamplesCollection[DimState, DimAction]
     )
+    ##
     ribbon_token: RibbonToken[DimState, DimAction] = field(init=False)
 
     def samples(
@@ -461,6 +458,7 @@ class Bin(Generic[DimState, DimAction]):
 class PACER(Generic[DimState, DimAction]):
     phase_estimator: PhaseEstimator[DimState, DimAction]
     n_bins: int = field(default=96, kw_only=True)  # B
+    ##
     bins: list[Bin[DimState, DimAction]] = field(init=False)
 
     @property
@@ -738,7 +736,7 @@ class BCPolicy(nn.Module, Generic[DimState, DimAction]):
         self,
         states: Tensor,  # (batch, state_dim)
     ) -> Tensor:  # (batch,)
-        return self.network(states)
+        return self.network(states)  # type: ignore[no-any-return]  # ty: ignore[unused-ignore-comment]
 
 
 @dataclass
@@ -747,6 +745,13 @@ class PACERBCTrainer(Generic[DimState, DimAction]):
 
     demonstrations: Demonstrations[DimState, DimAction]
     device: torch.device = field(kw_only=True, default_factory=get_torch_device_auto)
+    ##
+    phase_estimator: PhaseEstimator[DimState, DimAction] = field(init=False)
+    pacer: PACER[DimState, DimAction] = field(init=False)
+    trust_values: list[list[npDType]] = field(init=False)
+    pseudo_labels: list[Actions[DimAction]] = field(init=False)
+    policy: BCPolicy[DimState, DimAction] = field(init=False)
+    optimiser: torch.optim.Optimizer = field(init=False)
 
     def prepare(
         self,
@@ -837,9 +842,9 @@ class PACERBCTrainer(Generic[DimState, DimAction]):
         ):
             self.optimiser.zero_grad()
             loss = self.compute_huber_loss()
-            loss.backward()  # type: ignore  # ty: ignore[unused-ignore-comment]
+            loss.backward()  # type: ignore[no-untyped-call]  # ty: ignore[unused-ignore-comment]
             torch.nn.utils.clip_grad_norm_(self.policy.parameters(), 1.0)
-            self.optimiser.step()  # type: ignore  # ty: ignore[unused-ignore-comment]
+            self.optimiser.step()  # pyright: ignore[reportUnknownMemberType]
         return loss
 
     @enforce_shapes
