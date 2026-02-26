@@ -8,7 +8,7 @@ LASA Dataset
 
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
-from typing import Any, Literal, TypeAlias
+from typing import Generic, Literal, TypeAlias, TypeVar
 
 import numpy as np
 import pyLasaDataset as lasa  # type: ignore[import-untyped]  # ty: ignore[unused-ignore-comment]
@@ -25,8 +25,10 @@ from pacer.base import Demonstration, Demonstrations, npDType
 SEVEN: TypeAlias = Literal[7]
 THOUSAND: TypeAlias = Literal[1000]
 
+_ScalarT = TypeVar("_ScalarT", bound=np.generic, default=npDType)
+
 Array_7x1000x2: TypeAlias = Array3D[SEVEN, THOUSAND, TWO, np.dtype[npDType]]
-Array_7x1000x3: TypeAlias = Array3D[SEVEN, THOUSAND, THREE]
+Array_7x1000x3: TypeAlias = Array3D[SEVEN, THOUSAND, THREE, np.dtype[_ScalarT]]
 
 ## ── LASA ─────────────────────────────────────────────────────────────────────
 
@@ -63,17 +65,17 @@ class LASADataSet:
         )
 
 
-class LASADataSet3D:
+class LASADataSet3D(Generic[_ScalarT]):
     def __init__(
         self,
         data: _Data = lasa.DataSet.GShape,
         *,
-        dtype: type[np.floating[Any]] = npDType,
+        dtype: type[_ScalarT] = npDType,  # type: ignore[assignment]
     ) -> None:
         dataset = LASADataSet(data)
 
         @enforce_shapes
-        def pad(arr: Array_7x1000x2) -> Array_7x1000x3:
+        def pad(arr: Array_7x1000x2) -> Array_7x1000x3[_ScalarT]:
             out = Array_7x1000x3(np.zeros((7, 1000, 3), dtype=dtype))
             out[:, :, :2] = arr
             return out
