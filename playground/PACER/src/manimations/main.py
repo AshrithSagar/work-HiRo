@@ -1,7 +1,13 @@
-import manim as mn  # type: ignore
-import manim.typing as mnt  # type: ignore
+"""
+PACER manimation
+=======
+"""
+# src/manimations/main.py
+
+import manim as mn
+import manim.typing as mnt
 import numpy as np
-import pyLasaDataset as lasa  # type: ignore
+import pyLasaDataset as lasa  # type: ignore[import-untyped]  # ty: ignore[unused-ignore-comment]
 
 from pacer.lasa import LASADataSet3D
 
