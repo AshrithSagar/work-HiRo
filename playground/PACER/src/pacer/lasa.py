@@ -15,9 +15,9 @@ import pyLasaDataset as lasa  # type: ignore[import-untyped]  # ty: ignore[unuse
 from pyLasaDataset.dataset import (  # type: ignore[import-untyped]  # ty: ignore[unused-ignore-comment]
     _Data,
 )
-from typed_numpy._typed.helpers import TWO
+from typed_numpy._typed.helpers import TWO, Array3D
 
-from pacer.base import Array3D, Demonstration, Demonstrations, npDType
+from pacer.base import Demonstration, Demonstrations, npDType
 
 ## ── Typings ──────────────────────────────────────────────────────────────────
 
@@ -31,7 +31,7 @@ class LASADemonstrations:
     def __init__(self, data: _Data = lasa.DataSet.GShape) -> None:
         self.data = data
 
-        Ar7k2 = Array3D[SEVEN, THOUSAND, TWO]
+        Ar7k2 = Array3D[SEVEN, THOUSAND, TWO, np.dtype[npDType]]
         self.positions = Ar7k2(
             [demo.__getattribute__("pos").T for demo in data.demos], dtype=npDType
         )

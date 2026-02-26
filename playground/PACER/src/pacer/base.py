@@ -33,8 +33,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from rich.progress import track
 from torch import Tensor
-from typed_numpy._typed import TypedNDArray
 from typed_numpy._typed.context import enforce_shapes
+from typed_numpy._typed.helpers import Array1D
 
 from pacer import console
 
@@ -43,24 +43,18 @@ from pacer import console
 npDType: TypeAlias = np.float32
 torchDType = torch.float32
 
-Dim1 = TypeVar("Dim1", bound=int, default=int)
-Dim2 = TypeVar("Dim2", bound=int, default=int)
-Dim3 = TypeVar("Dim3", bound=int, default=int)
-Array1D: TypeAlias = TypedNDArray[tuple[Dim1], np.dtype[npDType]]
-Array2D: TypeAlias = TypedNDArray[tuple[Dim1, Dim2], np.dtype[npDType]]
-Array3D: TypeAlias = TypedNDArray[tuple[Dim1, Dim2, Dim3], np.dtype[npDType]]
-
 DimState = TypeVar("DimState", bound=int, default=int)  # d_x
 DimAction = TypeVar("DimAction", bound=int, default=int)  # d_a
 NumPoints = TypeVar("NumPoints", bound=int, default=int)  # T_i
-State: TypeAlias = Array1D[DimState]  # x_{i, t} \in R^{d_x}
-Action: TypeAlias = Array1D[DimAction]  # a_{i, t} \in R^{d_a}
+
 type Phase = float  # tau \in [0, 1]
 type DemoIndex = int  # i \in {0, 1, ..., N-1}
 type TimeIndex = int  # t \in {0, 1, ..., T_i-1}
 type BinIndex = int  # b \in {0, 1, ..., B-1}
 type SampleIndex = tuple[DemoIndex, TimeIndex]  # (i, t)
 
+State: TypeAlias = Array1D[DimState, np.dtype[npDType]]  # x_{i, t} \in R^{d_x}
+Action: TypeAlias = Array1D[DimAction, np.dtype[npDType]]  # a_{i, t} \in R^{d_a}
 States: TypeAlias = list[State[DimState]]
 Actions: TypeAlias = list[Action[DimAction]]
 SampleIndices: TypeAlias = list[SampleIndex]

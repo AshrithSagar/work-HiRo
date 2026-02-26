@@ -3,6 +3,7 @@ Plotting utils
 =======
 """
 # src/pacer/plotting.py
+
 # pyright: standard
 
 import matplotlib.pyplot as plt
