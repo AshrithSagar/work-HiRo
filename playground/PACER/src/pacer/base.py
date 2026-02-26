@@ -687,7 +687,7 @@ class PACER(Generic[DimState, DimAction]):
                     )  # y^{(1)}_{i, t}
 
                     # Sideways attentuation
-                    y1_pll = Action[DimAction](np.dot(y1, unit_tangent) * tangent)
+                    y1_pll = Action[DimAction](np.dot(y1, unit_tangent) * unit_tangent)
                     y1_perp = Action[DimAction](y1 - y1_pll)
                     has_state_tangent = token.state_tangent is not None
                     rho = rho_0 * (1 - w) if has_state_tangent else npDType(0)
@@ -894,7 +894,7 @@ class PACERBCTrainer(Generic[DimState, DimAction]):
             loss += weighted_losses.sum()
             total_weight += weights.sum()
 
-        if total_weight > 0:
+        if total_weight.item() > 0:
             loss /= total_weight
         return loss
 
