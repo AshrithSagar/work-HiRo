@@ -700,7 +700,7 @@ class PACER(Generic[DimState, DimAction]):
                     beta_a = bin.ribbon_token.median_action_strength
                     s = (1 - eta) * la.norm(y2) + eta * beta_a  # s_{i, t}
                     y3 = Action[DimAction](
-                        s * (y2 / la.norm(y2) + EPS), dtype=npDType
+                        s * (y2 / (la.norm(y2) + EPS)), dtype=npDType
                     )  # y^{(3)}_{i, t}
 
                     _labels[j].append(y3)
