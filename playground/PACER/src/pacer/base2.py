@@ -8,18 +8,9 @@ PACER Base2
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
 import random
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, field
-from typing import (
-    Generic,
-    Iterator,
-    Literal,
-    NamedTuple,
-    Self,
-    Sequence,
-    TypeAlias,
-    TypeVar,
-    overload,
-)
+from typing import Generic, Literal, NamedTuple, Self, TypeAlias, TypeVar, overload
 
 import numpy as np
 import numpy.linalg as la
@@ -291,11 +282,13 @@ class Demonstrations(SamplesCollection[NumDemos, NumPoints, DimState, DimAction]
         states_collection: onp.ToArrayStrict3D,
         actions_collection: onp.ToArrayStrict3D,
     ) -> None:
-        self.states_collection = StatesCollection[NumDemos, NumPoints, DimState](
-            states_collection
-        )
-        self.actions_collection = ActionsCollection[NumDemos, NumPoints, DimAction](
-            actions_collection
+        super().__init__(
+            states_collection=StatesCollection[NumDemos, NumPoints, DimState](
+                states_collection
+            ),
+            actions_collection=ActionsCollection[NumDemos, NumPoints, DimAction](
+                actions_collection
+            ),
         )
 
 
@@ -323,15 +316,13 @@ class PhaseScorer(nn.Module, Generic[DimState]):
         return forward.squeeze(-1)
 
 
+@dataclass
 class PhaseEstimator(Generic[NumDemos, NumPoints, DimState, DimAction]):
-    def __init__(
-        self,
-        demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction],
-        *,
-        device: torch.device | None = None,
-    ) -> None:
-        self.demonstrations = demonstrations
-        self.device = device or get_torch_device_auto()
+    demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
+    device: torch.device = field(kw_only=True, default_factory=get_torch_device_auto)
+    ##
+    scorer: PhaseScorer[DimState] = field(init=False)
+    optimiser: torch.optim.Optimizer = field(init=False)
 
     def compute_ranking_loss(self, margin: float = 1.0) -> Tensor:  # L_rank
         ranking_loss = torch.tensor(0.0, device=self.device)
@@ -362,7 +353,7 @@ class PhaseEstimator(Generic[NumDemos, NumPoints, DimState, DimAction]):
         for _epoch in track(range(epochs), description="[bold]Phase training[/]"):
             self.optimiser.zero_grad()
             loss = self.compute_ranking_loss(margin=margin)
-            loss.backward()  # pyright: ignore[reportUnknownMemberType]
+            loss.backward()  # type: ignore[no-untyped-call]  # ty: ignore[unused-ignore-comment]
             torch.nn.utils.clip_grad_norm_(self.scorer.parameters(), 1.0)
             self.optimiser.step()  # pyright: ignore[reportUnknownMemberType]
         return loss
