@@ -3,13 +3,15 @@
 import pyLasaDataset as lasa  # type: ignore[import-untyped]  # ty: ignore[unused-ignore-comment]
 
 from pacer import console
-from pacer.base import PACERBCTrainer
+from pacer.base import BCTrainer, PACERBCTrainer
 from pacer.corruptions import DemonstrationCorrupter
 from pacer.lasa import LASADataSet
 from pacer.plotting import full_diagnostic
 
 
-def test_lasa(use_corruptions: bool = False) -> None:
+def test_pacerbc_lasa(use_corruptions: bool = False) -> None:
+    console.rule("PACER + BC policy")
+
     demonstrations = LASADataSet(lasa.DataSet.GShape).to_demonstrations()
     if use_corruptions:
         corrupter = DemonstrationCorrupter(
@@ -49,5 +51,30 @@ def test_lasa(use_corruptions: bool = False) -> None:
     full_diagnostic(trainer)
 
 
+def test_bc_lasa(use_corruptions: bool = False) -> None:
+    console.rule("BC policy")
+
+    demonstrations = LASADataSet(lasa.DataSet.GShape).to_demonstrations()
+    if use_corruptions:
+        corrupter = DemonstrationCorrupter(
+            demonstrations=demonstrations,
+            noise_std=0.2,
+            outlier_fraction=0.2,
+            outlier_scale=5.0,
+            bias_strength=0.2,
+        )
+        demonstrations = corrupter.inject_corruptions()
+    trainer = BCTrainer(demonstrations)
+
+    # Behavioral cloning
+    policy_loss = trainer.train(
+        policy_hidden_dim=128,
+        policy_lr=1e-3,
+        policy_epochs=240,
+    )
+    console.print(f"Policy loss: {policy_loss}")
+
+
 if __name__ == "__main__":
-    test_lasa()
+    test_bc_lasa()
+    test_pacerbc_lasa()
