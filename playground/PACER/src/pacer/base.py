@@ -340,15 +340,15 @@ class PhaseEstimator(Generic[DimState, DimAction]):
     optimiser: torch.optim.Optimizer = field(init=False)
 
     def compute_ranking_loss(self, margin: float = 1.0) -> Tensor:  # L_rank
-        ranking_loss = torch.tensor(0.0, device=self.device)
+        loss = torch.tensor(0.0, device=self.device)
         for demo in self.demonstrations:
             states = Tensor(np.array(demo.states)).float().to(self.device)
             scores: Tensor = self.scorer(states)  # (T_i,)
             diff = scores.unsqueeze(1) - scores.unsqueeze(0)  # (T_i, T_i)
-            mask = torch.triu(torch.ones_like(diff), diagonal=1)
+            mask = torch.ones_like(diff).triu(diagonal=1)  # Enforces `t > t'`
             loss_matrix = F.softplus(margin - diff) * mask
-            ranking_loss += loss_matrix.mean()
-        return ranking_loss
+            loss += loss_matrix.mean()
+        return loss
 
     def train(
         self,
