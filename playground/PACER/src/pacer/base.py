@@ -112,7 +112,7 @@ def normalise(
 # (x_{i, t}, a_{i, t})
 @dataclass
 class Sample(Generic[DimState, DimAction]):
-    """A container for a State-Action pair"""
+    """A container for a State-Action pair."""
 
     state: State[DimState]  # x_{i, t}
     action: Action[DimAction]  # a_{i, t}
@@ -748,8 +748,78 @@ class BCPolicy(nn.Module, Generic[DimState, DimAction]):
 
 
 @dataclass
+class BCTrainer(Generic[DimState, DimAction]):
+    """Behavioral cloning policy trainer."""
+
+    demonstrations: Demonstrations[DimState, DimAction]
+    device: torch.device = field(kw_only=True, default_factory=get_torch_device_auto)
+    ##
+    policy: BCPolicy[DimState, DimAction] = field(init=False)
+    optimiser: torch.optim.Optimizer = field(init=False)
+
+    def compute_huber_loss(self) -> Tensor:  # L
+        loss = torch.tensor(0.0, dtype=torchDType, device=self.device)
+        for demo in self.demonstrations:
+            states = torch.tensor(
+                np.array(demo.states), dtype=torchDType, device=self.device
+            )  # (T_i, state_dim)
+            targets = torch.tensor(
+                np.array(demo.actions), dtype=torchDType, device=self.device
+            )  # (T_i, action_dim)
+            preds: Tensor = self.policy(states)  # (T_i, action_dim)
+
+            diffs: Tensor = preds - targets  # (T_i, action_dim)
+            huber_losses = F.huber_loss(
+                diffs, torch.zeros_like(diffs), reduction="none"
+            )  # (T_i, action_dim)
+            huber_losses = huber_losses.mean(dim=1)  # (T_i,)
+            loss += huber_losses.mean()
+        if (n_demos := len(self.demonstrations)) > 0:
+            loss /= n_demos  # Normalise over demonstrations
+        return loss
+
+    def train(
+        self,
+        *,
+        policy_hidden_dim: int = 128,
+        policy_lr: float = 1e-3,
+        policy_epochs: int = 240,
+    ) -> Tensor:
+        """Train BC policy using weighted Huber loss."""
+        policy = BCPolicy(
+            state_dim=self.demonstrations.state_dim,
+            action_dim=self.demonstrations.action_dim,
+            hidden_dim=policy_hidden_dim,
+        )
+        self.policy = policy.to(self.device)
+        self.optimiser = torch.optim.Adam(self.policy.parameters(), lr=policy_lr)
+
+        self.policy.train()
+        loss = self.compute_huber_loss()
+        for _epoch in track(
+            range(policy_epochs), description="[bold]Policy training[/]"
+        ):
+            self.optimiser.zero_grad()
+            loss = self.compute_huber_loss()
+            loss.backward()  # type: ignore[no-untyped-call]  # ty: ignore[unused-ignore-comment]
+            torch.nn.utils.clip_grad_norm_(self.policy.parameters(), 1.0)
+            self.optimiser.step()  # pyright: ignore[reportUnknownMemberType]
+        return loss
+
+    @enforce_shapes
+    def predict(self, states: States[DimState]) -> Actions[DimAction]:
+        self.policy.eval()
+        with torch.no_grad():
+            states_tensor = Tensor(np.array(states)).float().to(self.device)
+            actions_tensor: Tensor = self.policy(states_tensor)
+            actions_np = actions_tensor.cpu().numpy()
+        actions = list(Action[DimAction](action_np) for action_np in actions_np)
+        return actions
+
+
+@dataclass
 class PACERBCTrainer(Generic[DimState, DimAction]):
-    """PACER + Behavioral cloning policy trainer"""
+    """PACER + Behavioral cloning policy trainer."""
 
     demonstrations: Demonstrations[DimState, DimAction]
     device: torch.device = field(kw_only=True, default_factory=get_torch_device_auto)
