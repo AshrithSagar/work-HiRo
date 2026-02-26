@@ -351,15 +351,10 @@ class PhaseScorer(nn.Module, Generic[DimState]):
         return forward.squeeze(-1)
 
 
+@dataclass
 class PhaseEstimator(Generic[DimState, DimAction]):
-    def __init__(
-        self,
-        demonstrations: Demonstrations[DimState, DimAction],
-        *,
-        device: torch.device | None = None,
-    ) -> None:
-        self.demonstrations = demonstrations
-        self.device = device or get_torch_device_auto()
+    demonstrations: Demonstrations[DimState, DimAction]
+    device: torch.device = field(kw_only=True, default_factory=get_torch_device_auto)
 
     def compute_ranking_loss(self, margin: float = 1.0) -> Tensor:  # L_rank
         ranking_loss = torch.tensor(0.0, device=self.device)
@@ -769,17 +764,12 @@ class BCPolicy(nn.Module, Generic[DimState, DimAction]):
         return self.network(states)
 
 
+@dataclass
 class PACERBCTrainer(Generic[DimState, DimAction]):
     """PACER + Behavioral cloning policy trainer"""
 
-    def __init__(
-        self,
-        demonstrations: Demonstrations[DimState, DimAction],
-        *,
-        device: torch.device | None = None,
-    ) -> None:
-        self.demonstrations: Demonstrations[DimState, DimAction] = demonstrations
-        self.device: torch.device = device or get_torch_device_auto()
+    demonstrations: Demonstrations[DimState, DimAction]
+    device: torch.device = field(kw_only=True, default_factory=get_torch_device_auto)
 
     def prepare(
         self,
