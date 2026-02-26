@@ -38,16 +38,22 @@ DimState = TypeVar("DimState", bound=int, default=int)  # d_x
 DimAction = TypeVar("DimAction", bound=int, default=int)  # d_a
 NumPoints = TypeVar("NumPoints", bound=int, default=int)  # T_i
 
-type Phase = float  # tau \in [0, 1]
 type DemoIndex = int  # i \in {0, 1, ..., N-1}
 type TimeIndex = int  # t \in {0, 1, ..., T_i-1}
 type BinIndex = int  # b \in {0, 1, ..., B-1}
-type SampleIndex = tuple[DemoIndex, TimeIndex]  # (i, t)
 
 State: TypeAlias = Array1D[DimState, np.dtype[npDType]]  # x_{i, t} \in R^{d_x}
 Action: TypeAlias = Array1D[DimAction, np.dtype[npDType]]  # a_{i, t} \in R^{d_a}
 States: TypeAlias = list[State[DimState]]
 Actions: TypeAlias = list[Action[DimAction]]
+StatesCollection: TypeAlias = list[States[DimState]]
+ActionsCollection: TypeAlias = list[Actions[DimAction]]
+
+Phase: TypeAlias = npDType  # tau \in [0, 1]
+Phases: TypeAlias = list[Phase]
+PhasesCollection: TypeAlias = list[Phases]
+
+type SampleIndex = tuple[DemoIndex, TimeIndex]  # (i, t)
 SampleIndices: TypeAlias = list[SampleIndex]
 
 ## ── Utils ────────────────────────────────────────────────────────────────────
@@ -466,7 +472,7 @@ class PACER(Generic[DimState, DimAction]):
         return self.phase_estimator.demonstrations
 
     def phase_range(self, bin_idx: BinIndex) -> tuple[Phase, Phase]:
-        return (bin_idx / self.n_bins, (bin_idx + 1) / self.n_bins)
+        return (Phase(bin_idx / self.n_bins), Phase((bin_idx + 1) / self.n_bins))
 
     def make_bins(self) -> None:
         phases = self.phase_estimator.estimate_phases()
@@ -481,7 +487,7 @@ class PACER(Generic[DimState, DimAction]):
         ]
         for i in range(len(phases)):
             for t in range(len(phases[i])):
-                tau: Phase = float(phases[i][t])
+                tau: Phase = Phase(phases[i][t])
                 bin_idx: BinIndex = min(int(tau * self.n_bins), self.n_bins - 1)
                 assert bin_idx < self.n_bins
                 bin = self.bins[bin_idx]
@@ -512,7 +518,7 @@ class PACER(Generic[DimState, DimAction]):
         )
 
     @enforce_shapes
-    def compute_z_scores(self) -> list[list[npDType]]:  # (N x T_)
+    def compute_z_scores(self) -> PhasesCollection:  # (N x T_)
         N = len(self.demonstrations)
 
         # (N x T_)
@@ -568,7 +574,7 @@ class PACER(Generic[DimState, DimAction]):
         *,
         cutoff: npDType | float,  # c
         min_trust: npDType | float,  # w_min
-    ) -> list[list[npDType]]:  # (N x T_)
+    ) -> PhasesCollection:  # (N x T_)
         assert 3 <= cutoff <= 5
         N = len(self.demonstrations)
         trust_values = [list[npDType]() for _ in range(N)]  # (N x T_)
@@ -586,8 +592,8 @@ class PACER(Generic[DimState, DimAction]):
 
     @enforce_shapes
     def consolidate_ribbon_tokens(self) -> None:
-        bin_median_actions = list[Action[DimAction]]()
-        bin_median_states = list[State[DimState]]()
+        bin_median_actions = Actions[DimAction]()
+        bin_median_states = States[DimState]()
 
         for bin in self.bins:
             stats = self.compute_robust_consensus_statistics(bin.samples())
@@ -633,13 +639,13 @@ class PACER(Generic[DimState, DimAction]):
     @enforce_shapes
     def compute_pseudo_labels(
         self,
-        trust_values: list[list[npDType]],
+        trust_values: PhasesCollection,
         *,
         debias_weight: npDType | float,  # lambda_{debias}
         sideways_attenuation_shrinkage: npDType | float = 0.5,  # rho_0
         speed_regularisation_influence: npDType | float = 0.5,  # eta_0
         temporal_smoothing_weight: npDType | float = 0.0,  # kappa
-    ) -> list[Actions[DimAction]]:  # (N x T_)
+    ) -> ActionsCollection[DimAction]:  # (N x T_)
         N = len(self.demonstrations)
         pseudo_labels = [list[Action[DimAction]]() for _ in range(N)]
         _labels = [
@@ -748,8 +754,8 @@ class PACERBCTrainer(Generic[DimState, DimAction]):
     ##
     phase_estimator: PhaseEstimator[DimState, DimAction] = field(init=False)
     pacer: PACER[DimState, DimAction] = field(init=False)
-    trust_values: list[list[npDType]] = field(init=False)
-    pseudo_labels: list[Actions[DimAction]] = field(init=False)
+    trust_values: PhasesCollection = field(init=False)
+    pseudo_labels: ActionsCollection[DimAction] = field(init=False)
     policy: BCPolicy[DimState, DimAction] = field(init=False)
     optimiser: torch.optim.Optimizer = field(init=False)
 
