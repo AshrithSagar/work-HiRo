@@ -1,8 +1,10 @@
 # tests/test_lasa.py
 
 import pyLasaDataset as lasa  # type: ignore[import-untyped]  # ty: ignore[unused-ignore-comment]
+
 from pacer import console
-from pacer.base import DemonstrationCorrupter, PACERBCTrainer
+from pacer.base import PACERBCTrainer
+from pacer.corruptions import DemonstrationCorrupter
 from pacer.lasa import LASADemonstrations
 from pacer.plotting import full_diagnostic
 
