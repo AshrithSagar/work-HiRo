@@ -17,7 +17,6 @@ from typing import (
     Iterable,
     Iterator,
     Literal,
-    Self,
     Sequence,
     TypeAlias,
     TypeVar,
@@ -270,14 +269,6 @@ class Demonstration(Generic[DimState, DimAction]):  # D_i
     def samples(self) -> Samples[DimState, DimAction]:
         return Samples(list(sample for sample in self))
 
-    @classmethod
-    def from_samples(
-        cls, index: DemoIndex, samples: Samples[DimState, DimAction]
-    ) -> Self:
-        states = list(sample.state for sample in samples)
-        actions = list(sample.action for sample in samples)
-        return cls(index=index, states=states, actions=actions)
-
 
 # Behaves like SamplesCollection
 @dataclass(slots=True)
@@ -315,16 +306,6 @@ class Demonstrations(Generic[DimState, DimAction]):  # [D_i]_{i = 1}^{N}
     @property
     def action_dim(self) -> DimAction:  # d_a
         return self.demos[0].action_dim
-
-    @classmethod
-    def from_samples_collection(
-        cls, collection: SamplesCollection[DimState, DimAction]
-    ) -> Self:
-        demos = list[Demonstration[DimState, DimAction]]()
-        for i, samples in enumerate(collection):
-            demo = Demonstration[DimState, DimAction].from_samples(i, samples)
-            demos.append(demo)
-        return cls(demos=demos)
 
 
 ## ── Phase Alignment ──────────────────────────────────────────────────────────
@@ -535,10 +516,6 @@ class PACER(Generic[DimState, DimAction]):
     @enforce_shapes
     def compute_z_scores(self) -> list[list[npDType]]:  # (N x T_)
         N = len(self.demonstrations)
-
-        # (N x N x T_)
-        # [[[r^{(-j)}_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}]_{j = 1}^{N}
-        _action_residuals = [[list[npDType]() for _ in range(N)] for _ in range(N)]
 
         # (N x T_)
         # [[r^{(-i)}_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}]
