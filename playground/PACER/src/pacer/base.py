@@ -759,6 +759,7 @@ class BCTrainer(Generic[DimState, DimAction]):
 
     def compute_huber_loss(self) -> Tensor:  # L
         loss = torch.tensor(0.0, dtype=torchDType, device=self.device)
+        total_samples: int = 0
         for demo in self.demonstrations:
             states = torch.tensor(
                 np.array(demo.states), dtype=torchDType, device=self.device
@@ -769,13 +770,13 @@ class BCTrainer(Generic[DimState, DimAction]):
             preds: Tensor = self.policy(states)  # (T_i, action_dim)
 
             diffs: Tensor = preds - targets  # (T_i, action_dim)
-            huber_losses = F.huber_loss(
-                diffs, torch.zeros_like(diffs), reduction="none"
+            demo_loss = F.huber_loss(
+                diffs, torch.zeros_like(diffs), reduction="sum"
             )  # (T_i, action_dim)
-            huber_losses = huber_losses.mean(dim=1)  # (T_i,)
-            loss += huber_losses.mean()
-        if (n_demos := len(self.demonstrations)) > 0:
-            loss /= n_demos  # Normalise over demonstrations
+            loss += demo_loss
+            total_samples += len(demo)  # T_i
+        if total_samples > 0:
+            loss /= total_samples  # Normalise over samples
         return loss
 
     def train(
