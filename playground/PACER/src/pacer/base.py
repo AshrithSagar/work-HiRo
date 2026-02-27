@@ -12,7 +12,7 @@ https://openreview.net/forum?id=gaYyBvP2Rz
 
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field
-from typing import Generic, TypeAlias, TypeVar, overload
+from typing import Any, Generic, TypeAlias, TypeVar, cast, overload
 
 import numpy as np
 import numpy.linalg as la
@@ -23,6 +23,7 @@ from rich.progress import track
 from torch import Tensor
 from typed_numpy._typed.context import enforce_shapes
 from typed_numpy._typed.helpers import Array1D
+from typed_numpy._typed.list import TypedList
 
 from pacer.utils import (
     EPS,
@@ -43,6 +44,8 @@ set_seed(SEED)
 DimState = TypeVar("DimState", bound=int, default=int)  # d_x
 DimAction = TypeVar("DimAction", bound=int, default=int)  # d_a
 NumPoints = TypeVar("NumPoints", bound=int, default=int)  # T_i
+NumDemos = TypeVar("NumDemos", bound=int, default=int)  # N
+NumBins = TypeVar("NumBins", bound=int, default=int)  # B
 
 DemoIndex: TypeAlias = int  # i \in {0, 1, ..., N-1}
 TimeIndex: TypeAlias = int  # t \in {0, 1, ..., T_i-1}
@@ -50,17 +53,25 @@ BinIndex: TypeAlias = int  # b \in {0, 1, ..., B-1}
 
 State: TypeAlias = Array1D[DimState, np.dtype[npDType]]  # x_{i, t} \in R^{d_x}
 Action: TypeAlias = Array1D[DimAction, np.dtype[npDType]]  # a_{i, t} \in R^{d_a}
-States: TypeAlias = list[State[DimState]]
-Actions: TypeAlias = list[Action[DimAction]]
-StatesCollection: TypeAlias = list[States[DimState]]
-ActionsCollection: TypeAlias = list[Actions[DimAction]]
+States: TypeAlias = TypedList[NumPoints, State[DimState]]
+Actions: TypeAlias = TypedList[NumPoints, Action[DimAction]]
+StatesCollection: TypeAlias = TypedList[NumDemos, States[NumPoints, DimState]]
+ActionsCollection: TypeAlias = TypedList[NumDemos, Actions[NumPoints, DimAction]]
 
 Phase: TypeAlias = npDType  # tau \in [0, 1]
-Phases: TypeAlias = list[Phase]
-PhasesCollection: TypeAlias = list[Phases]
+Phases: TypeAlias = TypedList[NumPoints, Phase]
+PhasesCollection: TypeAlias = TypedList[NumDemos, Phases[NumPoints]]
+
+ZScore: TypeAlias = npDType
+ZScores: TypeAlias = TypedList[NumPoints, Phase]
+ZScoresCollection: TypeAlias = TypedList[NumDemos, Phases[NumPoints]]
+
+TrustValue: TypeAlias = npDType
+TrustValues: TypeAlias = TypedList[NumPoints, Phase]
+TrustValuesCollection: TypeAlias = TypedList[NumDemos, Phases[NumPoints]]
 
 SampleIndex: TypeAlias = tuple[DemoIndex, TimeIndex]  # (i, t)
-SampleIndices: TypeAlias = list[SampleIndex]
+SampleIndices: TypeAlias = TypedList[NumPoints, SampleIndex]
 
 ## ── Base ─────────────────────────────────────────────────────────────────────
 
@@ -75,13 +86,13 @@ class Sample(Generic[DimState, DimAction]):
 
 
 @dataclass
-class Samples(Generic[DimState, DimAction]):
-    samples: list[Sample[DimState, DimAction]] = field(
-        default_factory=list[Sample[DimState, DimAction]]
+class Samples(Generic[NumPoints, DimState, DimAction]):
+    samples: TypedList[NumPoints, Sample[DimState, DimAction]] = field(
+        default_factory=TypedList[NumPoints, Sample[DimState, DimAction]]
     )  # [(x_{t}, a_{t})]_{t = 1}^{T}
 
-    def __len__(self) -> int:
-        return len(self.samples)  # T
+    def __len__(self) -> NumPoints:
+        return self.samples.length  # T
 
     @enforce_shapes
     def __getitem__(
@@ -104,31 +115,33 @@ class Samples(Generic[DimState, DimAction]):
         self.samples.extend(samples)
 
     @enforce_shapes
-    def states(self) -> States[DimState]:
-        return list(sample.state for sample in self.samples)
+    def states(self) -> States[NumPoints, DimState]:
+        return States[NumPoints, DimState](sample.state for sample in self.samples)
 
     @enforce_shapes
-    def actions(self) -> Actions[DimAction]:
-        return list(sample.action for sample in self.samples)
+    def actions(self) -> Actions[NumPoints, DimAction]:
+        return Actions[NumPoints, DimAction](sample.action for sample in self.samples)
 
 
 @dataclass
-class SamplesCollection(Generic[DimState, DimAction]):
+class SamplesCollection(Generic[NumDemos, NumPoints, DimState, DimAction]):
     """A collection of state-action pairs (a sequence of state-action pair)."""
 
-    collection: list[Samples[DimState, DimAction]] = field(
-        default_factory=list[Samples[DimState, DimAction]]
+    collection: TypedList[NumDemos, Samples[NumPoints, DimState, DimAction]] = field(
+        default_factory=TypedList[NumDemos, Samples[NumPoints, DimState, DimAction]]
     )  # [[(x_{i, t}, a_{i, t})]_{t = 1}^{T_i}]_{i = 1}^{N}
 
-    def __len__(self) -> int:
-        return len(self.collection)  # N
+    def __len__(self) -> NumDemos:
+        return self.collection.length  # N
 
     @enforce_shapes
     @overload
     def __getitem__(
         self,
         index: DemoIndex,  # i
-    ) -> Samples[DimState, DimAction]: ...  # [(x_{i, t}, a_{i, t})]_{t = 1}^{T_i}
+    ) -> Samples[
+        NumPoints, DimState, DimAction
+    ]: ...  # [(x_{i, t}, a_{i, t})]_{t = 1}^{T_i}
     @overload
     def __getitem__(  # ty: ignore[invalid-overload]
         self,
@@ -137,7 +150,7 @@ class SamplesCollection(Generic[DimState, DimAction]):
     #
     def __getitem__(
         self, index: DemoIndex | SampleIndex
-    ) -> Samples[DimState, DimAction] | Sample[DimState, DimAction]:
+    ) -> Samples[NumPoints, DimState, DimAction] | Sample[DimState, DimAction]:
         match index:
             case tuple():
                 i, t = index
@@ -147,16 +160,18 @@ class SamplesCollection(Generic[DimState, DimAction]):
         raise IndexError
 
     @enforce_shapes
-    def __iter__(self) -> Iterator[Samples[DimState, DimAction]]:
+    def __iter__(self) -> Iterator[Samples[NumPoints, DimState, DimAction]]:
         for samples in self.collection:
             yield samples
 
     @enforce_shapes
-    def append(self, samples: Samples[DimState, DimAction]) -> None:
+    def append(self, samples: Samples[NumPoints, DimState, DimAction]) -> None:
         self.collection.append(samples)
 
     @enforce_shapes
-    def extend(self, samples: Iterable[Samples[DimState, DimAction]]) -> None:
+    def extend(
+        self, samples: Iterable[Samples[NumPoints, DimState, DimAction]]
+    ) -> None:
         self.collection.extend(samples)
 
     @enforce_shapes
@@ -170,32 +185,37 @@ class SamplesCollection(Generic[DimState, DimAction]):
                 yield sample
 
     @enforce_shapes
-    def states(self, *, LOO_demo_index: DemoIndex | None = None) -> States[DimState]:
+    def states(
+        self, *, LOO_demo_index: DemoIndex | None = None
+    ) -> States[int, DimState]:
         # (N x T_) or (N-1 x T_)
-        return list(
+        return States[int, DimState](
             sample.state for sample in self.samples(LOO_demo_index=LOO_demo_index)
         )
 
     @enforce_shapes
-    def actions(self, *, LOO_demo_index: DemoIndex | None = None) -> Actions[DimAction]:
+    def actions(
+        self, *, LOO_demo_index: DemoIndex | None = None
+    ) -> Actions[int, DimAction]:
         # (N x T_) or (N-1 x T_)
-        return list(
+        return Actions[int, DimAction](
             sample.action for sample in self.samples(LOO_demo_index=LOO_demo_index)
         )
 
 
 # Behaves like Samples
 @dataclass(kw_only=True)
-class Demonstration(Generic[DimState, DimAction]):  # D_i
+class Demonstration(Generic[NumPoints, DimState, DimAction]):  # D_i
     index: DemoIndex  # i
-    states: States[DimState]  # [x_{i, t}]_{t = 1}^{T_i}
-    actions: Actions[DimAction]  # [a_{i, t}]_{t = 1}^{T_i}
+    states: States[NumPoints, DimState]  # [x_{i, t}]_{t = 1}^{T_i}
+    actions: Actions[NumPoints, DimAction]  # [a_{i, t}]_{t = 1}^{T_i}
 
     def __post_init__(self) -> None:
         assert len(self.states) == len(self.actions)
 
-    def __len__(self) -> int:
-        return len(self.states)  # T_i
+    def __len__(self) -> NumPoints:
+        assert self.states.length == self.actions.length
+        return self.states.length  # T_i
 
     @enforce_shapes
     def __getitem__(
@@ -220,27 +240,33 @@ class Demonstration(Generic[DimState, DimAction]):  # D_i
     def sample(self, t: TimeIndex, /) -> Sample[DimState, DimAction]:
         return self[t]  # (x_{i, t}, a_{i, t})
 
-    def samples(self) -> Samples[DimState, DimAction]:
-        return Samples(list(sample for sample in self))
+    def samples(self) -> Samples[NumPoints, DimState, DimAction]:
+        return Samples(
+            TypedList[NumPoints, Sample[DimState, DimAction]](sample for sample in self)
+        )
 
 
 # Behaves like SamplesCollection
 @dataclass(slots=True)
-class Demonstrations(Generic[DimState, DimAction]):  # [D_i]_{i = 1}^{N}
-    demos: list[Demonstration[DimState, DimAction]]
+class Demonstrations(
+    Generic[NumDemos, NumPoints, DimState, DimAction]
+):  # [D_i]_{i = 1}^{N}
+    demos: TypedList[NumDemos, Demonstration[NumPoints, DimState, DimAction]]
 
-    def __len__(self) -> int:
-        return len(self.demos)
+    def __len__(self) -> NumDemos:
+        return self.demos.length  # N
 
     @enforce_shapes
     @overload
-    def __getitem__(self, index: DemoIndex) -> Demonstration[DimState, DimAction]: ...
+    def __getitem__(
+        self, index: DemoIndex
+    ) -> Demonstration[NumPoints, DimState, DimAction]: ...
     @overload
     def __getitem__(self, index: SampleIndex) -> Sample[DimState, DimAction]: ...  # ty: ignore[invalid-overload]
     #
     def __getitem__(
         self, index: DemoIndex | SampleIndex
-    ) -> Demonstration[DimState, DimAction] | Sample[DimState, DimAction]:
+    ) -> Demonstration[NumPoints, DimState, DimAction] | Sample[DimState, DimAction]:
         match index:
             case tuple():
                 i, t = index
@@ -250,7 +276,7 @@ class Demonstrations(Generic[DimState, DimAction]):  # [D_i]_{i = 1}^{N}
         raise IndexError
 
     @enforce_shapes
-    def __iter__(self) -> Iterator[Demonstration[DimState, DimAction]]:
+    def __iter__(self) -> Iterator[Demonstration[NumPoints, DimState, DimAction]]:
         for demo in self.demos:
             yield demo  # D_i
 
@@ -288,8 +314,8 @@ class PhaseScorer(nn.Module, Generic[DimState]):
 
 
 @dataclass
-class PhaseEstimator(Generic[DimState, DimAction]):
-    demonstrations: Demonstrations[DimState, DimAction]
+class PhaseEstimator(Generic[NumDemos, NumPoints, DimState, DimAction]):
+    demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     device: torch.device = field(kw_only=True, default_factory=get_torch_device_auto)
     ##
     scorer: PhaseScorer[DimState] = field(init=False)
@@ -332,17 +358,16 @@ class PhaseEstimator(Generic[DimState, DimAction]):
         return loss
 
     @enforce_shapes
-    def estimate_phases(
-        self,
-    ) -> list[Array1D[int]]:  # [[tau_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
+    def estimate_phases(self) -> PhasesCollection[NumDemos, NumPoints]:
+        # [[tau_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
         self.scorer.eval()
-        phases = list[Array1D[int]]()
+        phases = PhasesCollection[NumDemos, NumPoints]()
         with torch.no_grad():
             for demo in self.demonstrations:
                 states = Tensor(np.array(demo.states)).float().to(self.device)
                 scores: Tensor = self.scorer(states)
                 _scores = scores.cpu().numpy()
-                normalised = Array1D(normalise(_scores, method="MINMAX"))
+                normalised = Phases[NumPoints](normalise(_scores, method="MINMAX"))
                 phases.append(normalised)
         return phases
 
@@ -393,40 +418,52 @@ class RibbonToken(Generic[DimState, DimAction]):  # z_b
 
 
 @dataclass(kw_only=True)
-class Bin(Generic[DimState, DimAction]):
+class Bin(Generic[NumDemos, NumPoints, DimState, DimAction]):
     index: BinIndex  # b
-    samples_collection: SamplesCollection[DimState, DimAction] = field(
-        default_factory=SamplesCollection[DimState, DimAction]
+    samples_collection: SamplesCollection[NumDemos, NumPoints, DimState, DimAction] = (
+        field(
+            default_factory=SamplesCollection[NumDemos, NumPoints, DimState, DimAction]
+        )
     )
     ##
     ribbon_token: RibbonToken[DimState, DimAction] = field(init=False)
 
     def samples(
         self, *, LOO_demo_index: DemoIndex | None = None
-    ) -> Samples[DimState, DimAction]:
+    ) -> Samples[int, DimState, DimAction]:
         # (N x T_) or (N-1 x T_)
         return Samples(
-            list(self.samples_collection.samples(LOO_demo_index=LOO_demo_index))
+            TypedList[int, Sample[DimState, DimAction]](
+                self.samples_collection.samples(LOO_demo_index=LOO_demo_index)
+            )
         )
 
-    def states(self, *, LOO_demo_index: DemoIndex | None = None) -> States[DimState]:
+    def states(
+        self, *, LOO_demo_index: DemoIndex | None = None
+    ) -> States[int, DimState]:
         # (N x T_) or (N-1 x T_)
         return self.samples_collection.states(LOO_demo_index=LOO_demo_index)
 
-    def actions(self, *, LOO_demo_index: DemoIndex | None = None) -> Actions[DimAction]:
+    def actions(
+        self, *, LOO_demo_index: DemoIndex | None = None
+    ) -> Actions[int, DimAction]:
         # (N x T_) or (N-1 x T_)
         return self.samples_collection.actions(LOO_demo_index=LOO_demo_index)
 
 
 @dataclass
-class PACER(Generic[DimState, DimAction]):
-    phase_estimator: PhaseEstimator[DimState, DimAction]
-    n_bins: int = field(default=96, kw_only=True)  # B
+class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
+    phase_estimator: PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]
+    n_bins: NumBins = field(default=cast(NumBins, 96), kw_only=True)  # B
     ##
-    bins: list[Bin[DimState, DimAction]] = field(init=False)
+    bins: TypedList[NumBins, Bin[NumDemos, NumPoints, DimState, DimAction]] = field(
+        init=False
+    )
 
     @property
-    def demonstrations(self) -> Demonstrations[DimState, DimAction]:
+    def demonstrations(
+        self,
+    ) -> Demonstrations[NumDemos, NumPoints, DimState, DimAction]:
         return self.phase_estimator.demonstrations
 
     def phase_range(self, bin_idx: BinIndex) -> tuple[Phase, Phase]:
@@ -434,15 +471,20 @@ class PACER(Generic[DimState, DimAction]):
 
     def make_bins(self) -> None:
         phases = self.phase_estimator.estimate_phases()
-        self.bins = [
-            Bin[DimState, DimAction](
+        N = self.demonstrations.__len__()
+        self.bins = TypedList[
+            NumBins, Bin[NumDemos, NumPoints, DimState, DimAction]
+        ].full(
+            self.n_bins,
+            lambda bin_idx: Bin[NumDemos, NumPoints, DimState, DimAction](
                 index=bin_idx,
                 samples_collection=SamplesCollection(
-                    collection=[Samples() for _ in range(len(self.demonstrations))]
+                    collection=TypedList[
+                        NumDemos, Samples[NumPoints, DimState, DimAction]
+                    ].full(N, Samples[NumPoints, DimState, DimAction]()),
                 ),
-            )
-            for bin_idx in range(self.n_bins)
-        ]
+            ),
+        )
         for i in range(len(phases)):
             for t in range(len(phases[i])):
                 tau: Phase = Phase(phases[i][t])
@@ -456,7 +498,7 @@ class PACER(Generic[DimState, DimAction]):
 
     @enforce_shapes
     def compute_robust_consensus_statistics(
-        self, samples: Samples[DimState, DimAction]
+        self, samples: Samples[Any, DimState, DimAction]
     ) -> RobustStatistics[DimState, DimAction]:
         states = samples.states()
         actions = samples.actions()
@@ -476,8 +518,8 @@ class PACER(Generic[DimState, DimAction]):
         )
 
     @enforce_shapes
-    def compute_z_scores(self) -> PhasesCollection:  # (N x T_)
-        N = len(self.demonstrations)
+    def compute_z_scores(self) -> ZScoresCollection[NumDemos, NumPoints]:  # (N x T_)
+        N = self.demonstrations.__len__()
 
         # (N x T_)
         # [[r^{(-i)}_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}]
@@ -487,7 +529,7 @@ class PACER(Generic[DimState, DimAction]):
         MAD_residuals = list[npDType]()
 
         # (N x T_)
-        z_scores = [list[npDType]() for _ in range(N)]
+        z_scores = ZScoresCollection[NumDemos, NumPoints].full(N, ZScores[NumPoints]())
 
         for bin in self.bins:
             for j in range(N):
@@ -532,10 +574,12 @@ class PACER(Generic[DimState, DimAction]):
         *,
         cutoff: npDType | float,  # c
         min_trust: npDType | float,  # w_min
-    ) -> PhasesCollection:  # (N x T_)
+    ) -> TrustValuesCollection[NumDemos, NumPoints]:  # (N x T_)
         assert 3 <= cutoff <= 5
-        N = len(self.demonstrations)
-        trust_values = [list[npDType]() for _ in range(N)]  # (N x T_)
+        N = self.demonstrations.__len__()
+        trust_values = TrustValuesCollection[NumDemos, NumPoints].full(
+            N, TrustValues[NumPoints]()
+        )  # (N x T_)
         z_scores = self.compute_z_scores()
         for i, scores in enumerate(z_scores):
             for _t, z_score in enumerate(scores):
@@ -550,8 +594,8 @@ class PACER(Generic[DimState, DimAction]):
 
     @enforce_shapes
     def consolidate_ribbon_tokens(self) -> None:
-        bin_median_actions = Actions[DimAction]()
-        bin_median_states = States[DimState]()
+        bin_median_actions = Actions[NumPoints, DimAction]()
+        bin_median_states = States[NumPoints, DimState]()
 
         for bin in self.bins:
             stats = self.compute_robust_consensus_statistics(bin.samples())
@@ -597,18 +641,20 @@ class PACER(Generic[DimState, DimAction]):
     @enforce_shapes
     def compute_pseudo_labels(
         self,
-        trust_values: PhasesCollection,
+        trust_values: TrustValuesCollection[NumDemos, NumPoints],
         *,
         debias_weight: npDType | float,  # lambda_{debias}
         sideways_attenuation_shrinkage: npDType | float = 0.5,  # rho_0
         speed_regularisation_influence: npDType | float = 0.5,  # eta_0
         temporal_smoothing_weight: npDType | float = 0.0,  # kappa
-    ) -> ActionsCollection[DimAction]:  # (N x T_)
-        N = len(self.demonstrations)
-        pseudo_labels = [list[Action[DimAction]]() for _ in range(N)]
-        _labels = [
-            list[Action[DimAction]]() for _ in range(N)
-        ]  # [[y^{(3)}_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
+    ) -> ActionsCollection[NumDemos, NumPoints, DimAction]:  # (N x T_)
+        N = self.demonstrations.__len__()
+        pseudo_labels = ActionsCollection[NumDemos, NumPoints, DimAction].full(
+            N, Actions[NumPoints, DimAction]()
+        )
+        _labels = ActionsCollection[NumDemos, NumPoints, DimAction].full(
+            N, Actions[NumPoints, DimAction]()
+        )  # [[y^{(3)}_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
         self.consolidate_ribbon_tokens()
         rho_0 = sideways_attenuation_shrinkage
         assert 0 <= rho_0 <= 1
@@ -704,10 +750,10 @@ class BCPolicy(nn.Module, Generic[DimState, DimAction]):
 
 
 @dataclass
-class BCTrainer(Generic[DimState, DimAction]):
+class BCTrainer(Generic[NumDemos, NumPoints, DimState, DimAction]):
     """Behavioral cloning policy trainer."""
 
-    demonstrations: Demonstrations[DimState, DimAction]
+    demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     device: torch.device = field(kw_only=True, default_factory=get_torch_device_auto)
     ##
     policy: BCPolicy[DimState, DimAction] = field(init=False)
@@ -764,27 +810,33 @@ class BCTrainer(Generic[DimState, DimAction]):
         return loss
 
     @enforce_shapes
-    def predict(self, states: States[DimState]) -> Actions[DimAction]:
+    def predict(
+        self, states: States[NumPoints, DimState]
+    ) -> Actions[NumPoints, DimAction]:
         self.policy.eval()
         with torch.no_grad():
             states_tensor = Tensor(np.array(states)).float().to(self.device)
             actions_tensor: Tensor = self.policy(states_tensor)
             actions_np = actions_tensor.cpu().numpy()
-        actions = list(Action[DimAction](action_np) for action_np in actions_np)
+        actions = Actions[NumPoints, DimAction](
+            Action[DimAction](action_np) for action_np in actions_np
+        )
         return actions
 
 
 @dataclass
-class PACERBCTrainer(Generic[DimState, DimAction]):
+class PACERBCTrainer(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
     """PACER + Behavioral cloning policy trainer."""
 
-    demonstrations: Demonstrations[DimState, DimAction]
+    demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     device: torch.device = field(kw_only=True, default_factory=get_torch_device_auto)
     ##
-    phase_estimator: PhaseEstimator[DimState, DimAction] = field(init=False)
-    pacer: PACER[DimState, DimAction] = field(init=False)
-    trust_values: PhasesCollection = field(init=False)
-    pseudo_labels: ActionsCollection[DimAction] = field(init=False)
+    phase_estimator: PhaseEstimator[NumDemos, NumPoints, DimState, DimAction] = field(
+        init=False
+    )
+    pacer: PACER[NumBins, NumDemos, NumPoints, DimState, DimAction] = field(init=False)
+    trust_values: TrustValuesCollection[NumDemos, NumPoints] = field(init=False)
+    pseudo_labels: ActionsCollection[NumDemos, NumPoints, DimAction] = field(init=False)
     policy: BCPolicy[DimState, DimAction] = field(init=False)
     optimiser: torch.optim.Optimizer = field(init=False)
 
@@ -795,7 +847,7 @@ class PACERBCTrainer(Generic[DimState, DimAction]):
         phase_margin: float = 1.0,
         phase_lr: float = 1e-3,
         phase_epochs: int = 240,
-        n_bins: int = 96,
+        n_bins: NumBins = cast(NumBins, 96),
         tukey_cutoff: npDType | float = 4.685,  # c
         min_trust: npDType | float = 0.02,  # w_min
         debias_weight: npDType | float = 0.5,  # lambda_{debias}
@@ -883,13 +935,17 @@ class PACERBCTrainer(Generic[DimState, DimAction]):
         return loss
 
     @enforce_shapes
-    def predict(self, states: States[DimState]) -> Actions[DimAction]:
+    def predict(
+        self, states: States[NumPoints, DimState]
+    ) -> Actions[NumPoints, DimAction]:
         self.policy.eval()
         with torch.no_grad():
             states_tensor = Tensor(np.array(states)).float().to(self.device)
             actions_tensor: Tensor = self.policy(states_tensor)
             actions_np = actions_tensor.cpu().numpy()
-        actions = list(Action[DimAction](action_np) for action_np in actions_np)
+        actions = Actions[NumPoints, DimAction](
+            (Action[DimAction](action_np) for action_np in actions_np)
+        )
         return actions
 
 

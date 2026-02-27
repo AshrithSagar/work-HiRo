@@ -17,8 +17,9 @@ from pyLasaDataset.dataset import (  # type: ignore[import-untyped]  # ty: ignor
 )
 from typed_numpy._typed.context import enforce_shapes
 from typed_numpy._typed.helpers import THREE, TWO, Array3D
+from typed_numpy._typed.list import TypedList as List
 
-from pacer.base import Demonstration, Demonstrations, npDType
+from pacer.base import Actions, Demonstration, Demonstrations, States, npDType
 
 ## ── Typings ──────────────────────────────────────────────────────────────────
 
@@ -50,18 +51,20 @@ class LASADataSet:
     def __len__(self) -> SEVEN:
         return 7
 
-    def to_demonstrations(self) -> Demonstrations[TWO, TWO]:
+    def to_demonstrations(self) -> Demonstrations[SEVEN, THOUSAND, TWO, TWO]:
         return Demonstrations(
-            [
-                Demonstration(
-                    index=index,  # i
-                    states=[state for state in states],
-                    actions=[action for action in actions],
-                )
-                for index, (states, actions) in enumerate(
-                    zip(self.positions, self.velocities)
-                )
-            ]
+            List[SEVEN, Demonstration[THOUSAND, TWO, TWO]](
+                [
+                    Demonstration(
+                        index=index,  # i
+                        states=States[THOUSAND, TWO](states),
+                        actions=Actions[THOUSAND, TWO](actions),
+                    )
+                    for index, (states, actions) in enumerate(
+                        zip(self.positions, self.velocities)
+                    )
+                ]
+            )
         )
 
 

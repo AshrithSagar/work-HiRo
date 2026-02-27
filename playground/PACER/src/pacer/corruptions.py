@@ -12,6 +12,7 @@ from typing import Generic
 
 import numpy as np
 import numpy.linalg as la
+from typed_numpy._typed.list import TypedList as List
 
 from pacer.base import (
     EPS,
@@ -21,6 +22,8 @@ from pacer.base import (
     Demonstrations,
     DimAction,
     DimState,
+    NumDemos,
+    NumPoints,
     set_seed,
 )
 
@@ -28,8 +31,8 @@ from pacer.base import (
 
 
 @dataclass
-class DemonstrationCorrupter(Generic[DimState, DimAction]):
-    demonstrations: Demonstrations[DimState, DimAction]
+class DemonstrationCorrupter(Generic[NumDemos, NumPoints, DimState, DimAction]):
+    demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     noise_std: float = 0.0
     outlier_fraction: float = 0.0
     outlier_scale: float = 3.0
@@ -37,11 +40,15 @@ class DemonstrationCorrupter(Generic[DimState, DimAction]):
     dropout_fraction: float = 0.0
     seed: int = SEED
 
-    def inject_corruptions(self) -> Demonstrations[DimState, DimAction]:
+    def inject_corruptions(
+        self,
+    ) -> Demonstrations[NumDemos, NumPoints, DimState, DimAction]:
         set_seed(self.seed)
-        corrupted_demos = list[Demonstration[DimState, DimAction]]()
+        corrupted_demos = List[
+            NumDemos, Demonstration[NumPoints, DimState, DimAction]
+        ]()
         for demo in self.demonstrations:
-            new_actions = list[Action[DimAction]]()
+            new_actions = List[NumPoints, Action[DimAction]]()
             bias_vector = np.random.randn(demo.action_dim)
             bias_vector /= la.norm(bias_vector) + EPS
             for action in demo.actions:

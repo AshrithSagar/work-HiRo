@@ -6,6 +6,8 @@ Plotting utils
 
 # pyright: standard
 
+from typing import Any
+
 import matplotlib.pyplot as plt
 import numpy as np
 from typed_numpy._typed.helpers import TWO
@@ -13,16 +15,19 @@ from typed_numpy._typed.helpers import TWO
 from pacer.base import (
     PACER,
     Actions,
-    Array1D,
     Demonstrations,
     DimAction,
+    NumBins,
+    NumDemos,
+    NumPoints,
     PACERBCTrainer,
-    npDType,
+    PhasesCollection,
+    TrustValuesCollection,
 )
 
 
 def plot_trajectories(
-    demonstrations: Demonstrations[TWO, DimAction],
+    demonstrations: Demonstrations[Any, Any, TWO, DimAction],
     *,
     title: str = "Demonstration trajectories",
 ) -> None:
@@ -41,7 +46,7 @@ def plot_trajectories(
 
 
 def plot_phases(
-    phases: list[Array1D[int]],
+    phases: PhasesCollection[NumDemos, NumPoints],
     *,
     title: str = "Estimated phases",
 ) -> None:
@@ -58,7 +63,7 @@ def plot_phases(
 
 
 def plot_trust_values(
-    trust_values: list[list[npDType]],
+    trust_values: TrustValuesCollection[NumDemos, NumPoints],
     *,
     title: str = "Trust values",
 ) -> None:
@@ -75,8 +80,8 @@ def plot_trust_values(
 
 
 def plot_action_comparison(
-    original: Actions[DimAction],
-    pseudo: Actions[DimAction],
+    original: Actions[NumPoints, DimAction],
+    pseudo: Actions[NumPoints, DimAction],
     *,
     title: str = "Original vs Pseudo actions",
 ) -> None:
@@ -101,7 +106,7 @@ def plot_action_comparison(
 
 
 def plot_ribbon_action_field(
-    pacer: PACER[TWO, TWO],
+    pacer: PACER[NumBins, NumDemos, NumPoints, TWO, TWO],
     *,
     title: str = "Ribbon Median Action Field",
     scale: float = 1.0,
@@ -135,7 +140,9 @@ def plot_ribbon_action_field(
     plt.show()
 
 
-def full_diagnostic(trainer: PACERBCTrainer[TWO, TWO]) -> None:
+def full_diagnostic(
+    trainer: PACERBCTrainer[NumBins, NumDemos, NumPoints, TWO, TWO],
+) -> None:
     plot_trajectories(trainer.demonstrations)
     plot_phases(trainer.phase_estimator.estimate_phases())
     plot_trust_values(trainer.trust_values)

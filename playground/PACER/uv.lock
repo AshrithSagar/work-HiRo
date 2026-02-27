@@ -935,7 +935,7 @@ typecheck = [
 
 [package.metadata]
 requires-dist = [
-    { name = "manim", marker = "extra == 'manim'", specifier = ">=0.20.0" },
+    { name = "manim", marker = "extra == 'manim'", specifier = ">=0.20.1" },
     { name = "matplotlib", specifier = ">=3.10.8" },
     { name = "numpy", specifier = ">=2.4.2" },
     { name = "optype", extras = ["numpy"], specifier = ">=0.16.0" },
@@ -1551,7 +1551,7 @@ wheels = [
 [[package]]
 name = "typed-numpy"
 version = "0.2.1"
-source = { git = "https://github.com/AshrithSagar/typed-numpy.git?rev=main#18f364bd28383e31a3cc9fc3ed2a236d5046a126" }
+source = { git = "https://github.com/AshrithSagar/typed-numpy.git?rev=main#6e4dce182695a90f904caf8509ac3b6156de52fa" }
 dependencies = [
     { name = "numpy" },
 ]
