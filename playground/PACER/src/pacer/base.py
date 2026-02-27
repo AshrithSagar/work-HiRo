@@ -62,13 +62,13 @@ Phase: TypeAlias = npDType  # tau \in [0, 1]
 Phases: TypeAlias = TypedList[NumPoints, Phase]
 PhasesCollection: TypeAlias = TypedList[NumDemos, Phases[NumPoints]]
 
-ZScore: TypeAlias = npDType
-ZScores: TypeAlias = TypedList[NumPoints, Phase]
-ZScoresCollection: TypeAlias = TypedList[NumDemos, Phases[NumPoints]]
+ZScore: TypeAlias = npDType  # z_{i, t}
+ZScores: TypeAlias = TypedList[NumPoints, ZScore]
+ZScoresCollection: TypeAlias = TypedList[NumDemos, ZScores[NumPoints]]
 
-TrustValue: TypeAlias = npDType
-TrustValues: TypeAlias = TypedList[NumPoints, Phase]
-TrustValuesCollection: TypeAlias = TypedList[NumDemos, Phases[NumPoints]]
+TrustValue: TypeAlias = npDType  # w_{i, t}
+TrustValues: TypeAlias = TypedList[NumPoints, TrustValue]
+TrustValuesCollection: TypeAlias = TypedList[NumDemos, TrustValues[NumPoints]]
 
 SampleIndex: TypeAlias = tuple[DemoIndex, TimeIndex]  # (i, t)
 SampleIndices: TypeAlias = TypedList[NumPoints, SampleIndex]
