@@ -18,7 +18,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-manim = ["manim>=0.20.0"]
+manim = ["manim>=0.20.1"]
 
 [dependency-groups]
 dev = [
