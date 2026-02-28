@@ -1,15 +1,12 @@
 # tests/test_lasa.py
 
 import pyLasaDataset as lasa  # type: ignore[import-untyped]  # ty: ignore[unused-ignore-comment]
-from typed_numpy._typed.list import TypedListConfig
 
 from pacer import console
 from pacer.base import BCTrainer, PACERBCTrainer
 from pacer.corruptions import DemonstrationCorrupter
 from pacer.lasa import LASADataSet
 from pacer.plotting import full_diagnostic
-
-TypedListConfig.VALIDATE_ITEM = False
 
 
 def test_pacerbc_lasa(use_corruptions: bool = False) -> None:

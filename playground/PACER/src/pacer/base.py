@@ -944,7 +944,7 @@ class PACERBCTrainer(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction])
             actions_tensor: Tensor = self.policy(states_tensor)
             actions_np = actions_tensor.cpu().numpy()
         actions = Actions[NumPoints, DimAction](
-            (Action[DimAction](action_np) for action_np in actions_np)
+            [Action[DimAction](action_np) for action_np in actions_np]
         )
         return actions
 
