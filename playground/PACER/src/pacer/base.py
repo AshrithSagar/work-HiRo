@@ -459,6 +459,7 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
     bins: TypedList[NumBins, Bin[NumDemos, NumPoints, DimState, DimAction]] = field(
         init=False
     )
+    phases: PhasesCollection[NumDemos, NumPoints] = field(init=False)
 
     @property
     def demonstrations(
@@ -469,8 +470,22 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
     def phase_range(self, bin_idx: BinIndex) -> tuple[Phase, Phase]:
         return (Phase(bin_idx / self.n_bins), Phase((bin_idx + 1) / self.n_bins))
 
+    def sample_index_to_bin_index(self, sample_idx: SampleIndex) -> BinIndex:
+        i, t = sample_idx
+        tau: Phase = Phase(self.phases[i][t])
+        bin_idx: BinIndex = min(int(tau * self.n_bins), self.n_bins - 1)
+        assert 0 <= bin_idx < self.n_bins
+        return bin_idx
+
+    @property
+    def sample_indices(self) -> Iterator[SampleIndex]:
+        for i in range(len(self.phases)):
+            for t in range(len(self.phases[i])):
+                sample_idx: SampleIndex = (i, t)
+                yield sample_idx
+
     def make_bins(self) -> None:
-        phases = self.phase_estimator.estimate_phases()
+        self.phases = self.phase_estimator.estimate_phases()
         N = self.demonstrations.__len__()
         self.bins = TypedList[
             NumBins, Bin[NumDemos, NumPoints, DimState, DimAction]
@@ -485,16 +500,13 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
                 ),
             ),
         )
-        for i in range(len(phases)):
-            for t in range(len(phases[i])):
-                tau: Phase = Phase(phases[i][t])
-                bin_idx: BinIndex = min(int(tau * self.n_bins), self.n_bins - 1)
-                assert bin_idx < self.n_bins
-                bin = self.bins[bin_idx]
-                sample_idx: SampleIndex = (i, t)
-                sample = self.demonstrations[sample_idx]
-                collection = bin.samples_collection.collection[i]
-                collection.append(sample)
+        for sample_idx in self.sample_indices:
+            demo_idx, _ = sample_idx
+            bin_idx = self.sample_index_to_bin_index(sample_idx)
+            bin = self.bins[bin_idx]
+            sample = self.demonstrations[sample_idx]
+            collection = bin.samples_collection[demo_idx]
+            collection.append(sample)
 
     @enforce_shapes
     def compute_robust_consensus_statistics(
@@ -523,10 +535,12 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
 
         # (N x T_)
         # [[r^{(-i)}_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}]
-        self_action_residuals = [list[npDType]() for _ in range(N)]
+        self_action_residuals = TypedList[NumDemos, TypedList[NumPoints, npDType]].full(
+            N, TypedList[NumPoints, npDType]()
+        )
 
         # (N,)
-        MAD_residuals = list[npDType]()
+        MAD_residuals = TypedList[NumDemos, npDType]()
 
         # (N x T_)
         z_scores = ZScoresCollection[NumDemos, NumPoints].full(N, ZScores[NumPoints]())
@@ -537,7 +551,7 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
                 loo_stats = self.compute_robust_consensus_statistics(loo_samples)
                 bin_median_action = loo_stats.median_action  # alpha_a^{(-j)}[b]
 
-                demo_samples = bin.samples_collection.collection[j]
+                demo_samples = bin.samples_collection[j]
                 for action in demo_samples.actions():
                     residual = npDType(
                         la.norm(action - bin_median_action)
@@ -677,7 +691,7 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
                 loo_stats = self.compute_robust_consensus_statistics(loo_samples)
                 bin_median_action = loo_stats.median_action  # alpha_a^{(-j)}[b]
 
-                demo_samples = bin.samples_collection.collection[j]
+                demo_samples = bin.samples_collection[j]
                 for t, action in enumerate(demo_samples.actions()):
                     w = trust_values[j][t]  # w_{i, t}
 
