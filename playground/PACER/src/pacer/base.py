@@ -12,7 +12,7 @@ https://openreview.net/forum?id=gaYyBvP2Rz
 
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field
-from typing import Any, Generic, TypeAlias, TypeVar, cast, overload
+from typing import Any, Generic, NamedTuple, TypeAlias, TypeVar, cast, overload
 
 import numpy as np
 import numpy.linalg as la
@@ -79,7 +79,12 @@ TimeIndex: TypeAlias = int  # t \in {0, 1, ..., T_i-1}
 TimeIndices: TypeAlias = TypedList[NumPoints, TimeIndex]
 TimeIndicesCollection: TypeAlias = TypedList[NumDemos, TimeIndices[NumPoints]]
 
-SampleIndex: TypeAlias = tuple[DemoIndex, TimeIndex]  # (i, t)
+
+class SampleIndex(NamedTuple):  # (i, t)
+    demo: DemoIndex  # i
+    time: TimeIndex  # t
+
+
 SampleIndices: TypeAlias = TypedList[NumPoints, SampleIndex]
 SampleIndicesCollection: TypeAlias = TypedList[NumDemos, SampleIndices[NumPoints]]
 
@@ -254,7 +259,7 @@ class SamplesCollection(Generic[NumDemos, NumPoints, DimState, DimAction]):
         for i in self.demo_indices:
             samples = self[i]
             for t in samples.time_indices:
-                sample_idx: SampleIndex = (i, t)
+                sample_idx = SampleIndex(i, t)
                 sample = self[sample_idx]
                 yield (sample_idx, sample)
 
@@ -561,7 +566,7 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
         t: TimeIndex
         for i in range(self.phases.__len__()):
             for t in range(self.phases[i].__len__()):
-                sample_idx: SampleIndex = (i, t)
+                sample_idx = SampleIndex(i, t)
                 yield sample_idx
 
     def make_bins(self) -> None:
