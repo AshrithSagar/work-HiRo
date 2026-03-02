@@ -47,10 +47,6 @@ NumPoints = TypeVar("NumPoints", bound=int, default=int)  # T_i
 NumDemos = TypeVar("NumDemos", bound=int, default=int)  # N
 NumBins = TypeVar("NumBins", bound=int, default=int)  # B
 
-DemoIndex: TypeAlias = int  # i \in {0, 1, ..., N-1}
-TimeIndex: TypeAlias = int  # t \in {0, 1, ..., T_i-1}
-BinIndex: TypeAlias = int  # b \in {0, 1, ..., B-1}
-
 State: TypeAlias = Array1D[DimState, np.dtype[npDType]]  # x_{i, t} \in R^{d_x}
 Action: TypeAlias = Array1D[DimAction, np.dtype[npDType]]  # a_{i, t} \in R^{d_a}
 States: TypeAlias = TypedList[NumPoints, State[DimState]]
@@ -70,8 +66,19 @@ TrustValue: TypeAlias = npDType  # w_{i, t}
 TrustValues: TypeAlias = TypedList[NumPoints, TrustValue]
 TrustValuesCollection: TypeAlias = TypedList[NumDemos, TrustValues[NumPoints]]
 
+DemoIndex: TypeAlias = int  # i \in {0, 1, ..., N-1}
+DemoIndices: TypeAlias = TypedList[NumPoints, DemoIndex]
+DemoIndicesCollection: TypeAlias = TypedList[NumDemos, DemoIndices[NumPoints]]
+
+TimeIndex: TypeAlias = int  # t \in {0, 1, ..., T_i-1}
+TimeIndices: TypeAlias = TypedList[NumPoints, TimeIndex]
+TimeIndicesCollection: TypeAlias = TypedList[NumDemos, TimeIndices[NumPoints]]
+
 SampleIndex: TypeAlias = tuple[DemoIndex, TimeIndex]  # (i, t)
 SampleIndices: TypeAlias = TypedList[NumPoints, SampleIndex]
+SampleIndicesCollection: TypeAlias = TypedList[NumDemos, SampleIndices[NumPoints]]
+
+BinIndex: TypeAlias = int  # b \in {0, 1, ..., B-1}
 
 ## ── Base ─────────────────────────────────────────────────────────────────────
 
@@ -108,8 +115,8 @@ class Samples(Generic[NumPoints, DimState, DimAction]):
             yield sample
 
     @property
-    def time_indices(self) -> TypedList[NumPoints, TimeIndex]:
-        return TypedList[NumPoints, TimeIndex](range(self.__len__()))
+    def time_indices(self) -> TimeIndices[NumPoints]:
+        return TimeIndices[NumPoints](range(self.__len__()))
 
     @enforce_shapes
     def append(self, sample: Sample[DimState, DimAction]) -> None:
@@ -194,8 +201,8 @@ class SamplesCollection(Generic[NumDemos, NumPoints, DimState, DimAction]):
             yield samples
 
     @property
-    def demo_indices(self) -> TypedList[NumDemos, DemoIndex]:
-        return TypedList[NumDemos, DemoIndex](range(self.__len__()))
+    def demo_indices(self) -> DemoIndices[NumDemos]:
+        return DemoIndices[NumDemos](range(self.__len__()))
 
     @enforce_shapes
     def append(self, samples: Samples[NumPoints, DimState, DimAction]) -> None:
@@ -288,8 +295,8 @@ class Demonstration(Generic[NumPoints, DimState, DimAction]):  # D_i
             yield self[t]
 
     @property
-    def time_indices(self) -> TypedList[NumPoints, TimeIndex]:
-        return TypedList[NumPoints, TimeIndex](range(self.__len__()))
+    def time_indices(self) -> TimeIndices[NumPoints]:
+        return TimeIndices[NumPoints](range(self.__len__()))
 
     @property
     def state_dim(self) -> DimState:  # d_x
@@ -343,8 +350,8 @@ class Demonstrations(
             yield demo  # D_i
 
     @property
-    def demo_indices(self) -> TypedList[NumDemos, DemoIndex]:
-        return TypedList[NumDemos, DemoIndex](range(self.__len__()))
+    def demo_indices(self) -> DemoIndices[NumDemos]:
+        return DemoIndices[NumDemos](range(self.__len__()))
 
     @property
     def state_dim(self) -> DimState:  # d_x
