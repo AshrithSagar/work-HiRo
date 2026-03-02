@@ -198,11 +198,10 @@ class SamplesCollection(Generic[NumDemos, NumPoints, DimState, DimAction]):
         self, index: DemoIndex | SampleIndex, /
     ) -> Samples[NumPoints, DimState, DimAction] | Sample[DimState, DimAction]:
         match index:
-            case tuple():
-                i, t = index
+            case SampleIndex(i, t):
                 return self.collection[i][t]
-            case DemoIndex():
-                return self.collection[index]
+            case DemoIndex() as i:
+                return self.collection[i]
         raise IndexError
 
     @enforce_shapes
@@ -347,11 +346,10 @@ class Demonstrations(
         self, index: DemoIndex | SampleIndex, /
     ) -> Demonstration[NumPoints, DimState, DimAction] | Sample[DimState, DimAction]:
         match index:
-            case tuple():
-                i, t = index
+            case SampleIndex(i, t):
                 return self.demos[i][t]
-            case DemoIndex():
-                return self.demos[index]
+            case DemoIndex() as i:
+                return self.demos[i]
         raise IndexError
 
     @enforce_shapes
