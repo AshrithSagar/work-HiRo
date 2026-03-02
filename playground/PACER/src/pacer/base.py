@@ -48,10 +48,11 @@ NumDemos = TypeVar("NumDemos", bound=int, default=int)  # N
 NumBins = TypeVar("NumBins", bound=int, default=int)  # B
 
 State: TypeAlias = Array1D[DimState, np.dtype[npDType]]  # x_{i, t} \in R^{d_x}
-Action: TypeAlias = Array1D[DimAction, np.dtype[npDType]]  # a_{i, t} \in R^{d_a}
 States: TypeAlias = TypedList[NumPoints, State[DimState]]
-Actions: TypeAlias = TypedList[NumPoints, Action[DimAction]]
 StatesCollection: TypeAlias = TypedList[NumDemos, States[NumPoints, DimState]]
+
+Action: TypeAlias = Array1D[DimAction, np.dtype[npDType]]  # a_{i, t} \in R^{d_a}
+Actions: TypeAlias = TypedList[NumPoints, Action[DimAction]]
 ActionsCollection: TypeAlias = TypedList[NumDemos, Actions[NumPoints, DimAction]]
 
 Phase: TypeAlias = npDType  # tau \in [0, 1]
