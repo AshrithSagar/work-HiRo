@@ -58,6 +58,10 @@ Phase: TypeAlias = npDType  # tau \in [0, 1]
 Phases: TypeAlias = TypedList[NumPoints, Phase]
 PhasesCollection: TypeAlias = TypedList[NumDemos, Phases[NumPoints]]
 
+Residual: TypeAlias = npDType  # r_{i, t}
+Residuals: TypeAlias = TypedList[NumPoints, Residual]
+ResidualsCollection: TypeAlias = TypedList[NumDemos, Residuals[NumPoints]]
+
 ZScore: TypeAlias = npDType  # z_{i, t}
 ZScores: TypeAlias = TypedList[NumPoints, ZScore]
 ZScoresCollection: TypeAlias = TypedList[NumDemos, ZScores[NumPoints]]
@@ -487,7 +491,7 @@ class RibbonToken(Generic[DimState, DimAction]):  # z_b
     state_tangent: State[DimState] | None = field(init=False)
     # t_s[b] <- diff{ alpha_s[b] }
 
-    MAD_action_residual: npDType  # Median Absolute Deviation of action residuals
+    MAD_action_residual: Residual  # Median Absolute Deviation of action residuals
 
 
 @dataclass(kw_only=True)
@@ -610,12 +614,12 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
 
         # (N x T_)
         # [[r^{(-i)}_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}]
-        self_action_residuals = TypedList[NumDemos, TypedList[NumPoints, npDType]].full(
-            N, TypedList[NumPoints, npDType]()
+        self_action_residuals = ResidualsCollection[NumDemos, NumPoints].full(
+            N, Residuals[NumPoints]()
         )
 
         # (N,)
-        MAD_residuals = TypedList[NumDemos, npDType]()
+        MAD_residuals = Residuals[NumDemos]()
 
         # (N x T_)
         z_scores = ZScoresCollection[NumDemos, NumPoints].full(N, ZScores[NumPoints]())
@@ -628,24 +632,24 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
 
                 demo_samples = bin.samples_collection[j]
                 for action in demo_samples.actions():
-                    residual = npDType(
+                    residual = Residual(
                         la.norm(action - bin_median_action)
                     )  # r^{-i}_{i, t}
                     self_action_residuals[j].append(residual)
 
-                bin_action_residuals = list[npDType]()  # LOO
+                bin_action_residuals = list[Residual]()  # LOO
                 for action in bin.actions(LOO_demo_index=j):
-                    residual = npDType(
+                    residual = Residual(
                         la.norm(action - bin_median_action)
                     )  # r^{-j}_{i, t}
                     bin_action_residuals.append(residual)
 
-                bin_median_action_residual = npDType(median(bin_action_residuals))
-                abs_deviations = list[npDType]()
+                bin_median_action_residual = Residual(median(bin_action_residuals))
+                abs_deviations = list[Residual]()
                 for residual in bin_action_residuals:
-                    abs_deviation = npDType(abs(residual - bin_median_action_residual))
+                    abs_deviation = Residual(abs(residual - bin_median_action_residual))
                     abs_deviations.append(abs_deviation)
-                MAD_residual = npDType(MAD_SCALE * median(abs_deviations))
+                MAD_residual = Residual(MAD_SCALE * median(abs_deviations))
                 MAD_residuals.append(MAD_residual)
 
         for i in self.demonstrations.demo_indices:
@@ -674,9 +678,9 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
                 if z_score <= cutoff:
                     trust_value = (1 - (z_score / cutoff) ** 2) ** 2
                 else:
-                    trust_value = npDType(0)
+                    trust_value = TrustValue(0)
                 if trust_value < min_trust:
-                    trust_value = npDType(min_trust)
+                    trust_value = TrustValue(min_trust)
                 trust_values[i].append(trust_value)
         return trust_values  # [[w_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
 
@@ -689,16 +693,16 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
             stats = self.compute_robust_consensus_statistics(bin.samples())
 
             bin_median_action = stats.median_action  # alpha_a[b]
-            bin_action_residuals = list[npDType]()
+            bin_action_residuals = list[Residual]()
             for action in bin.actions():
-                residual = npDType(la.norm(action - bin_median_action))  # r_{i, t}
+                residual = Residual(la.norm(action - bin_median_action))  # r_{i, t}
                 bin_action_residuals.append(residual)
-            bin_median_action_residual = npDType(median(bin_action_residuals))
-            abs_deviations = list[npDType]()
+            bin_median_action_residual = Residual(median(bin_action_residuals))
+            abs_deviations = list[Residual]()
             for residual in bin_action_residuals:
-                abs_deviation = npDType(abs(residual - bin_median_action_residual))
+                abs_deviation = Residual(abs(residual - bin_median_action_residual))
                 abs_deviations.append(abs_deviation)
-            MAD_action_residual = npDType(MAD_SCALE * median(abs_deviations))
+            MAD_action_residual = Residual(MAD_SCALE * median(abs_deviations))
 
             bin.ribbon_token = RibbonToken(
                 median_action=stats.median_action,
