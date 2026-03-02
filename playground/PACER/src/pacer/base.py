@@ -107,6 +107,10 @@ class Samples(Generic[NumPoints, DimState, DimAction]):
         for sample in self.samples:
             yield sample
 
+    @property
+    def time_indices(self) -> TypedList[NumPoints, TimeIndex]:
+        return TypedList[NumPoints, TimeIndex](range(self.__len__()))
+
     @enforce_shapes
     def append(self, sample: Sample[DimState, DimAction]) -> None:
         self.samples.append(sample)
@@ -127,7 +131,7 @@ class Samples(Generic[NumPoints, DimState, DimAction]):
     def iter_time_indices_and_samples(
         self,
     ) -> Iterator[tuple[TimeIndex, Sample[DimState, DimAction]]]:
-        for t in range(self.__len__()):
+        for t in self.time_indices:
             sample = self.samples[t]
             yield (t, sample)
 
@@ -189,6 +193,10 @@ class SamplesCollection(Generic[NumDemos, NumPoints, DimState, DimAction]):
         for samples in self.collection:
             yield samples
 
+    @property
+    def demo_indices(self) -> TypedList[NumDemos, DemoIndex]:
+        return TypedList[NumDemos, DemoIndex](range(self.__len__()))
+
     @enforce_shapes
     def append(self, samples: Samples[NumPoints, DimState, DimAction]) -> None:
         self.collection.append(samples)
@@ -231,9 +239,9 @@ class SamplesCollection(Generic[NumDemos, NumPoints, DimState, DimAction]):
     def iter_sample_indices_and_samples(
         self,
     ) -> Iterator[tuple[SampleIndex, Sample[DimState, DimAction]]]:
-        for i in range(self.__len__()):
+        for i in self.demo_indices:
             samples = self[i]
-            for t in range(samples.__len__()):
+            for t in samples.time_indices:
                 sample_idx: SampleIndex = (i, t)
                 sample = self[sample_idx]
                 yield (sample_idx, sample)
@@ -276,8 +284,12 @@ class Demonstration(Generic[NumPoints, DimState, DimAction]):  # D_i
     @enforce_shapes
     def __iter__(self) -> Iterator[Sample[DimState, DimAction]]:
         # [(x_{i, t}, a_{i, t})]_{t = 1}^{T_i}
-        for t in range(self.__len__()):
+        for t in self.time_indices:
             yield self[t]
+
+    @property
+    def time_indices(self) -> TypedList[NumPoints, TimeIndex]:
+        return TypedList[NumPoints, TimeIndex](range(self.__len__()))
 
     @property
     def state_dim(self) -> DimState:  # d_x
@@ -329,6 +341,10 @@ class Demonstrations(
     def __iter__(self) -> Iterator[Demonstration[NumPoints, DimState, DimAction]]:
         for demo in self.demos:
             yield demo  # D_i
+
+    @property
+    def demo_indices(self) -> TypedList[NumDemos, DemoIndex]:
+        return TypedList[NumDemos, DemoIndex](range(self.__len__()))
 
     @property
     def state_dim(self) -> DimState:  # d_x
@@ -529,6 +545,8 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
 
     @property
     def sample_indices(self) -> Iterator[SampleIndex]:
+        i: DemoIndex
+        t: TimeIndex
         for i in range(self.phases.__len__()):
             for t in range(self.phases[i].__len__()):
                 sample_idx: SampleIndex = (i, t)
@@ -596,7 +614,7 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
         z_scores = ZScoresCollection[NumDemos, NumPoints].full(N, ZScores[NumPoints]())
 
         for bin in self.bins:
-            for j in range(N):
+            for j in self.demonstrations.demo_indices:
                 loo_samples = bin.samples(LOO_demo_index=j)
                 loo_stats = self.compute_robust_consensus_statistics(loo_samples)
                 bin_median_action = loo_stats.median_action  # alpha_a^{(-j)}[b]
@@ -623,10 +641,9 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
                 MAD_residual = npDType(MAD_SCALE * median(abs_deviations))
                 MAD_residuals.append(MAD_residual)
 
-        for i in range(N):
-            T_i = self.demonstrations.demos[i].__len__()
+        for i in self.demonstrations.demo_indices:
             denom = MAD_residuals[i] + EPS
-            for t in range(T_i):
+            for t in self.demonstrations.demos[i].time_indices:
                 z_score = (self_action_residuals[i][t]) / denom  # z_{i, t}
                 z_scores[i].append(z_score)
 
@@ -736,7 +753,7 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
             )
             unit_tangent = Array1D[int](normalise(tangent, method="NORM"))  # t_{dir}[b]
 
-            for j in range(N):
+            for j in self.demonstrations.demo_indices:
                 loo_samples = bin.samples(LOO_demo_index=j)
                 loo_stats = self.compute_robust_consensus_statistics(loo_samples)
                 bin_median_action = loo_stats.median_action  # alpha_a^{(-j)}[b]
@@ -772,10 +789,9 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
                     _labels[j].append(y3)
 
         # Temporal smoothing
-        for i in range(N):
-            T_i = self.demonstrations.demos[i].__len__()
+        for i in self.demonstrations.demo_indices:
             ystar_prev: Action[DimAction] | None = None
-            for t in range(T_i):
+            for t in self.demonstrations.demos[i].time_indices:
                 y3 = _labels[i][t]
                 if ystar_prev is None:  # t = 0
                     ystar_prev = y3
