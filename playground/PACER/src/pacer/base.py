@@ -98,6 +98,7 @@ class Samples(Generic[NumPoints, DimState, DimAction]):
     def __getitem__(
         self,
         index: TimeIndex,  # t
+        /,
     ) -> Sample[DimState, DimAction]:
         return self.samples[index]  # (x_{t}, a_{t})
 
@@ -122,6 +123,28 @@ class Samples(Generic[NumPoints, DimState, DimAction]):
     def actions(self) -> Actions[NumPoints, DimAction]:
         return Actions[NumPoints, DimAction](sample.action for sample in self.samples)
 
+    @property
+    def iter_time_indices_and_samples(
+        self,
+    ) -> Iterator[tuple[TimeIndex, Sample[DimState, DimAction]]]:
+        for t in range(self.__len__()):
+            sample = self.samples[t]
+            yield (t, sample)
+
+    @property
+    def iter_time_indices_and_states(
+        self,
+    ) -> Iterator[tuple[TimeIndex, State[DimState]]]:
+        for t, sample in self.iter_time_indices_and_samples:
+            yield (t, sample.state)
+
+    @property
+    def iter_time_indices_and_actions(
+        self,
+    ) -> Iterator[tuple[TimeIndex, Action[DimAction]]]:
+        for t, sample in self.iter_time_indices_and_samples:
+            yield (t, sample.action)
+
 
 @dataclass
 class SamplesCollection(Generic[NumDemos, NumPoints, DimState, DimAction]):
@@ -139,6 +162,7 @@ class SamplesCollection(Generic[NumDemos, NumPoints, DimState, DimAction]):
     def __getitem__(
         self,
         index: DemoIndex,  # i
+        /,
     ) -> Samples[
         NumPoints, DimState, DimAction
     ]: ...  # [(x_{i, t}, a_{i, t})]_{t = 1}^{T_i}
@@ -146,10 +170,11 @@ class SamplesCollection(Generic[NumDemos, NumPoints, DimState, DimAction]):
     def __getitem__(  # ty: ignore[invalid-overload]
         self,
         index: SampleIndex,  # (i, t)
+        /,
     ) -> Sample[DimState, DimAction]: ...  # (x_{i, t}, a_{i, t})
     #
     def __getitem__(
-        self, index: DemoIndex | SampleIndex
+        self, index: DemoIndex | SampleIndex, /
     ) -> Samples[NumPoints, DimState, DimAction] | Sample[DimState, DimAction]:
         match index:
             case tuple():
@@ -202,6 +227,31 @@ class SamplesCollection(Generic[NumDemos, NumPoints, DimState, DimAction]):
             sample.action for sample in self.samples(LOO_demo_index=LOO_demo_index)
         )
 
+    @property
+    def iter_sample_indices_and_samples(
+        self,
+    ) -> Iterator[tuple[SampleIndex, Sample[DimState, DimAction]]]:
+        for i in range(self.__len__()):
+            samples = self[i]
+            for t in range(samples.__len__()):
+                sample_idx: SampleIndex = (i, t)
+                sample = self[sample_idx]
+                yield (sample_idx, sample)
+
+    @property
+    def iter_sample_indices_and_states(
+        self,
+    ) -> Iterator[tuple[SampleIndex, State[DimState]]]:
+        for sample_idx, sample in self.iter_sample_indices_and_samples:
+            yield (sample_idx, sample.state)
+
+    @property
+    def iter_sample_indices_and_actions(
+        self,
+    ) -> Iterator[tuple[SampleIndex, Action[DimAction]]]:
+        for sample_idx, sample in self.iter_sample_indices_and_samples:
+            yield (sample_idx, sample.action)
+
 
 # Behaves like Samples
 @dataclass(kw_only=True)
@@ -211,7 +261,7 @@ class Demonstration(Generic[NumPoints, DimState, DimAction]):  # D_i
     actions: Actions[NumPoints, DimAction]  # [a_{i, t}]_{t = 1}^{T_i}
 
     def __post_init__(self) -> None:
-        assert len(self.states) == len(self.actions)
+        assert self.states.length == self.actions.length
 
     def __len__(self) -> NumPoints:
         assert self.states.length == self.actions.length
@@ -226,7 +276,7 @@ class Demonstration(Generic[NumPoints, DimState, DimAction]):  # D_i
     @enforce_shapes
     def __iter__(self) -> Iterator[Sample[DimState, DimAction]]:
         # [(x_{i, t}, a_{i, t})]_{t = 1}^{T_i}
-        for t in range(len(self)):
+        for t in range(self.__len__()):
             yield self[t]
 
     @property
@@ -259,13 +309,13 @@ class Demonstrations(
     @enforce_shapes
     @overload
     def __getitem__(
-        self, index: DemoIndex
+        self, index: DemoIndex, /
     ) -> Demonstration[NumPoints, DimState, DimAction]: ...
     @overload
-    def __getitem__(self, index: SampleIndex) -> Sample[DimState, DimAction]: ...  # ty: ignore[invalid-overload]
+    def __getitem__(self, index: SampleIndex, /) -> Sample[DimState, DimAction]: ...  # ty: ignore[invalid-overload]
     #
     def __getitem__(
-        self, index: DemoIndex | SampleIndex
+        self, index: DemoIndex | SampleIndex, /
     ) -> Demonstration[NumPoints, DimState, DimAction] | Sample[DimState, DimAction]:
         match index:
             case tuple():
@@ -330,7 +380,7 @@ class PhaseEstimator(Generic[NumDemos, NumPoints, DimState, DimAction]):
             mask = torch.ones_like(diff).triu(diagonal=1)  # Enforces `t > t'`
             loss_matrix = F.softplus(margin - diff) * mask
             loss += loss_matrix.sum() / (mask.sum() + EPS)  # Normalise over valid pairs
-        if (n_demos := len(self.demonstrations)) > 0:
+        if (n_demos := self.demonstrations.__len__()) > 0:
             loss /= n_demos  # Normalise over demonstrations
         return loss
 
@@ -479,8 +529,8 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
 
     @property
     def sample_indices(self) -> Iterator[SampleIndex]:
-        for i in range(len(self.phases)):
-            for t in range(len(self.phases[i])):
+        for i in range(self.phases.__len__()):
+            for t in range(self.phases[i].__len__()):
                 sample_idx: SampleIndex = (i, t)
                 yield sample_idx
 
@@ -574,7 +624,7 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
                 MAD_residuals.append(MAD_residual)
 
         for i in range(N):
-            T_i = len(self.demonstrations.demos[i])
+            T_i = self.demonstrations.demos[i].__len__()
             denom = MAD_residuals[i] + EPS
             for t in range(T_i):
                 z_score = (self_action_residuals[i][t]) / denom  # z_{i, t}
@@ -723,7 +773,7 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
 
         # Temporal smoothing
         for i in range(N):
-            T_i = len(self.demonstrations.demos[i])
+            T_i = self.demonstrations.demos[i].__len__()
             ystar_prev: Action[DimAction] | None = None
             for t in range(T_i):
                 y3 = _labels[i][t]
@@ -790,7 +840,7 @@ class BCTrainer(Generic[NumDemos, NumPoints, DimState, DimAction]):
                 diffs, torch.zeros_like(diffs), reduction="sum"
             )  # (T_i, action_dim)
             loss += demo_loss
-            total_samples += len(demo)  # T_i
+            total_samples += demo.__len__()  # T_i
         if total_samples > 0:
             loss /= total_samples  # Normalise over samples
         return loss
