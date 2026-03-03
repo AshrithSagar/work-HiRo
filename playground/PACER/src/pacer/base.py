@@ -617,57 +617,39 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
         N = self.demonstrations.__len__()
 
         # (N x T_)
-        # [[r^{(-i)}_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}]
-        self_action_residuals = ResidualsCollection[NumDemos, NumPoints].full(
-            N, Residuals[NumPoints]()
+        z_scores = ZScoresCollection[NumDemos, NumPoints].full(
+            N,
+            lambda i: ZScores[NumPoints](
+                [ZScore(0) for _ in self.demonstrations[i].time_indices]
+            ),
         )
-
-        # (N x B)
-        # [[MAD_{a}^{(-i)}[b]]_{b = 1}^{B}]_{i = 1}^{N}]
-        MAD_residuals = ResidualsCollection[NumDemos, NumBins].full(
-            N, Residuals[NumBins]()
-        )
-
-        # (N x T_)
-        z_scores = ZScoresCollection[NumDemos, NumPoints].full(N, ZScores[NumPoints]())
 
         for bin in self.bins:
             for i in self.demonstrations.demo_indices:
                 loo_samples = bin.samples(LOO_demo_index=i)
                 loo_stats = self.compute_robust_consensus_statistics(loo_samples)
-                bin_median_action = loo_stats.median_action  # alpha_a^{(-i)}[b]
+                loo_median_action = loo_stats.median_action  # alpha_a^{(-i)}[b]
 
-                demo_samples = bin.samples_collection[i]
-                for action in demo_samples.actions():
-                    residual = Residual(
-                        la.norm(action - bin_median_action)
-                    )  # r^{-i}_{i, t}
-                    self_action_residuals[i].append(residual)
-
-                bin_action_residuals = list[Residual]()  # LOO
-                for action in bin.actions(LOO_demo_index=i):
-                    residual = Residual(
-                        la.norm(action - bin_median_action)
-                    )  # r^{-i}_{j, u} OR r^{-i}_{m, v}
-                    bin_action_residuals.append(residual)
-
-                bin_median_action_residual = Residual(median(bin_action_residuals))
-                abs_deviations = list[Residual]()
-                for residual in bin_action_residuals:
-                    abs_deviation = Residual(abs(residual - bin_median_action_residual))
-                    abs_deviations.append(abs_deviation)
+                loo_residuals = [
+                    Residual(la.norm(action - loo_median_action))
+                    for action in bin.actions(LOO_demo_index=i)
+                ]
+                median_residual = Residual(median(loo_residuals))
+                abs_deviations = [
+                    Residual(abs(residual - median_residual))
+                    for residual in loo_residuals
+                ]
                 MAD_residual = Residual(
                     MAD_SCALE * median(abs_deviations)
                 )  # MAD_{a}^{(-i)}[b]
-                MAD_residuals[i].append(MAD_residual)
 
-        for i in self.demonstrations.demo_indices:
-            for t in self.demonstrations.demos[i].time_indices:
-                sample_idx = SampleIndex(i, t)
-                bin_idx = self.sample_index_to_bin_index(sample_idx)
-                denom = MAD_residuals[i][bin_idx] + EPS
-                z_score = (self_action_residuals[i][t]) / denom  # z_{i, t}
-                z_scores[i].append(z_score)
+                demo_samples = bin.samples_collection[i]
+                for t, action in demo_samples.iter_time_indices_and_actions:
+                    self_residual = Residual(
+                        la.norm(action - loo_median_action)
+                    )  # r^{-i}_{i, t}
+                    z_score = ZScore(self_residual / (MAD_residual + EPS))  # z_{i, t}
+                    z_scores[i][t] = z_score
 
         return z_scores
 
