@@ -841,6 +841,7 @@ class BCTrainer(Generic[NumDemos, NumPoints, DimState, DimAction]):
 
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     device: torch.device = field(kw_only=True, default_factory=get_torch_device_auto)
+    seed: int = SEED
     ##
     policy: BCPolicy[DimState, DimAction] = field(init=False)
     optimiser: torch.optim.Optimizer = field(init=False)
@@ -875,6 +876,7 @@ class BCTrainer(Generic[NumDemos, NumPoints, DimState, DimAction]):
         policy_epochs: int = 240,
     ) -> Tensor:
         """Train BC policy using weighted Huber loss."""
+        set_seed(self.seed)
         policy = BCPolicy(
             state_dim=self.demonstrations.state_dim,
             action_dim=self.demonstrations.action_dim,
@@ -916,6 +918,7 @@ class PACERBCTrainer(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction])
 
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     device: torch.device = field(kw_only=True, default_factory=get_torch_device_auto)
+    seed: int = SEED
     ##
     phase_estimator: PhaseEstimator[NumDemos, NumPoints, DimState, DimAction] = field(
         init=False
@@ -941,6 +944,7 @@ class PACERBCTrainer(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction])
         speed_regularisation_influence: npDType | float = 0.5,  # eta_0
         temporal_smoothing_weight: npDType | float = 0.0,  # kappa
     ) -> Tensor:
+        set_seed(self.seed)
         self.phase_estimator = PhaseEstimator(self.demonstrations, device=self.device)
         loss = self.phase_estimator.train(
             hidden_dim=phase_hidden_dim,
@@ -1000,6 +1004,7 @@ class PACERBCTrainer(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction])
         policy_epochs: int = 240,
     ) -> Tensor:
         """Train PACER policy using weighted Huber loss with pseudo-labels."""
+        set_seed(self.seed)
         policy = BCPolicy(
             state_dim=self.demonstrations.state_dim,
             action_dim=self.demonstrations.action_dim,

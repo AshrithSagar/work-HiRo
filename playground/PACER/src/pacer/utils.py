@@ -36,6 +36,7 @@ def set_seed(seed: int = SEED) -> None:
     torch.manual_seed(seed)  # pyright: ignore[reportUnknownMemberType]
     torch.cuda.manual_seed_all(seed)
     torch.use_deterministic_algorithms(True)
+    torch.backends.cudnn.benchmark = False
 
 
 def get_torch_device_auto() -> torch.device:
