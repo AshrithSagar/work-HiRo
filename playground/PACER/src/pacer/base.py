@@ -21,9 +21,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from rich.progress import track
 from torch import Tensor
-from typed_numpy._typed.context import enforce_shapes
-from typed_numpy._typed.helpers import Array1D
-from typed_numpy._typed.list import TypedList
+from typingkit._typed.context import enforce_shapes
+from typingkit._typed.helpers import Array1D
+from typingkit._typed.list import TypedList
 
 from pacer.utils import (
     EPS,

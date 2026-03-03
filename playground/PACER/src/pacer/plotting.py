@@ -10,7 +10,7 @@ from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
-from typed_numpy._typed.helpers import TWO
+from typingkit._typed.helpers import TWO
 
 from pacer.base import (
     PACER,

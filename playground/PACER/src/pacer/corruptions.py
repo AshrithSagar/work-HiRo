@@ -12,7 +12,7 @@ from typing import Generic
 
 import numpy as np
 import numpy.linalg as la
-from typed_numpy._typed.list import TypedList as List
+from typingkit._typed.list import TypedList as List
 
 from pacer.base import (
     EPS,
