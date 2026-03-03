@@ -598,7 +598,9 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
         states = samples.states()
         actions = samples.actions()
         action_norms = list(la.norm(action) for action in actions)
-        state_change_norms = list(la.norm(np.diff(state)) for state in states)
+        state_change_norms = [
+            la.norm(states[t + 1] - states[t]) for t in range(len(states) - 1)
+        ]
 
         median_action = Action[DimAction](median(actions, axis=0))
         median_state = State[DimState](median(states, axis=0))
@@ -763,7 +765,7 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
                 bin_median_action = loo_stats.median_action  # alpha_a^{(-j)}[b]
 
                 demo_samples = bin.samples_collection[j]
-                for t, action in enumerate(demo_samples.actions()):
+                for t, action in demo_samples.iter_time_indices_and_actions:
                     w = trust_values[j][t]  # w_{i, t}
 
                     # Debiasing towards the anchor
