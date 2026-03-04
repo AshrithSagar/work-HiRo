@@ -64,4 +64,4 @@ ignore = ["F403", "F405"]
 
 [tool.uv.sources]
 microsoft-python-type-stubs = { git = "https://github.com/microsoft/python-type-stubs.git" }
-typed-numpy = { git = "https://github.com/AshrithSagar/typingkit.git", rev = "main" }
+typingkit = { git = "https://github.com/AshrithSagar/typingkit.git", rev = "main" }

@@ -18,9 +18,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from rich.progress import track
 from torch import Tensor
-from typingkit._typed.context import enforce_shapes
-from typingkit._typed.dimexpr import MinusOne, Mul
-from typingkit._typed.helpers import Array0D, Array1D, Array2D, Array3D, DType
+from typingkit.numpy import enforce_shapes
+from typingkit.numpy._typed.dimexpr import MinusOne, Mul
+from typingkit.numpy._typed.helpers import Array0D, Array1D, Array2D, Array3D, DType
 
 from pacer.utils import EPS, SEED, get_torch_device_auto, normalise, npDType, set_seed
 

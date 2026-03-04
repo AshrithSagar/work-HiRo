@@ -15,9 +15,9 @@ import pyLasaDataset as lasa  # type: ignore[import-untyped]  # ty: ignore[unuse
 from pyLasaDataset.dataset import (  # type: ignore[import-untyped]  # ty: ignore[unused-ignore-comment]
     _Data,
 )
-from typingkit._typed.context import enforce_shapes
-from typingkit._typed.helpers import THREE, TWO, Array3D
-from typingkit._typed.list import TypedList as List
+from typingkit.core import TypedList as List
+from typingkit.numpy import enforce_shapes
+from typingkit.numpy._typed.helpers import THREE, TWO, Array3D
 
 from pacer.base import Actions, Demonstration, Demonstrations, States, npDType
 
