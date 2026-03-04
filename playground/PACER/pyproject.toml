@@ -9,6 +9,7 @@ dependencies = [
     "matplotlib>=3.10.8",
     "numpy>=2.4.2",
     "optype[numpy]>=0.16.0",
+    "pygame>=2.6.1",
     "pylasadataset>=0.1.1",
     "rich>=14.3.3",
     "scikit-learn>=1.8.0",

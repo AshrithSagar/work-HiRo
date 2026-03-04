@@ -884,6 +884,7 @@ dependencies = [
     { name = "matplotlib" },
     { name = "numpy" },
     { name = "optype", extra = ["numpy"] },
+    { name = "pygame" },
     { name = "pylasadataset" },
     { name = "rich" },
     { name = "scikit-learn" },
@@ -939,6 +940,7 @@ requires-dist = [
     { name = "matplotlib", specifier = ">=3.10.8" },
     { name = "numpy", specifier = ">=2.4.2" },
     { name = "optype", extras = ["numpy"], specifier = ">=0.16.0" },
+    { name = "pygame", specifier = ">=2.6.1" },
     { name = "pylasadataset", specifier = ">=0.1.1" },
     { name = "rich", specifier = ">=14.3.3" },
     { name = "scikit-learn", specifier = ">=1.8.0" },
@@ -1084,6 +1086,12 @@ sdist = { url = "https://files.pythonhosted.org/packages/fe/9a/e6bca0eed82db2656
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a6/53/d78dc063216e62fc55f6b2eebb447f6a4b0a59f55c8406376f76bf959b08/pydub-0.25.1-py2.py3-none-any.whl", hash = "sha256:65617e33033874b59d87db603aa1ed450633288aefead953b30bded59cb599a6", size = 32327, upload-time = "2021-03-10T02:09:53.503Z" },
 ]
+
+[[package]]
+name = "pygame"
+version = "2.6.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/49/cc/08bba60f00541f62aaa252ce0cfbd60aebd04616c0b9574f755b583e45ae/pygame-2.6.1.tar.gz", hash = "sha256:56fb02ead529cee00d415c3e007f75e0780c655909aaa8e8bf616ee09c9feb1f", size = 14808125, upload-time = "2024-09-29T13:41:34.698Z" }
 
 [[package]]
 name = "pyglet"
