@@ -12,15 +12,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 from typingkit.numpy._typed.helpers import TWO
 
-from pacer.base import (
-    PACER,
+from pacer.base import PACER, Demonstrations, PACERBCTrainer
+from pacer.typings import (
     Actions,
-    Demonstrations,
     DimAction,
     NumBins,
     NumDemos,
     NumPoints,
-    PACERBCTrainer,
     PhasesCollection,
     TrustValuesCollection,
 )

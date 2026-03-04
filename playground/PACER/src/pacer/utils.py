@@ -8,7 +8,7 @@ Utils
 
 import random
 from collections.abc import Sequence
-from typing import Literal, TypeAlias
+from typing import Literal
 
 import numpy as np
 import numpy.linalg as la
@@ -17,11 +17,7 @@ import optype.numpy as onp
 import torch
 
 from pacer import console
-
-## ── Typings ──────────────────────────────────────────────────────────────────
-
-npDType: TypeAlias = np.float32
-torchDType = torch.float32
+from pacer.typings import npDType
 
 ## ── Utils ────────────────────────────────────────────────────────────────────
 

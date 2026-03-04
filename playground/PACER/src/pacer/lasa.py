@@ -15,11 +15,12 @@ import pyLasaDataset as lasa  # type: ignore[import-untyped]  # ty: ignore[unuse
 from pyLasaDataset.dataset import (  # type: ignore[import-untyped]  # ty: ignore[unused-ignore-comment]
     _Data,
 )
-from typingkit.core import TypedList as List
+from typingkit.core import TypedList
 from typingkit.numpy import enforce_shapes
 from typingkit.numpy._typed.helpers import THREE, TWO, Array3D
 
-from pacer.base import Actions, Demonstration, Demonstrations, States, npDType
+from pacer.base import Demonstration, Demonstrations
+from pacer.typings import Actions, States, npDType
 
 ## ── Typings ──────────────────────────────────────────────────────────────────
 
@@ -53,7 +54,7 @@ class LASADataSet:
 
     def to_demonstrations(self) -> Demonstrations[SEVEN, THOUSAND, TWO, TWO]:
         return Demonstrations(
-            List[SEVEN, Demonstration[THOUSAND, TWO, TWO]](
+            TypedList[SEVEN, Demonstration[THOUSAND, TWO, TWO]](
                 [
                     Demonstration(
                         index=index,  # i
