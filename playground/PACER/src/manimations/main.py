@@ -58,7 +58,7 @@ class DemonstrationScene(mn.Scene):
 
         curves_group = mn.VGroup(*curves)
         curves_group.center()
-        curves_group.scale_to_fit_width(5)  # type: ignore
+        curves_group.scale_to_fit_width(5)  # pyright: ignore[reportUnknownMemberType]
         self.play(*[mn.Create(curve) for curve in curves])
 
         # ── Phase slider ─────────────────────────────────────────────────────────
@@ -93,11 +93,11 @@ class DemonstrationScene(mn.Scene):
         curve_dots_group = mn.VGroup(*curve_dots)
         all_arrows_group = mn.VGroup(*velocity_vectors)
 
-        def update_curve_dots(group: mn.VGroup) -> None:
+        def update_curve_dots(group: mn.Mobject) -> None:
             for dot, curve in zip(group, curves):
                 dot.move_to(curve.point_from_proportion(tau.get_value()))
 
-        def update_all_arrows(_) -> None:
+        def update_all_arrows(_: mn.Mobject) -> None:
             for arrow, vels, curve in zip(velocity_vectors, data.velocities, curves):
                 T = vels.shape[0]
                 t = min(int(tau.get_value() * (T - 1)), T - 1)
@@ -110,8 +110,8 @@ class DemonstrationScene(mn.Scene):
                     arrow.set_opacity(1)
                     arrow.put_start_and_end_on(p, p + v)
 
-        curve_dots_group.add_updater(update_curve_dots)  # type: ignore
-        all_arrows_group.add_updater(update_all_arrows)  # type: ignore
+        curve_dots_group.add_updater(update_curve_dots)
+        all_arrows_group.add_updater(update_all_arrows)
 
         progress_line = mn.NumberLine(
             x_range=(0, 1, 0.1), length=10, include_numbers=True
@@ -198,14 +198,14 @@ class DemonstrationScene(mn.Scene):
             return strength * direction / np.linalg.norm(direction)
 
         segments_per_bin = [
-            mn.VGroup(*(segmented_curves_per_curve[i][b] for i in range(len(curves))))  # type: ignore
+            mn.VGroup(*(segmented_curves_per_curve[i][b] for i in range(len(curves))))  # pyright: ignore[reportArgumentType]
             for b in range(n_bins)
         ]
         target_group = segmented_group.copy()
         for b, bg in enumerate(segments_per_bin):
             target_bin = mn.VGroup(*target_group.submobjects[b::n_bins])
             target_bin.shift(radial_shift(bg))
-        target_group.scale_to_fit_width(5)  # type: ignore
+        target_group.scale_to_fit_width(5)  # pyright: ignore[reportUnknownMemberType]
         self.play(mn.Transform(segmented_group, target_group))
         self.wait()
 
