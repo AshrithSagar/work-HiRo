@@ -17,7 +17,6 @@ from typing import Any, Generic, cast
 import numpy as np
 import numpy.linalg as la
 from typingkit.core import TypedList
-from typingkit.numpy import enforce_shapes
 from typingkit.numpy._typed.helpers import Array1D
 
 from pacer.base import Demonstrations, Sample, Samples, SamplesCollection
@@ -188,7 +187,6 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
             collection = bin.samples_collection[demo_idx]
             collection.append(sample)
 
-    @enforce_shapes
     def compute_robust_consensus_statistics(
         self, samples: Samples[Any, DimState, DimAction]
     ) -> RobustStatistics[DimState, DimAction]:
@@ -211,7 +209,6 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
             median_state_change=median_state_change,
         )
 
-    @enforce_shapes
     def compute_z_scores(self) -> ZScoresCollection[NumDemos, NumPoints]:  # (N x T_)
         N = self.demonstrations.__len__()
 
@@ -252,7 +249,6 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
 
         return z_scores
 
-    @enforce_shapes
     def compute_trust_values(
         self,
         *,
@@ -276,7 +272,6 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
                 trust_values[i].append(trust_value)
         return trust_values  # [[w_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
 
-    @enforce_shapes
     def consolidate_ribbon_tokens(self) -> None:
         bin_median_actions = Actions[NumPoints, DimAction]()
         bin_median_states = States[NumPoints, DimState]()
@@ -322,7 +317,6 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
             bin.ribbon_token.action_tangent = action_tangent
             bin.ribbon_token.state_tangent = state_tangent
 
-    @enforce_shapes
     def compute_pseudo_labels(
         self,
         trust_values: TrustValuesCollection[NumDemos, NumPoints],

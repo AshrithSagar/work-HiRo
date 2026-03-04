@@ -15,7 +15,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from rich.progress import track
 from torch import Tensor
-from typingkit.numpy import enforce_shapes
 
 from pacer.base import Demonstrations
 from pacer.pacer import PACER
@@ -123,7 +122,6 @@ class BCTrainer(Generic[NumDemos, NumPoints, DimState, DimAction]):
             self.optimiser.step()  # pyright: ignore[reportUnknownMemberType]
         return loss
 
-    @enforce_shapes
     def predict(
         self, states: States[NumPoints, DimState]
     ) -> Actions[NumPoints, DimAction]:
@@ -251,7 +249,6 @@ class PACERBCTrainer(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction])
             self.optimiser.step()  # pyright: ignore[reportUnknownMemberType]
         return loss
 
-    @enforce_shapes
     def predict(
         self, states: States[NumPoints, DimState]
     ) -> Actions[NumPoints, DimAction]:

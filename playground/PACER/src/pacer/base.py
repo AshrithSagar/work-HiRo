@@ -11,7 +11,6 @@ from dataclasses import dataclass, field
 from typing import Generic, overload
 
 from typingkit.core import TypedList
-from typingkit.numpy import enforce_shapes
 
 from pacer.typings import (
     Action,
@@ -58,7 +57,6 @@ class Samples(Generic[NumPoints, DimState, DimAction]):
     def __len__(self) -> NumPoints:
         return self.samples.length  # T
 
-    @enforce_shapes
     def __getitem__(
         self,
         index: TimeIndex,  # t
@@ -66,7 +64,6 @@ class Samples(Generic[NumPoints, DimState, DimAction]):
     ) -> Sample[DimState, DimAction]:
         return self.samples[index]  # (x_{t}, a_{t})
 
-    @enforce_shapes
     def __iter__(self) -> Iterator[Sample[DimState, DimAction]]:
         yield from self.samples
 
@@ -74,15 +71,12 @@ class Samples(Generic[NumPoints, DimState, DimAction]):
     def time_indices(self) -> TimeIndices[NumPoints]:
         return TimeIndices[NumPoints](range(self.__len__()))
 
-    @enforce_shapes
     def append(self, sample: Sample[DimState, DimAction]) -> None:
-        self.samples.append(sample)
+        return self.samples.append(sample)
 
-    @enforce_shapes
     def states(self) -> States[NumPoints, DimState]:
         return States[NumPoints, DimState](sample.state for sample in self.samples)
 
-    @enforce_shapes
     def actions(self) -> Actions[NumPoints, DimAction]:
         return Actions[NumPoints, DimAction](sample.action for sample in self.samples)
 
@@ -124,7 +118,6 @@ class SamplesCollection(Generic[NumDemos, NumPoints, DimState, DimAction]):
     def __len__(self) -> NumDemos:
         return self.collection.length  # N
 
-    @enforce_shapes
     @overload
     def __getitem__(
         self,
@@ -150,7 +143,6 @@ class SamplesCollection(Generic[NumDemos, NumPoints, DimState, DimAction]):
                 return self.collection[i]
         raise IndexError
 
-    @enforce_shapes
     def __iter__(self) -> Iterator[Samples[NumPoints, DimState, DimAction]]:
         yield from self.collection
 
@@ -158,7 +150,10 @@ class SamplesCollection(Generic[NumDemos, NumPoints, DimState, DimAction]):
     def demo_indices(self) -> DemoIndices[NumDemos]:
         return DemoIndices[NumDemos](range(self.__len__()))
 
-    @enforce_shapes
+    @property
+    def demo_lengths(self) -> TypedList[NumDemos, int]:
+        return TypedList[NumDemos, int](samples.__len__() for samples in self)
+
     def samples(
         self, *, LOO_demo_index: DemoIndex | None = None
     ) -> Iterator[Sample[DimState, DimAction]]:  # (N x T_) or (N-1 x T_)
@@ -167,7 +162,6 @@ class SamplesCollection(Generic[NumDemos, NumPoints, DimState, DimAction]):
                 continue
             yield from samples
 
-    @enforce_shapes
     def states(
         self, *, LOO_demo_index: DemoIndex | None = None
     ) -> States[int, DimState]:
@@ -176,7 +170,6 @@ class SamplesCollection(Generic[NumDemos, NumPoints, DimState, DimAction]):
             sample.state for sample in self.samples(LOO_demo_index=LOO_demo_index)
         )
 
-    @enforce_shapes
     def actions(
         self, *, LOO_demo_index: DemoIndex | None = None
     ) -> Actions[int, DimAction]:
@@ -225,7 +218,6 @@ class Demonstration(Generic[NumPoints, DimState, DimAction]):  # D_i
         assert self.states.length == self.actions.length
         return self.states.length  # T_i
 
-    @enforce_shapes
     def __getitem__(
         self, index: TimeIndex, /
     ) -> Sample[DimState, DimAction]:  # (x_{i, t}, a_{i, t})
@@ -235,7 +227,6 @@ class Demonstration(Generic[NumPoints, DimState, DimAction]):  # D_i
             action=self.actions[index],
         )
 
-    @enforce_shapes
     def __iter__(self) -> Iterator[Sample[DimState, DimAction]]:
         # [(x_{i, t}, a_{i, t})]_{t = 1}^{T_i}
         for t in self.time_indices:
@@ -272,7 +263,6 @@ class Demonstrations(
     def __len__(self) -> NumDemos:
         return self.demos.length  # N
 
-    @enforce_shapes
     @overload
     def __getitem__(
         self, index: DemoIndex, /
@@ -290,7 +280,6 @@ class Demonstrations(
                 return self.demos[i]
         raise IndexError
 
-    @enforce_shapes
     def __iter__(self) -> Iterator[Demonstration[NumPoints, DimState, DimAction]]:
         yield from self.demos  # D_i
 

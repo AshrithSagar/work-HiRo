@@ -15,7 +15,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from rich.progress import track
 from torch import Tensor
-from typingkit.numpy import enforce_shapes
 
 from pacer.base import Demonstrations
 from pacer.typings import (
@@ -96,7 +95,6 @@ class PhaseEstimator(Generic[NumDemos, NumPoints, DimState, DimAction]):
             self.optimiser.step()  # pyright: ignore[reportUnknownMemberType]
         return loss
 
-    @enforce_shapes
     def estimate_phases(self) -> PhasesCollection[NumDemos, NumPoints]:
         # [[tau_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
         self.scorer.eval()
