@@ -3,10 +3,10 @@
 import pyLasaDataset as lasa  # type: ignore[import-untyped]  # ty: ignore[unused-ignore-comment]
 
 from pacer import console
-from pacer.trainers import BCTrainer, PACERBCTrainer
 from pacer.corruptions import DemonstrationCorrupter
 from pacer.lasa import LASADataSet
 from pacer.plotting import full_diagnostic
+from pacer.trainers import BCTrainer, PACERBCTrainer
 
 
 def test_pacerbc_lasa(use_corruptions: bool = False) -> None:

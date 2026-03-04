@@ -17,7 +17,9 @@ from rich.progress import track
 from torch import Tensor
 from typingkit.numpy import enforce_shapes
 
-from pacer.base import PACER, Demonstrations, PhaseEstimator
+from pacer.base import Demonstrations
+from pacer.pacer import PACER
+from pacer.phase import PhaseEstimator
 from pacer.typings import (
     Action,
     Actions,
