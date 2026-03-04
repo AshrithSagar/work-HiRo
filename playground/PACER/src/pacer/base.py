@@ -10,7 +10,7 @@ https://openreview.net/forum?id=gaYyBvP2Rz
 
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from typing import Any, Generic, NamedTuple, TypeAlias, TypeVar, cast, overload
 
@@ -93,13 +93,21 @@ BinIndex: TypeAlias = int  # b \in {0, 1, ..., B-1}
 ## ── Base ─────────────────────────────────────────────────────────────────────
 
 
-# (x_{i, t}, a_{i, t})
+# (x, a)
 @dataclass
-class Sample(Generic[DimState, DimAction]):
+class StateActionPair(Generic[DimState, DimAction]):
     """A container for a State-Action pair."""
 
-    state: State[DimState]  # x_{i, t}
-    action: Action[DimAction]  # a_{i, t}
+    state: State[DimState]  # x
+    action: Action[DimAction]  # a
+
+
+# (x_{i, t}, a_{i, t})
+@dataclass
+class Sample(StateActionPair[DimState, DimAction]):
+    """A State-Action pair in the context of Demonstrations."""
+
+    index: SampleIndex  # (i, t)
 
 
 @dataclass
@@ -121,8 +129,7 @@ class Samples(Generic[NumPoints, DimState, DimAction]):
 
     @enforce_shapes
     def __iter__(self) -> Iterator[Sample[DimState, DimAction]]:
-        for sample in self.samples:
-            yield sample
+        yield from self.samples
 
     @property
     def time_indices(self) -> TimeIndices[NumPoints]:
@@ -133,10 +140,6 @@ class Samples(Generic[NumPoints, DimState, DimAction]):
         self.samples.append(sample)
 
     @enforce_shapes
-    def extend(self, samples: Iterable[Sample[DimState, DimAction]]) -> None:
-        self.samples.extend(samples)
-
-    @enforce_shapes
     def states(self) -> States[NumPoints, DimState]:
         return States[NumPoints, DimState](sample.state for sample in self.samples)
 
@@ -145,25 +148,29 @@ class Samples(Generic[NumPoints, DimState, DimAction]):
         return Actions[NumPoints, DimAction](sample.action for sample in self.samples)
 
     @property
-    def iter_time_indices_and_samples(
+    def time_indices_and_samples(
         self,
     ) -> Iterator[tuple[TimeIndex, Sample[DimState, DimAction]]]:
+        # ) -> TypedList[NumPoints, tuple[TimeIndex, Sample[DimState, DimAction]]]:
         for t in self.time_indices:
             sample = self.samples[t]
             yield (t, sample)
+        # return TypedList[NumPoints, tuple[TimeIndex, Sample[DimState, DimAction]]](
+        #     (sample.index.time, sample) for sample in self.samples
+        # )
 
     @property
-    def iter_time_indices_and_states(
+    def time_indices_and_states(
         self,
     ) -> Iterator[tuple[TimeIndex, State[DimState]]]:
-        for t, sample in self.iter_time_indices_and_samples:
+        for t, sample in self.time_indices_and_samples:
             yield (t, sample.state)
 
     @property
-    def iter_time_indices_and_actions(
+    def time_indices_and_actions(
         self,
     ) -> Iterator[tuple[TimeIndex, Action[DimAction]]]:
-        for t, sample in self.iter_time_indices_and_samples:
+        for t, sample in self.time_indices_and_samples:
             yield (t, sample.action)
 
 
@@ -206,22 +213,11 @@ class SamplesCollection(Generic[NumDemos, NumPoints, DimState, DimAction]):
 
     @enforce_shapes
     def __iter__(self) -> Iterator[Samples[NumPoints, DimState, DimAction]]:
-        for samples in self.collection:
-            yield samples
+        yield from self.collection
 
     @property
     def demo_indices(self) -> DemoIndices[NumDemos]:
         return DemoIndices[NumDemos](range(self.__len__()))
-
-    @enforce_shapes
-    def append(self, samples: Samples[NumPoints, DimState, DimAction]) -> None:
-        self.collection.append(samples)
-
-    @enforce_shapes
-    def extend(
-        self, samples: Iterable[Samples[NumPoints, DimState, DimAction]]
-    ) -> None:
-        self.collection.extend(samples)
 
     @enforce_shapes
     def samples(
@@ -230,8 +226,7 @@ class SamplesCollection(Generic[NumDemos, NumPoints, DimState, DimAction]):
         for i, samples in enumerate(self.collection):
             if i == LOO_demo_index:
                 continue
-            for sample in samples:
-                yield sample
+            yield from samples
 
     @enforce_shapes
     def states(
@@ -293,9 +288,13 @@ class Demonstration(Generic[NumPoints, DimState, DimAction]):  # D_i
 
     @enforce_shapes
     def __getitem__(
-        self, t: TimeIndex, /
+        self, index: TimeIndex, /
     ) -> Sample[DimState, DimAction]:  # (x_{i, t}, a_{i, t})
-        return Sample(self.states[t], self.actions[t])
+        return Sample(
+            index=SampleIndex(demo=self.index, time=index),
+            state=self.states[index],
+            action=self.actions[index],
+        )
 
     @enforce_shapes
     def __iter__(self) -> Iterator[Sample[DimState, DimAction]]:
@@ -354,8 +353,7 @@ class Demonstrations(
 
     @enforce_shapes
     def __iter__(self) -> Iterator[Demonstration[NumPoints, DimState, DimAction]]:
-        for demo in self.demos:
-            yield demo  # D_i
+        yield from self.demos  # D_i
 
     @property
     def demo_indices(self) -> DemoIndices[NumDemos]:
@@ -646,7 +644,7 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
                 )  # MAD_{a}^{(-i)}[b]
 
                 demo_samples = bin.samples_collection[i]
-                for t, action in demo_samples.iter_time_indices_and_actions:
+                for t, action in demo_samples.time_indices_and_actions:
                     self_residual = Residual(
                         la.norm(action - loo_median_action)
                     )  # r^{-i}_{i, t}
@@ -765,7 +763,7 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
                 bin_median_action = loo_stats.median_action  # alpha_a^{(-j)}[b]
 
                 demo_samples = bin.samples_collection[j]
-                for t, action in demo_samples.iter_time_indices_and_actions:
+                for t, action in demo_samples.time_indices_and_actions:
                     w = trust_values[j][t]  # w_{i, t}
 
                     # Debiasing towards the anchor
