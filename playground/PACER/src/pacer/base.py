@@ -84,13 +84,9 @@ class Samples(Generic[NumPoints, DimState, DimAction]):
     def time_indices_and_samples(
         self,
     ) -> Iterator[tuple[TimeIndex, Sample[DimState, DimAction]]]:
-        # ) -> TypedList[NumPoints, tuple[TimeIndex, Sample[DimState, DimAction]]]:
         for t in self.time_indices:
             sample = self.samples[t]
             yield (t, sample)
-        # return TypedList[NumPoints, tuple[TimeIndex, Sample[DimState, DimAction]]](
-        #     (sample.index.time, sample) for sample in self.samples
-        # )
 
     @property
     def time_indices_and_states(
