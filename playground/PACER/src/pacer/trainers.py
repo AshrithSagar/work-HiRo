@@ -60,6 +60,9 @@ class BCPolicy(nn.Module, Generic[DimState, DimAction]):
         return self.network(states)  # type: ignore[no-any-return]  # ty: ignore[unused-ignore-comment]
 
 
+## ── Trainers ─────────────────────────────────────────────────────────────────
+
+
 @dataclass
 class BCTrainer(Generic[NumDemos, NumPoints, DimState, DimAction]):
     """Behavioral cloning policy trainer."""

@@ -1,6 +1,7 @@
 """
 Base
 =======
+Core data structures for representing demonstrations and samples.
 """
 # src/pacer/base.py
 
