@@ -8,7 +8,7 @@ Core data structures for representing demonstrations and samples.
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
 from collections.abc import Iterator
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Generic, overload
 
 from typingkit.core import TypedList
@@ -49,44 +49,24 @@ class Sample(StateActionPair[DimState, DimAction]):
     index: SampleIndex  # (i, t)
 
 
-@dataclass
-class Samples(Generic[NumPoints, DimState, DimAction]):
-    samples: TypedList[NumPoints, Sample[DimState, DimAction]] = field(
-        default_factory=TypedList[NumPoints, Sample[DimState, DimAction]]
-    )  # [(x_{t}, a_{t})]_{t = 1}^{T}
-
-    def __len__(self) -> NumPoints:
-        return self.samples.length  # T
-
-    def __getitem__(
-        self,
-        index: TimeIndex,  # t
-        /,
-    ) -> Sample[DimState, DimAction]:
-        return self.samples[index]  # (x_{t}, a_{t})
-
-    def __iter__(self) -> Iterator[Sample[DimState, DimAction]]:
-        yield from self.samples
-
+# [(x_{t}, a_{t})]_{t = 1}^{T}
+class Samples(TypedList[NumPoints, Sample[DimState, DimAction]]):
     @property
     def time_indices(self) -> TimeIndices[NumPoints]:
         return TimeIndices[NumPoints](range(self.__len__()))
 
-    def append(self, sample: Sample[DimState, DimAction]) -> None:
-        return self.samples.append(sample)
-
     def states(self) -> States[NumPoints, DimState]:
-        return States[NumPoints, DimState](sample.state for sample in self.samples)
+        return States[NumPoints, DimState](sample.state for sample in self)
 
     def actions(self) -> Actions[NumPoints, DimAction]:
-        return Actions[NumPoints, DimAction](sample.action for sample in self.samples)
+        return Actions[NumPoints, DimAction](sample.action for sample in self)
 
     @property
     def time_indices_and_samples(
         self,
     ) -> Iterator[tuple[TimeIndex, Sample[DimState, DimAction]]]:
         for t in self.time_indices:
-            sample = self.samples[t]
+            sample = self[t]
             yield (t, sample)
 
     @property
@@ -104,44 +84,9 @@ class Samples(Generic[NumPoints, DimState, DimAction]):
             yield (t, sample.action)
 
 
-@dataclass
-class SamplesCollection(Generic[NumDemos, NumPoints, DimState, DimAction]):
+# [[(x_{i, t}, a_{i, t})]_{t = 1}^{T_i}]_{i = 1}^{N}
+class SamplesCollection(TypedList[NumDemos, Samples[NumPoints, DimState, DimAction]]):
     """A collection of state-action pairs (a sequence of state-action pair)."""
-
-    collection: TypedList[NumDemos, Samples[NumPoints, DimState, DimAction]] = field(
-        default_factory=TypedList[NumDemos, Samples[NumPoints, DimState, DimAction]]
-    )  # [[(x_{i, t}, a_{i, t})]_{t = 1}^{T_i}]_{i = 1}^{N}
-
-    def __len__(self) -> NumDemos:
-        return self.collection.length  # N
-
-    @overload
-    def __getitem__(
-        self,
-        index: DemoIndex,  # i
-        /,
-    ) -> Samples[
-        NumPoints, DimState, DimAction
-    ]: ...  # [(x_{i, t}, a_{i, t})]_{t = 1}^{T_i}
-    @overload
-    def __getitem__(  # ty: ignore[invalid-overload]
-        self,
-        index: SampleIndex,  # (i, t)
-        /,
-    ) -> Sample[DimState, DimAction]: ...  # (x_{i, t}, a_{i, t})
-    #
-    def __getitem__(
-        self, index: DemoIndex | SampleIndex, /
-    ) -> Samples[NumPoints, DimState, DimAction] | Sample[DimState, DimAction]:
-        match index:
-            case SampleIndex(i, t):
-                return self.collection[i][t]
-            case DemoIndex() as i:
-                return self.collection[i]
-        raise IndexError
-
-    def __iter__(self) -> Iterator[Samples[NumPoints, DimState, DimAction]]:
-        yield from self.collection
 
     @property
     def demo_indices(self) -> DemoIndices[NumDemos]:
@@ -154,7 +99,7 @@ class SamplesCollection(Generic[NumDemos, NumPoints, DimState, DimAction]):
     def samples(
         self, *, LOO_demo_index: DemoIndex | None = None
     ) -> Iterator[Sample[DimState, DimAction]]:  # (N x T_) or (N-1 x T_)
-        for i, samples in enumerate(self.collection):
+        for i, samples in enumerate(self):
             if i == LOO_demo_index:
                 continue
             yield from samples
@@ -183,7 +128,7 @@ class SamplesCollection(Generic[NumDemos, NumPoints, DimState, DimAction]):
             samples = self[i]
             for t in samples.time_indices:
                 sample_idx = SampleIndex(i, t)
-                sample = self[sample_idx]
+                sample = self[i][t]
                 yield (sample_idx, sample)
 
     @property

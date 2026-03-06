@@ -172,11 +172,9 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
             self.n_bins,
             lambda bin_idx: Bin[NumDemos, NumPoints, DimState, DimAction](
                 index=bin_idx,
-                samples_collection=SamplesCollection(
-                    collection=TypedList[
-                        NumDemos, Samples[NumPoints, DimState, DimAction]
-                    ].full(N, Samples[NumPoints, DimState, DimAction]()),
-                ),
+                samples_collection=SamplesCollection[
+                    NumDemos, NumPoints, DimState, DimAction
+                ].full(N, Samples[NumPoints, DimState, DimAction]()),
             ),
         )
         for sample_idx in self.sample_indices:
