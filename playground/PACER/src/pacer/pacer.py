@@ -180,19 +180,19 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
             samples = bin.samples_collection[demo_idx]
             samples[time_idx] = sample
 
-    # [FIXME]: Accepting any Iterator of Sample seems too generic;
-    #   Maybe restrict to some Samples OR validate sample indices, prolly;
-    #   Maybe once verify if use cases are already in a valid context;
     def compute_robust_consensus_statistics(
-        self, samples: Iterator[Sample[DimState, DimAction]]
+        self,
+        bin: Bin[NumDemos, NumPoints, DimState, DimAction],
+        *,
+        LOO_demo_index: DemoIndex | None = None,
     ) -> RobustStatistics[DimState, DimAction]:
         states = States[Any, DimState]()
         actions = Actions[Any, DimAction]()
-        for sample in samples:
+        for sample in bin.samples(LOO_demo_index=LOO_demo_index):
             states.append(sample.state)
             actions.append(sample.action)
 
-        action_norms = list(la.norm(action) for action in actions)
+        action_norms = [la.norm(action) for action in actions]
         state_change_norms = [
             la.norm(states[t + 1] - states[t]) for t in range(len(states) - 1)
         ]
@@ -222,8 +222,9 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
 
         for bin in self.bins:
             for i in self.demonstrations.demo_indices:
-                loo_samples = bin.samples(LOO_demo_index=i)
-                loo_stats = self.compute_robust_consensus_statistics(loo_samples)
+                loo_stats = self.compute_robust_consensus_statistics(
+                    bin, LOO_demo_index=i
+                )
                 loo_median_action = loo_stats.median_action  # alpha_a^{(-i)}[b]
 
                 loo_residuals = [
@@ -277,7 +278,7 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
         bin_median_states = States[NumPoints, DimState]()
 
         for bin in self.bins:
-            stats = self.compute_robust_consensus_statistics(bin.samples())
+            stats = self.compute_robust_consensus_statistics(bin)
 
             bin_median_action = stats.median_action  # alpha_a[b]
             bin_action_residuals = list[Residual]()
@@ -351,8 +352,9 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
             unit_tangent = Array1D[int](normalise(tangent, method="NORM"))  # t_{dir}[b]
 
             for j in self.demonstrations.demo_indices:
-                loo_samples = bin.samples(LOO_demo_index=j)
-                loo_stats = self.compute_robust_consensus_statistics(loo_samples)
+                loo_stats = self.compute_robust_consensus_statistics(
+                    bin, LOO_demo_index=j
+                )
                 bin_median_action = loo_stats.median_action  # alpha_a^{(-j)}[b]
 
                 demo_samples = bin.samples_collection[j]
