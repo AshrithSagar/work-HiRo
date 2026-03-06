@@ -328,12 +328,18 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
         temporal_smoothing_weight: npDType | float = 0.0,  # kappa
     ) -> ActionsCollection[NumDemos, NumPoints, DimAction]:  # (N x T_)
         N = self.demonstrations.__len__()
+        da = self.demonstrations.action_dim
         pseudo_labels = ActionsCollection[NumDemos, NumPoints, DimAction].full(
             N, Actions[NumPoints, DimAction]()
         )
         _labels = ActionsCollection[NumDemos, NumPoints, DimAction].full(
-            N, Actions[NumPoints, DimAction]()
-        )  # [[y^{(3)}_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
+            N,
+            lambda i: Actions[NumPoints, DimAction].full(
+                self.demonstrations[i].time_indices.length,
+                Action[DimAction](np.zeros((da), dtype=npDType)),
+            ),
+        )
+        # [[y^{(3)}_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
         self.consolidate_ribbon_tokens()
         rho_0 = sideways_attenuation_shrinkage
         assert 0 <= rho_0 <= 1
@@ -385,7 +391,7 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
                         s * (y2 / (la.norm(y2) + EPS)), dtype=npDType
                     )  # y^{(3)}_{i, t}
 
-                    _labels[j].append(y3)
+                    _labels[j][t] = y3
 
         # Temporal smoothing
         for i in self.demonstrations.demo_indices:
