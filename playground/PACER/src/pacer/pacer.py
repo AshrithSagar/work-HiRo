@@ -16,7 +16,7 @@ from typing import Any, Generic, cast
 
 import numpy as np
 import numpy.linalg as la
-from typingkit.core import TypedDict, TypedList
+from typingkit.core import TypedList
 from typingkit.numpy._typed.helpers import Array1D
 
 from pacer.base import Demonstrations, Sample, Samples, SamplesCollection
@@ -107,14 +107,9 @@ class Bin(Generic[NumDemos, NumPoints, DimState, DimAction]):
 
     def samples(
         self, *, LOO_demo_index: DemoIndex | None = None
-    ) -> Samples[Any, DimState, DimAction]:
+    ) -> Iterator[Sample[DimState, DimAction]]:
         # (N x T_) or (N-1 x T_)
-        samples = self.samples_collection.samples(LOO_demo_index=LOO_demo_index)
-        return Samples(
-            TypedDict[Any, TimeIndex, Sample[DimState, DimAction]](
-                {sample.index.time: sample for sample in samples}
-            )
-        )
+        return self.samples_collection.samples(LOO_demo_index=LOO_demo_index)
 
     def states(
         self, *, LOO_demo_index: DemoIndex | None = None
@@ -185,11 +180,18 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
             samples = bin.samples_collection[demo_idx]
             samples[time_idx] = sample
 
+    # [FIXME]: Accepting any Iterator of Sample seems too generic;
+    #   Maybe restrict to some Samples OR validate sample indices, prolly;
+    #   Maybe once verify if use cases are already in a valid context;
     def compute_robust_consensus_statistics(
-        self, samples: Samples[Any, DimState, DimAction]
+        self, samples: Iterator[Sample[DimState, DimAction]]
     ) -> RobustStatistics[DimState, DimAction]:
-        states = samples.states()
-        actions = samples.actions()
+        states = States[Any, DimState]()
+        actions = Actions[Any, DimAction]()
+        for sample in samples:
+            states.append(sample.state)
+            actions.append(sample.action)
+
         action_norms = list(la.norm(action) for action in actions)
         state_change_norms = [
             la.norm(states[t + 1] - states[t]) for t in range(len(states) - 1)
