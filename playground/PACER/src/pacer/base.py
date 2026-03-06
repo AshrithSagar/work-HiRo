@@ -9,9 +9,9 @@ Core data structures for representing demonstrations and samples.
 
 from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Generic, overload
+from typing import Any, Generic, overload
 
-from typingkit.core import TypedList
+from typingkit.core import TypedDict, TypedList
 
 from pacer.typings import (
     Action,
@@ -50,100 +50,82 @@ class Sample(StateActionPair[DimState, DimAction]):
 
 
 # [(x_{t}, a_{t})]_{t = 1}^{T}
-class Samples(TypedList[NumPoints, Sample[DimState, DimAction]]):
+class Samples(TypedDict[NumPoints, TimeIndex, Sample[DimState, DimAction]]):
     @property
     def time_indices(self) -> TimeIndices[NumPoints]:
-        return TimeIndices[NumPoints](range(self.__len__()))
+        return TimeIndices[NumPoints](self.keys())
 
     def states(self) -> States[NumPoints, DimState]:
-        return States[NumPoints, DimState](sample.state for sample in self)
+        return States[NumPoints, DimState](sample.state for sample in self.values())
 
     def actions(self) -> Actions[NumPoints, DimAction]:
-        return Actions[NumPoints, DimAction](sample.action for sample in self)
-
-    @property
-    def time_indices_and_samples(
-        self,
-    ) -> Iterator[tuple[TimeIndex, Sample[DimState, DimAction]]]:
-        for t in self.time_indices:
-            sample = self[t]
-            yield (t, sample)
-
-    @property
-    def time_indices_and_states(
-        self,
-    ) -> Iterator[tuple[TimeIndex, State[DimState]]]:
-        for t, sample in self.time_indices_and_samples:
-            yield (t, sample.state)
-
-    @property
-    def time_indices_and_actions(
-        self,
-    ) -> Iterator[tuple[TimeIndex, Action[DimAction]]]:
-        for t, sample in self.time_indices_and_samples:
-            yield (t, sample.action)
+        return Actions[NumPoints, DimAction](sample.action for sample in self.values())
 
 
 # [[(x_{i, t}, a_{i, t})]_{t = 1}^{T_i}]_{i = 1}^{N}
-class SamplesCollection(TypedList[NumDemos, Samples[NumPoints, DimState, DimAction]]):
+class SamplesCollection(
+    TypedDict[NumDemos, DemoIndex, Samples[NumPoints, DimState, DimAction]]
+):
     """A collection of state-action pairs (a sequence of state-action pair)."""
+
+    @overload
+    def __getitem__(
+        self,
+        index: DemoIndex,  # i
+        /,
+    ) -> Samples[
+        NumPoints, DimState, DimAction
+    ]: ...  # [(x_{i, t}, a_{i, t})]_{t = 1}^{T_i}
+    @overload
+    def __getitem__(  # ty: ignore[invalid-overload]
+        self,
+        index: SampleIndex,  # (i, t)
+        /,
+    ) -> Sample[DimState, DimAction]: ...  # (x_{i, t}, a_{i, t})
+    #
+    def __getitem__(
+        self, index: DemoIndex | SampleIndex, /
+    ) -> Samples[NumPoints, DimState, DimAction] | Sample[DimState, DimAction]:
+        match index:
+            case SampleIndex(i, t):
+                return super().__getitem__(i)[t]
+            case DemoIndex() as i:
+                return super().__getitem__(i)
+        raise IndexError
 
     @property
     def demo_indices(self) -> DemoIndices[NumDemos]:
-        return DemoIndices[NumDemos](range(self.__len__()))
+        return DemoIndices[NumDemos](self.keys())
 
     @property
-    def demo_lengths(self) -> TypedList[NumDemos, int]:
-        return TypedList[NumDemos, int](samples.__len__() for samples in self)
+    def demo_lengths(self) -> TypedList[NumDemos, NumPoints]:
+        return TypedList[NumDemos, NumPoints](
+            samples.__len__() for samples in self.values()
+        )
 
     def samples(
         self, *, LOO_demo_index: DemoIndex | None = None
     ) -> Iterator[Sample[DimState, DimAction]]:  # (N x T_) or (N-1 x T_)
-        for i, samples in enumerate(self):
+        for i in self.demo_indices:
             if i == LOO_demo_index:
                 continue
-            yield from samples
+            yield from self[i].values()
 
     def states(
         self, *, LOO_demo_index: DemoIndex | None = None
-    ) -> States[int, DimState]:
+    ) -> States[Any, DimState]:
         # (N x T_) or (N-1 x T_)
-        return States[int, DimState](
+        return States[Any, DimState](
             sample.state for sample in self.samples(LOO_demo_index=LOO_demo_index)
         )
 
     def actions(
         self, *, LOO_demo_index: DemoIndex | None = None
-    ) -> Actions[int, DimAction]:
+    ) -> Actions[Any, DimAction]:
         # (N x T_) or (N-1 x T_)
-        return Actions[int, DimAction](
+        return Actions[Any, DimAction](
             sample.action for sample in self.samples(LOO_demo_index=LOO_demo_index)
         )
-
-    @property
-    def iter_sample_indices_and_samples(
-        self,
-    ) -> Iterator[tuple[SampleIndex, Sample[DimState, DimAction]]]:
-        for i in self.demo_indices:
-            samples = self[i]
-            for t in samples.time_indices:
-                sample_idx = SampleIndex(i, t)
-                sample = self[i][t]
-                yield (sample_idx, sample)
-
-    @property
-    def iter_sample_indices_and_states(
-        self,
-    ) -> Iterator[tuple[SampleIndex, State[DimState]]]:
-        for sample_idx, sample in self.iter_sample_indices_and_samples:
-            yield (sample_idx, sample.state)
-
-    @property
-    def iter_sample_indices_and_actions(
-        self,
-    ) -> Iterator[tuple[SampleIndex, Action[DimAction]]]:
-        for sample_idx, sample in self.iter_sample_indices_and_samples:
-            yield (sample_idx, sample.action)
 
 
 # Behaves like Samples
@@ -191,7 +173,9 @@ class Demonstration(Generic[NumPoints, DimState, DimAction]):  # D_i
 
     def samples(self) -> Samples[NumPoints, DimState, DimAction]:
         return Samples(
-            TypedList[NumPoints, Sample[DimState, DimAction]](sample for sample in self)
+            TypedDict[NumPoints, TimeIndex, Sample[DimState, DimAction]](
+                (sample.index.time, sample) for sample in self
+            )
         )
 
 

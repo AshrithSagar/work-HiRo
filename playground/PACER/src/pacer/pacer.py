@@ -16,7 +16,7 @@ from typing import Any, Generic, cast
 
 import numpy as np
 import numpy.linalg as la
-from typingkit.core import TypedList
+from typingkit.core import TypedDict, TypedList
 from typingkit.numpy._typed.helpers import Array1D
 
 from pacer.base import Demonstrations, Sample, Samples, SamplesCollection
@@ -107,23 +107,24 @@ class Bin(Generic[NumDemos, NumPoints, DimState, DimAction]):
 
     def samples(
         self, *, LOO_demo_index: DemoIndex | None = None
-    ) -> Samples[int, DimState, DimAction]:
+    ) -> Samples[Any, DimState, DimAction]:
         # (N x T_) or (N-1 x T_)
+        samples = self.samples_collection.samples(LOO_demo_index=LOO_demo_index)
         return Samples(
-            TypedList[int, Sample[DimState, DimAction]](
-                self.samples_collection.samples(LOO_demo_index=LOO_demo_index)
+            TypedDict[Any, TimeIndex, Sample[DimState, DimAction]](
+                {sample.index.time: sample for sample in samples}
             )
         )
 
     def states(
         self, *, LOO_demo_index: DemoIndex | None = None
-    ) -> States[int, DimState]:
+    ) -> States[Any, DimState]:
         # (N x T_) or (N-1 x T_)
         return self.samples_collection.states(LOO_demo_index=LOO_demo_index)
 
     def actions(
         self, *, LOO_demo_index: DemoIndex | None = None
-    ) -> Actions[int, DimAction]:
+    ) -> Actions[Any, DimAction]:
         # (N x T_) or (N-1 x T_)
         return self.samples_collection.actions(LOO_demo_index=LOO_demo_index)
 
@@ -165,25 +166,24 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
 
     def make_bins(self) -> None:
         self.phases = self.phase_estimator.estimate_phases()
-        N = self.demonstrations.__len__()
         self.bins = TypedList[
             NumBins, Bin[NumDemos, NumPoints, DimState, DimAction]
         ].full(
             self.n_bins,
-            lambda bin_idx: Bin[NumDemos, NumPoints, DimState, DimAction](
+            lambda bin_idx: Bin(
                 index=bin_idx,
                 samples_collection=SamplesCollection[
                     NumDemos, NumPoints, DimState, DimAction
-                ].full(N, Samples[NumPoints, DimState, DimAction]()),
+                ]({i: Samples() for i in self.demonstrations.demo_indices}),
             ),
         )
         for sample_idx in self.sample_indices:
-            demo_idx, _ = sample_idx
+            demo_idx, time_idx = sample_idx
             bin_idx = self.sample_index_to_bin_index(sample_idx)
             bin = self.bins[bin_idx]
             sample = self.demonstrations[sample_idx]
-            collection = bin.samples_collection[demo_idx]
-            collection.append(sample)
+            samples = bin.samples_collection[demo_idx]
+            samples[time_idx] = sample
 
     def compute_robust_consensus_statistics(
         self, samples: Samples[Any, DimState, DimAction]
@@ -238,9 +238,9 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
                 )  # MAD_{a}^{(-i)}[b]
 
                 demo_samples = bin.samples_collection[i]
-                for t, action in demo_samples.time_indices_and_actions:
+                for t, sample in demo_samples.items():
                     self_residual = Residual(
-                        la.norm(action - loo_median_action)
+                        la.norm(sample.action - loo_median_action)
                     )  # r^{-i}_{i, t}
                     z_score = ZScore(self_residual / (MAD_residual + EPS))  # z_{i, t}
                     z_scores[i][t] = z_score
@@ -354,14 +354,14 @@ class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
                 bin_median_action = loo_stats.median_action  # alpha_a^{(-j)}[b]
 
                 demo_samples = bin.samples_collection[j]
-                for t, action in demo_samples.time_indices_and_actions:
+                for t, sample in demo_samples.items():
                     w = trust_values[j][t]  # w_{i, t}
 
                     # Debiasing towards the anchor
                     gamma = 1 - debias_weight * (1 - w)  # gamma_{i, t}
                     assert 0 <= gamma <= 1
                     y1 = Action[DimAction](
-                        gamma * action + (1 - gamma) * bin_median_action
+                        gamma * sample.action + (1 - gamma) * bin_median_action
                     )  # y^{(1)}_{i, t}
 
                     # Sideways attentuation
