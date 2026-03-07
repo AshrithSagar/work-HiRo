@@ -963,7 +963,7 @@ dev = [
     { name = "types-pexpect", specifier = ">=4.9.0.20260127" },
     { name = "types-protobuf", specifier = ">=6.32.1.20260221" },
     { name = "types-pygments", specifier = ">=2.19.0.20251121" },
-    { name = "types-python-dateutil", specifier = ">=2.9.0.20260302" },
+    { name = "types-python-dateutil", specifier = ">=2.9.0.20260305" },
     { name = "types-pywin32", specifier = ">=311.0.0.20251008" },
     { name = "types-pyyaml", specifier = ">=6.0.12.20250915" },
     { name = "types-setuptools", specifier = ">=82.0.0.20260210" },
@@ -1732,8 +1732,8 @@ wheels = [
 
 [[package]]
 name = "typingkit"
-version = "0.2.3"
-source = { git = "https://github.com/AshrithSagar/typingkit.git?rev=main#9a74599de8119ed6e3299f6c54a5b4d2629f3217" }
+version = "0.2.4"
+source = { git = "https://github.com/AshrithSagar/typingkit.git?rev=main#ef5f07c3cc44991b80e20dacff8501e49ea6a199" }
 dependencies = [
     { name = "numpy" },
 ]
