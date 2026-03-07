@@ -64,7 +64,7 @@ class PhaseEstimator(Generic[NumDemos, NumPoints, DimState, DimAction]):
         for demo in self.demonstrations:
             states = Tensor(np.array(demo.states)).float().to(self.device)
             scores: Tensor = self.scorer(states)  # (T_i,)
-            diff = scores.unsqueeze(1) - scores.unsqueeze(0)  # (T_i, T_i)
+            diff = scores.unsqueeze(0) - scores.unsqueeze(1)  # (T_i, T_i)
             mask = torch.ones_like(diff).triu(diagonal=1)  # Enforces `t > t'`
             loss_matrix = F.softplus(margin - diff) * mask
             loss += loss_matrix.sum() / (mask.sum() + EPS)  # Normalise over valid pairs
