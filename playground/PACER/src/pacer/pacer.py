@@ -12,11 +12,11 @@ https://openreview.net/forum?id=gaYyBvP2Rz
 
 from collections.abc import Iterator
 from dataclasses import dataclass, field
-from typing import Any, Generic, cast
+from typing import Any, cast
 
 import numpy as np
 import numpy.linalg as la
-from typingkit.core import TypedList
+from typingkit.core import RuntimeGeneric, TypedList
 from typingkit.numpy._typed.helpers import Array1D
 
 from pacer.base import Demonstrations, Sample, Samples, SamplesCollection
@@ -53,7 +53,7 @@ from pacer.utils import EPS, MAD_SCALE, median, normalise
 
 
 @dataclass(kw_only=True)
-class RobustStatistics(Generic[DimState, DimAction]):
+class RobustStatistics(RuntimeGeneric[DimState, DimAction]):
     """Robust consensus statistics for a set of samples."""
 
     ## Stable anchors
@@ -74,7 +74,7 @@ class RobustStatistics(Generic[DimState, DimAction]):
 
 
 @dataclass(kw_only=True)
-class RibbonToken(Generic[DimState, DimAction]):  # z_b
+class RibbonToken(RuntimeGeneric[DimState, DimAction]):  # z_b
     """
     Robust structured descriptor for a single phase bin `b`.\\
     Encodes both consensus behaviour and degree of variability present at phase `b`.
@@ -95,7 +95,7 @@ class RibbonToken(Generic[DimState, DimAction]):  # z_b
 
 
 @dataclass(kw_only=True)
-class Bin(Generic[NumDemos, NumPoints, DimState, DimAction]):
+class Bin(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
     index: BinIndex  # b
     samples_collection: SamplesCollection[NumDemos, NumPoints, DimState, DimAction] = (
         field(
@@ -125,7 +125,7 @@ class Bin(Generic[NumDemos, NumPoints, DimState, DimAction]):
 
 
 @dataclass
-class PACER(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
+class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
     phase_estimator: PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]
     n_bins: NumBins = field(default=cast(NumBins, 96), kw_only=True)  # B
     ##

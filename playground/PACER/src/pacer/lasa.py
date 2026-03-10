@@ -8,14 +8,14 @@ LASA Dataset
 
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
-from typing import Generic, Literal, TypeAlias, TypeVar
+from typing import Literal, TypeAlias, TypeVar
 
 import numpy as np
 import pyLasaDataset as lasa  # type: ignore[import-untyped]  # ty: ignore[unused-ignore-comment]
 from pyLasaDataset.dataset import (  # type: ignore[import-untyped]  # ty: ignore[unused-ignore-comment]
     _Data,
 )
-from typingkit.core import TypedList
+from typingkit.core import RuntimeGeneric, TypedList
 from typingkit.numpy import enforce_shapes
 from typingkit.numpy._typed.helpers import THREE, TWO, Array3D
 
@@ -45,8 +45,8 @@ class LASADataSet:
         self.velocities = Array_7x1000x2(
             [demo.__getattribute__("vel").T for demo in data.demos], dtype=npDType
         )
-        self.positions_diff = np.diff(
-            self.positions, axis=-2, append=np.zeros((7, 1, 2), dtype=npDType)
+        self.positions_diff = Array_7x1000x2(
+            np.diff(self.positions, axis=-2, append=np.zeros((7, 1, 2), dtype=npDType))
         )
 
     def __len__(self) -> SEVEN:
@@ -69,7 +69,7 @@ class LASADataSet:
         )
 
 
-class LASADataSet3D(Generic[_ScalarT]):
+class LASADataSet3D(RuntimeGeneric[_ScalarT]):
     def __init__(
         self,
         data: _Data = lasa.DataSet.GShape,

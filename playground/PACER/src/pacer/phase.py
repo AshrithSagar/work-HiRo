@@ -7,7 +7,6 @@ Phase alignment
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
 from dataclasses import dataclass, field
-from typing import Generic
 
 import numpy as np
 import torch
@@ -15,6 +14,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from rich.progress import track
 from torch import Tensor
+from typingkit.core import RuntimeGeneric
 
 from pacer.base import Demonstrations
 from pacer.typings import (
@@ -30,7 +30,7 @@ from pacer.utils import EPS, get_torch_device_auto, normalise
 ## ── Phase Alignment ──────────────────────────────────────────────────────────
 
 
-class PhaseScorer(nn.Module, Generic[DimState]):
+class PhaseScorer(nn.Module, RuntimeGeneric[DimState]):
     """A small neural network (MLP) to estimate state-dependent phase score `g_psi`."""
 
     def __init__(self, state_dim: DimState, hidden_dim: int = 64):
@@ -52,7 +52,7 @@ class PhaseScorer(nn.Module, Generic[DimState]):
 
 
 @dataclass
-class PhaseEstimator(Generic[NumDemos, NumPoints, DimState, DimAction]):
+class PhaseEstimator(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     device: torch.device = field(kw_only=True, default_factory=get_torch_device_auto)
     ##

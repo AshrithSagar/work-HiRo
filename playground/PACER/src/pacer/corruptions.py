@@ -8,11 +8,10 @@ Dataset corruptions
 
 import random
 from dataclasses import dataclass
-from typing import Generic
 
 import numpy as np
 import numpy.linalg as la
-from typingkit.core import TypedList
+from typingkit.core import RuntimeGeneric, TypedList
 
 from pacer.base import Demonstration, Demonstrations
 from pacer.typings import Action, DimAction, DimState, NumDemos, NumPoints
@@ -22,7 +21,7 @@ from pacer.utils import EPS, SEED, set_seed
 
 
 @dataclass
-class DemonstrationCorrupter(Generic[NumDemos, NumPoints, DimState, DimAction]):
+class DemonstrationCorrupter(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     noise_std: float = 0.0
     outlier_fraction: float = 0.0

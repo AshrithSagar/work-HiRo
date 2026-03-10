@@ -9,9 +9,9 @@ Core data structures for representing demonstrations and samples.
 
 from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Any, Generic, overload
+from typing import Any, overload
 
-from typingkit.core import TypedDict, TypedList
+from typingkit.core import RuntimeGeneric, TypedDict, TypedList
 
 from pacer.typings import (
     Action,
@@ -34,7 +34,7 @@ from pacer.typings import (
 
 # (x, a)
 @dataclass
-class StateActionPair(Generic[DimState, DimAction]):
+class StateActionPair(RuntimeGeneric[DimState, DimAction]):
     """A container for a State-Action pair."""
 
     state: State[DimState]  # x
@@ -130,7 +130,7 @@ class SamplesCollection(
 
 # Behaves like Samples
 @dataclass(kw_only=True)
-class Demonstration(Generic[NumPoints, DimState, DimAction]):  # D_i
+class Demonstration(RuntimeGeneric[NumPoints, DimState, DimAction]):  # D_i
     index: DemoIndex  # i
     states: States[NumPoints, DimState]  # [x_{i, t}]_{t = 1}^{T_i}
     actions: Actions[NumPoints, DimAction]  # [a_{i, t}]_{t = 1}^{T_i}
@@ -182,7 +182,7 @@ class Demonstration(Generic[NumPoints, DimState, DimAction]):  # D_i
 # Behaves like SamplesCollection
 @dataclass(slots=True)
 class Demonstrations(
-    Generic[NumDemos, NumPoints, DimState, DimAction]
+    RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]
 ):  # [D_i]_{i = 1}^{N}
     demos: TypedList[NumDemos, Demonstration[NumPoints, DimState, DimAction]]
 

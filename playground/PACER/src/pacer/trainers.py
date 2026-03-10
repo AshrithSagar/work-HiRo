@@ -7,7 +7,7 @@ Policy training
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
 from dataclasses import dataclass, field
-from typing import Generic, cast
+from typing import cast
 
 import numpy as np
 import torch
@@ -15,6 +15,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from rich.progress import track
 from torch import Tensor
+from typingkit.core import RuntimeGeneric
 
 from pacer.base import Demonstrations
 from pacer.pacer import PACER
@@ -38,7 +39,7 @@ from pacer.utils import SEED, get_torch_device_auto, set_seed
 ## ── Policies ─────────────────────────────────────────────────────────────────
 
 
-class BCPolicy(nn.Module, Generic[DimState, DimAction]):
+class BCPolicy(nn.Module, RuntimeGeneric[DimState, DimAction]):
     """Behavioral cloning policy that maps states to actions."""
 
     def __init__(
@@ -64,7 +65,7 @@ class BCPolicy(nn.Module, Generic[DimState, DimAction]):
 
 
 @dataclass
-class BCTrainer(Generic[NumDemos, NumPoints, DimState, DimAction]):
+class BCTrainer(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
     """Behavioral cloning policy trainer."""
 
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
@@ -140,7 +141,7 @@ class BCTrainer(Generic[NumDemos, NumPoints, DimState, DimAction]):
 
 
 @dataclass
-class PACERBCTrainer(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
+class PACERBCTrainer(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
     """PACER + Behavioral cloning policy trainer."""
 
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
