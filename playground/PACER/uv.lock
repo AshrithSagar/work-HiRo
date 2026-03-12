@@ -1738,8 +1738,8 @@ wheels = [
 
 [[package]]
 name = "typingkit"
-version = "0.2.6"
-source = { git = "https://github.com/AshrithSagar/typingkit.git?rev=main#85f1ab2b93783276a170b9a566c316c8fc44b656" }
+version = "0.2.7"
+source = { git = "https://github.com/AshrithSagar/typingkit.git?rev=main#86ee4e81008d0714a6dcb92f2cdeb91b8ad79d25" }
 dependencies = [
     { name = "numpy" },
 ]

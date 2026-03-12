@@ -1,12 +1,15 @@
 # tests/test_lasa.py
 
 import pyLasaDataset as lasa  # type: ignore[import-untyped]  # ty: ignore[unused-ignore-comment]
+from typingkit.core import RuntimeOptions, set_global_default_runtime_options
 
 from pacer import console
 from pacer.corruptions import DemonstrationCorrupter
 from pacer.lasa import LASADataSet
 from pacer.plotting import full_diagnostic
 from pacer.trainers import BCTrainer, PACERBCTrainer
+
+set_global_default_runtime_options(RuntimeOptions(validate=True))
 
 
 def test_pacerbc_lasa(use_corruptions: bool = False) -> None:
