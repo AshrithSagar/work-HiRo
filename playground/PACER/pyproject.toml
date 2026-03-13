@@ -42,14 +42,14 @@ dev = [
     "types-tqdm>=4.67.3.20260303",
     "types-xlrd>=2.0.0.20251020",
 ]
-lint = ["ruff>=0.15.5"]
+lint = ["ruff>=0.15.6"]
 test = ["pytest>=9.0.2", "pytest-memray>=1.8.0"]
 typecheck = [
     "basedpyright>=1.38.2",
     "mypy[mypyc]>=1.19.1",
     "pyrefly>=0.56.0",
     "pyright>=1.1.408",
-    "ty>=0.0.21",
+    "ty>=0.0.22",
 ]
 
 [build-system]
