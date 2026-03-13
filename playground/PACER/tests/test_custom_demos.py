@@ -2,6 +2,8 @@
 
 # pyright: standard
 
+from typing import Any
+
 import matplotlib.pyplot as plt
 from typingkit.core import RuntimeOptions, set_global_default_runtime_options
 from typingkit.numpy._typed.helpers import TWO
@@ -17,7 +19,7 @@ from pacer.typings import NumDemos, NumPoints
 set_global_default_runtime_options(RuntimeOptions(validate=True))
 
 
-def get_demonstrations() -> Demonstrations[int, int, TWO, TWO]:
+def get_demonstrations() -> Demonstrations[Any, Any, TWO, TWO]:
     drawer = InteractiveDataSet()
     plt.show(block=True)
     return drawer.to_demonstrations()
