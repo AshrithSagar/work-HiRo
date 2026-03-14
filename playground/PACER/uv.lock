@@ -932,7 +932,6 @@ dependencies = [
     { name = "numpy" },
     { name = "optype", extra = ["numpy"] },
     { name = "pygame" },
-    { name = "pylasadataset" },
     { name = "pylasahandwritingdataset" },
     { name = "rich" },
     { name = "scikit-learn" },
@@ -989,7 +988,6 @@ requires-dist = [
     { name = "numpy", specifier = ">=2.4.3" },
     { name = "optype", extras = ["numpy"], specifier = ">=0.17.0" },
     { name = "pygame", specifier = ">=2.6.1" },
-    { name = "pylasadataset", specifier = ">=0.1.1" },
     { name = "pylasahandwritingdataset", specifier = ">=0.1.1" },
     { name = "rich", specifier = ">=14.3.3" },
     { name = "scikit-learn", specifier = ">=1.8.0" },
@@ -1200,20 +1198,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/b0/77/a5b8c569bf593b0140bde72ea885a803b82086995367bf2037de0159d924/pygments-2.19.2.tar.gz", hash = "sha256:636cb2477cec7f8952536970bc533bc43743542f70392ae026374600add5b887", size = 4968631, upload-time = "2025-06-21T13:39:12.283Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c7/21/705964c7812476f378728bdf590ca4b771ec72385c533964653c68e86bdc/pygments-2.19.2-py3-none-any.whl", hash = "sha256:86540386c03d588bb81d44bc3928634ff26449851e99741617ecb9037ee5ec0b", size = 1225217, upload-time = "2025-06-21T13:39:07.939Z" },
-]
-
-[[package]]
-name = "pylasadataset"
-version = "0.1.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "matplotlib" },
-    { name = "numpy" },
-    { name = "scipy" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/04/8a/e4d53e4a043a25970f4dbb6ac280f50859c4359e1ae480c6739ab09ec00f/pyLasaDataset-0.1.1.tar.gz", hash = "sha256:b9a1d2d454123b6394357319e4daef7d8895b1559b6da68e93f2281fac43f296", size = 10665477, upload-time = "2022-02-04T14:42:16.851Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/6d/ca/66fa27a360b04e42836781dd20cadb612e1e4b81a417e3b7a3ebdb390373/pyLasaDataset-0.1.1-py3-none-any.whl", hash = "sha256:2d47245bb788c7a31bbf307830893451271b6c1f2dbe92ff800214dc0865db25", size = 10664206, upload-time = "2022-02-04T14:42:11.517Z" },
 ]
 
 [[package]]
