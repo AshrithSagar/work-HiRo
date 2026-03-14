@@ -11,10 +11,7 @@ LASA Dataset
 from typing import Literal, TypeAlias, TypeVar
 
 import numpy as np
-import pyLasaDataset as lasa  # type: ignore[import-untyped]  # ty: ignore[unused-ignore-comment]
-from pyLasaDataset.dataset import (  # type: ignore[import-untyped]  # ty: ignore[unused-ignore-comment]
-    _Data,
-)
+from pyLASAHandwritingDataset import DataSet, SinglePatternMotion
 from typingkit.core import RuntimeGeneric, TypedList
 from typingkit.numpy import enforce_shapes
 from typingkit.numpy._typed.helpers import THREE, TWO, Array3D
@@ -36,14 +33,14 @@ Array_7x1000x3: TypeAlias = Array3D[SEVEN, THOUSAND, THREE, np.dtype[_ScalarT]]
 
 
 class LASADataSet:
-    def __init__(self, data: _Data = lasa.DataSet.GShape) -> None:
-        self.data = data
+    def __init__(self, pattern: SinglePatternMotion) -> None:
+        self.data = DataSet[pattern]
 
         self.positions = Array_7x1000x2(
-            [demo.__getattribute__("pos").T for demo in data.demos], dtype=npDType
+            [demo.pos.T for demo in self.data.demos], dtype=npDType
         )
         self.velocities = Array_7x1000x2(
-            [demo.__getattribute__("vel").T for demo in data.demos], dtype=npDType
+            [demo.vel.T for demo in self.data.demos], dtype=npDType
         )
         self.positions_diff = Array_7x1000x2(
             np.diff(self.positions, axis=-2, append=np.zeros((7, 1, 2), dtype=npDType))
@@ -72,11 +69,11 @@ class LASADataSet:
 class LASADataSet3D(RuntimeGeneric[_ScalarT]):
     def __init__(
         self,
-        data: _Data = lasa.DataSet.GShape,
+        pattern: SinglePatternMotion,
         *,
         dtype: type[_ScalarT] = npDType,  # type: ignore[assignment]
     ) -> None:
-        dataset = LASADataSet(data)
+        dataset = LASADataSet(pattern)
 
         @enforce_shapes
         def pad(arr: Array_7x1000x2) -> Array_7x1000x3[_ScalarT]:

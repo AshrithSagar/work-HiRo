@@ -2,7 +2,6 @@
 
 from typing import Any
 
-import pyLasaDataset as lasa  # type: ignore[import-untyped]  # ty: ignore[unused-ignore-comment]
 from typingkit.core import RuntimeOptions, set_global_default_runtime_options
 from typingkit.numpy._typed.helpers import TWO
 
@@ -18,7 +17,7 @@ set_global_default_runtime_options(RuntimeOptions(validate=True))
 
 
 def get_demonstrations() -> Demonstrations[Any, Any, TWO, TWO]:
-    return LASADataSet(lasa.DataSet.GShape).to_demonstrations()
+    return LASADataSet("GShape").to_demonstrations()
 
 
 def test_pacerbc(
