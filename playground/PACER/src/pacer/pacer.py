@@ -16,6 +16,8 @@ from typing import Any, cast
 
 import numpy as np
 import numpy.linalg as la
+import torch
+from torch import Tensor
 from typingkit.core import RuntimeGeneric, TypedList
 from typingkit.numpy._typed.helpers import Array1D
 
@@ -47,7 +49,15 @@ from pacer.typings import (
     ZScoresCollection,
     npDType,
 )
-from pacer.utils import EPS, MAD_SCALE, median, normalise
+from pacer.utils import (
+    EPS,
+    MAD_SCALE,
+    SEED,
+    get_torch_device_auto,
+    median,
+    normalise,
+    set_seed,
+)
 
 ## ── PACER ────────────────────────────────────────────────────────────────────
 
@@ -126,19 +136,18 @@ class Bin(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
 
 @dataclass
 class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
-    phase_estimator: PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]
+    demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     n_bins: NumBins = field(default=cast(NumBins, 96), kw_only=True)  # B
     ##
+    phase_estimator: PhaseEstimator[NumDemos, NumPoints, DimState, DimAction] = field(
+        init=False
+    )
     bins: TypedList[NumBins, Bin[NumDemos, NumPoints, DimState, DimAction]] = field(
         init=False
     )
     phases: PhasesCollection[NumDemos, NumPoints] = field(init=False)
-
-    @property
-    def demonstrations(
-        self,
-    ) -> Demonstrations[NumDemos, NumPoints, DimState, DimAction]:
-        return self.phase_estimator.demonstrations
+    trust_values: TrustValuesCollection[NumDemos, NumPoints] = field(init=False)
+    pseudo_labels: ActionsCollection[NumDemos, NumPoints, DimAction] = field(init=False)
 
     def phase_range(self, bin_idx: BinIndex) -> tuple[Phase, Phase]:
         return (Phase(bin_idx / self.n_bins), Phase((bin_idx + 1) / self.n_bins))
@@ -407,6 +416,45 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
                 ystar_prev = ystar
 
         return pseudo_labels
+
+    def prepare(
+        self,
+        *,
+        seed: int = SEED,
+        device: torch.device | None = None,
+        phase_hidden_dim: int = 128,
+        phase_margin: float = 1.0,
+        phase_lr: float = 1e-3,
+        phase_epochs: int = 240,
+        tukey_cutoff: npDType | float = 4.685,  # c
+        min_trust: npDType | float = 0.02,  # w_min
+        debias_weight: npDType | float = 0.5,  # lambda_{debias}
+        sideways_attenuation_shrinkage: npDType | float = 0.5,  # rho_0
+        speed_regularisation_influence: npDType | float = 0.5,  # eta_0
+        temporal_smoothing_weight: npDType | float = 0.0,  # kappa
+    ) -> Tensor:
+        set_seed(seed)
+        device = device or get_torch_device_auto()
+        self.phase_estimator = PhaseEstimator(self.demonstrations, device=device)
+        loss = self.phase_estimator.train(
+            hidden_dim=phase_hidden_dim,
+            margin=phase_margin,
+            lr=phase_lr,
+            epochs=phase_epochs,
+        )
+        self.make_bins()
+        self.trust_values = self.compute_trust_values(
+            cutoff=tukey_cutoff,
+            min_trust=min_trust,
+        )
+        self.pseudo_labels = self.compute_pseudo_labels(
+            self.trust_values,
+            debias_weight=debias_weight,
+            sideways_attenuation_shrinkage=sideways_attenuation_shrinkage,
+            speed_regularisation_influence=speed_regularisation_influence,
+            temporal_smoothing_weight=temporal_smoothing_weight,
+        )
+        return loss
 
 
 ## ─────────────────────────────────────────────────────────────────────────────

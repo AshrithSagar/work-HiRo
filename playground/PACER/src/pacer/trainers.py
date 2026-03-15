@@ -7,7 +7,6 @@ Policy training
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
 from dataclasses import dataclass, field
-from typing import cast
 
 import numpy as np
 import torch
@@ -19,19 +18,15 @@ from typingkit.core import RuntimeGeneric
 
 from pacer.base import Demonstrations
 from pacer.pacer import PACER
-from pacer.phase import PhaseEstimator
 from pacer.typings import (
     Action,
     Actions,
-    ActionsCollection,
     DimAction,
     DimState,
     NumBins,
     NumDemos,
     NumPoints,
     States,
-    TrustValuesCollection,
-    npDType,
     torchDType,
 )
 from pacer.utils import SEED, get_torch_device_auto, set_seed
@@ -144,69 +139,29 @@ class BCTrainer(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
 class PACERBCTrainer(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
     """PACER + Behavioral cloning policy trainer."""
 
-    demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
+    pacer: PACER[NumBins, NumDemos, NumPoints, DimState, DimAction]
     device: torch.device = field(kw_only=True, default_factory=get_torch_device_auto)
     seed: int = SEED
     ##
-    phase_estimator: PhaseEstimator[NumDemos, NumPoints, DimState, DimAction] = field(
-        init=False
-    )
-    pacer: PACER[NumBins, NumDemos, NumPoints, DimState, DimAction] = field(init=False)
-    trust_values: TrustValuesCollection[NumDemos, NumPoints] = field(init=False)
-    pseudo_labels: ActionsCollection[NumDemos, NumPoints, DimAction] = field(init=False)
     policy: BCPolicy[DimState, DimAction] = field(init=False)
     optimiser: torch.optim.Optimizer = field(init=False)
-
-    def prepare(
-        self,
-        *,
-        phase_hidden_dim: int = 128,
-        phase_margin: float = 1.0,
-        phase_lr: float = 1e-3,
-        phase_epochs: int = 240,
-        n_bins: NumBins = cast(NumBins, 96),
-        tukey_cutoff: npDType | float = 4.685,  # c
-        min_trust: npDType | float = 0.02,  # w_min
-        debias_weight: npDType | float = 0.5,  # lambda_{debias}
-        sideways_attenuation_shrinkage: npDType | float = 0.5,  # rho_0
-        speed_regularisation_influence: npDType | float = 0.5,  # eta_0
-        temporal_smoothing_weight: npDType | float = 0.0,  # kappa
-    ) -> Tensor:
-        set_seed(self.seed)
-        self.phase_estimator = PhaseEstimator(self.demonstrations, device=self.device)
-        loss = self.phase_estimator.train(
-            hidden_dim=phase_hidden_dim,
-            margin=phase_margin,
-            lr=phase_lr,
-            epochs=phase_epochs,
-        )
-        self.pacer = PACER(self.phase_estimator, n_bins=n_bins)
-        self.pacer.make_bins()
-        self.trust_values = self.pacer.compute_trust_values(
-            cutoff=tukey_cutoff,
-            min_trust=min_trust,
-        )
-        self.pseudo_labels = self.pacer.compute_pseudo_labels(
-            self.trust_values,
-            debias_weight=debias_weight,
-            sideways_attenuation_shrinkage=sideways_attenuation_shrinkage,
-            speed_regularisation_influence=speed_regularisation_influence,
-            temporal_smoothing_weight=temporal_smoothing_weight,
-        )
-        return loss
 
     def compute_huber_loss(self) -> Tensor:  # L
         loss = torch.tensor(0.0, dtype=torchDType, device=self.device)
         total_weight = torch.tensor(0.0, dtype=torchDType, device=self.device)
-        for i, demo in enumerate(self.demonstrations):
+        for i, demo in enumerate(self.pacer.demonstrations):
             states = torch.tensor(
                 np.array(demo.states), dtype=torchDType, device=self.device
             )  # (T_i, state_dim)
             targets = torch.tensor(
-                np.array(self.pseudo_labels[i]), dtype=torchDType, device=self.device
+                np.array(self.pacer.pseudo_labels[i]),
+                dtype=torchDType,
+                device=self.device,
             )  # (T_i, action_dim)
             weights = torch.tensor(
-                np.array(self.trust_values[i]), dtype=torchDType, device=self.device
+                np.array(self.pacer.trust_values[i]),
+                dtype=torchDType,
+                device=self.device,
             )  # (T_i,)
             preds: Tensor = self.policy(states)  # (T_i, action_dim)
 
@@ -234,8 +189,8 @@ class PACERBCTrainer(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimA
         """Train PACER policy using weighted Huber loss with pseudo-labels."""
         set_seed(self.seed)
         policy = BCPolicy(
-            state_dim=self.demonstrations.state_dim,
-            action_dim=self.demonstrations.action_dim,
+            state_dim=self.pacer.demonstrations.state_dim,
+            action_dim=self.pacer.demonstrations.action_dim,
             hidden_dim=policy_hidden_dim,
         )
         self.policy = policy.to(self.device)

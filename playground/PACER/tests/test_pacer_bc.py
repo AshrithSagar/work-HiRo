@@ -13,6 +13,7 @@ from pacer.base import Demonstrations
 from pacer.corruptions import DemonstrationCorrupter
 from pacer.interactive import InteractiveDataSet
 from pacer.lasa import LASADataSet
+from pacer.pacer import PACER
 from pacer.plotting import full_diagnostic
 from pacer.trainers import BCTrainer, PACERBCTrainer
 from pacer.typings import NumDemos, NumPoints
@@ -57,15 +58,17 @@ def test_pacerbc(
             bias_strength=0.2,
         )
         demonstrations = corrupter.inject_corruptions()
-    trainer = PACERBCTrainer(demonstrations)
 
     # PACER
-    phase_loss = trainer.prepare(
+    pacer = PACER(
+        demonstrations,
+        n_bins=96,  # B
+    )
+    phase_loss = pacer.prepare(
         phase_hidden_dim=128,
         phase_margin=1.0,  # m
         phase_lr=1e-3,
         phase_epochs=240,
-        n_bins=96,  # B
         tukey_cutoff=4.685,  # c
         min_trust=0.02,  # w_min
         debias_weight=0.5,  # lambda_{debias}
@@ -76,6 +79,7 @@ def test_pacerbc(
     console.print(f"Phase scorer loss: {phase_loss}")
 
     # Behavioral cloning
+    trainer = PACERBCTrainer(pacer)
     policy_loss = trainer.train(
         policy_hidden_dim=128,
         policy_lr=1e-3,
@@ -101,9 +105,9 @@ def test_bc(
             bias_strength=0.2,
         )
         demonstrations = corrupter.inject_corruptions()
-    trainer = BCTrainer(demonstrations)
 
     # Behavioral cloning
+    trainer = BCTrainer(demonstrations)
     policy_loss = trainer.train(
         policy_hidden_dim=128,
         policy_lr=1e-3,

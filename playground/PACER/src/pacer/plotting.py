@@ -195,12 +195,12 @@ def plot_ribbon_action_field(
 def full_diagnostic(
     trainer: PACERBCTrainer[NumBins, NumDemos, NumPoints, TWO, TWO],
 ) -> None:
-    plot_trajectories(trainer.demonstrations)
-    plot_phases(trainer.phase_estimator.estimate_phases())
-    plot_trust_values(trainer.trust_values)
+    plot_trajectories(trainer.pacer.demonstrations)
+    plot_phases(trainer.pacer.phase_estimator.estimate_phases())
+    plot_trust_values(trainer.pacer.trust_values)
     plot_ribbon_action_field(trainer.pacer)
     plot_action_comparison(
-        trainer.demonstrations.demos[0].actions,
-        trainer.pseudo_labels[0],
+        trainer.pacer.demonstrations.demos[0].actions,
+        trainer.pacer.pseudo_labels[0],
         title="Demo 0: Action refinement",
     )
