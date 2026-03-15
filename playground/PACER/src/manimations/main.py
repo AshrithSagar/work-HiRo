@@ -7,7 +7,6 @@ PACER manimation
 import manim as mn
 import manim.typing as mnt
 import numpy as np
-import pyLasaDataset as lasa  # type: ignore[import-untyped]  # ty: ignore[unused-ignore-comment]
 
 from pacer.lasa import LASADataSet3D
 
@@ -44,7 +43,7 @@ class DemonstrationScene(mn.Scene):
         heading.to_corner(mn.UL)
         self.play(mn.ReplacementTransform(mn.VGroup(old_heading, caption), heading))
 
-        data = LASADataSet3D(lasa.DataSet.GShape, dtype=np.float64)
+        data = LASADataSet3D("GShape", dtype=np.float64)
 
         curves = list[mn.VMobject]()
         curve_colors = mn.color_gradient(

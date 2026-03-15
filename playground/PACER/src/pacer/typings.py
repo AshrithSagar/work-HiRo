@@ -25,13 +25,31 @@ NumPoints = TypeVar("NumPoints", bound=int, default=int)  # T_i
 NumDemos = TypeVar("NumDemos", bound=int, default=int)  # N
 NumBins = TypeVar("NumBins", bound=int, default=int)  # B
 
+# ──────────────────────────────────────────────────────────────────────────────
+
 State: TypeAlias = Array1D[DimState, np.dtype[npDType]]  # x_{i, t} \in R^{d_x}
-States: TypeAlias = TypedList[NumPoints, State[DimState]]
+
+
+class States(TypedList[NumPoints, State[DimState]]):
+    def coord(self, dim: int) -> Array1D[NumPoints, np.dtype[npDType]]:
+        return Array1D[NumPoints, np.dtype[npDType]](np.asarray(self)[:, dim])
+
+
 StatesCollection: TypeAlias = TypedList[NumDemos, States[NumPoints, DimState]]
 
+# ──────────────────────────────────────────────────────────────────────────────
+
 Action: TypeAlias = Array1D[DimAction, np.dtype[npDType]]  # a_{i, t} \in R^{d_a}
-Actions: TypeAlias = TypedList[NumPoints, Action[DimAction]]
+
+
+class Actions(TypedList[NumPoints, Action[DimAction]]):
+    def coord(self, dim: int) -> Array1D[NumPoints, np.dtype[npDType]]:
+        return Array1D[NumPoints, np.dtype[npDType]](np.asarray(self)[:, dim])
+
+
 ActionsCollection: TypeAlias = TypedList[NumDemos, Actions[NumPoints, DimAction]]
+
+# ──────────────────────────────────────────────────────────────────────────────
 
 Phase: TypeAlias = npDType  # tau \in [0, 1]
 Phases: TypeAlias = TypedList[NumPoints, Phase]
@@ -48,6 +66,8 @@ ZScoresCollection: TypeAlias = TypedList[NumDemos, ZScores[NumPoints]]
 TrustValue: TypeAlias = npDType  # w_{i, t}
 TrustValues: TypeAlias = TypedList[NumPoints, TrustValue]
 TrustValuesCollection: TypeAlias = TypedList[NumDemos, TrustValues[NumPoints]]
+
+# ──────────────────────────────────────────────────────────────────────────────
 
 DemoIndex: TypeAlias = int  # i \in {0, 1, ..., N-1}
 DemoIndices: TypeAlias = TypedList[NumPoints, DemoIndex]

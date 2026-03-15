@@ -6,8 +6,6 @@ Plotting utils
 
 # pyright: standard
 
-from typing import Any
-
 import matplotlib.pyplot as plt
 import numpy as np
 from typingkit.numpy._typed.helpers import TWO
@@ -27,20 +25,79 @@ from pacer.typings import (
 
 
 def plot_trajectories(
-    demonstrations: Demonstrations[Any, Any, TWO, DimAction],
+    demonstrations: Demonstrations[NumDemos, NumPoints, TWO, TWO],
     *,
     title: str = "Demonstration trajectories",
 ) -> None:
     """Plot 2D state trajectories."""
     plt.figure()
     for i, demo in enumerate(demonstrations):
-        states = np.array(demo.states)
-        plt.plot(states[:, 0], states[:, 1], label=f"Demo {i}")
+        plt.plot(demo.states.coord(0), demo.states.coord(1), label=f"Demo {i}")
     plt.xlabel("x")
     plt.ylabel("y")
     plt.title(title)
     plt.legend()
     plt.axis("equal")
+    plt.margins(0.05)
+    plt.tight_layout()
+
+
+def plot_states_and_actions(
+    demonstrations: Demonstrations[NumDemos, NumPoints, TWO, TWO],
+    *,
+    title: str = "Demonstrations",
+    demo_indices: list[int] | None = None,
+    action_scale: float = 1.0,
+    action_step: int = 1,
+) -> None:
+    """Plot states and actions for the 2D case."""
+    plt.figure()
+
+    for i, demo in enumerate(demonstrations):
+        if demo_indices is not None:
+            if i not in demo_indices:
+                continue
+
+        xs = demo.states.coord(0)
+        ys = demo.states.coord(1)
+
+        (line,) = plt.plot(xs, ys, label=f"Demo {i}", linewidth=2)
+        color = line.get_color()
+        plt.scatter(xs[0], ys[0], color=color, marker="o", s=15)
+
+        ax = demo.actions.coord(0)
+        ay = demo.actions.coord(1)
+
+        xs_q = xs[::action_step]
+        ys_q = ys[::action_step]
+        ax_q = ax[::action_step]
+        ay_q = ay[::action_step]
+
+        plt.quiver(
+            xs_q,
+            ys_q,
+            ax_q,
+            ay_q,
+            angles="xy",
+            scale_units="xy",
+            scale=1.0 / action_scale,
+            color=color,
+            width=0.003,
+            headwidth=3,
+            headlength=4,
+            headaxislength=3.5,
+            alpha=0.5,
+        )
+
+        # Expand limits to include arrow tips
+        plt.scatter(xs_q + ax_q * action_scale, ys_q + ay_q * action_scale, alpha=0)
+
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title(title)
+    plt.legend()
+    plt.axis("equal")
+    plt.margins(0.05)
     plt.tight_layout()
 
 

@@ -14,7 +14,7 @@ import numpy.linalg as la
 from typingkit.core import RuntimeGeneric, TypedList
 
 from pacer.base import Demonstration, Demonstrations
-from pacer.typings import Action, DimAction, DimState, NumDemos, NumPoints
+from pacer.typings import Action, Actions, DimAction, DimState, NumDemos, NumPoints
 from pacer.utils import EPS, SEED, set_seed
 
 ## ── Corruptions ──────────────────────────────────────────────────────────────
@@ -38,7 +38,7 @@ class DemonstrationCorrupter(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAc
             NumDemos, Demonstration[NumPoints, DimState, DimAction]
         ]()
         for demo in self.demonstrations:
-            new_actions = TypedList[NumPoints, Action[DimAction]]()
+            new_actions = Actions[NumPoints, DimAction]()
             bias_vector = np.random.randn(demo.action_dim)
             bias_vector /= la.norm(bias_vector) + EPS
             for action in demo.actions:
