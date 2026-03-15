@@ -15,10 +15,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.backend_bases import KeyEvent, MouseEvent
 from matplotlib.lines import Line2D
+from pyLASAHandwritingDataset import SinglePatternMotion
 from typingkit.core import TypedList
-from typingkit.numpy._typed.helpers import TWO
+from typingkit.numpy._typed.helpers import TWO, Array3D
 
 from pacer.base import Action, Demonstration, Demonstrations, State
+from pacer.lasa import THOUSAND, LASADataSet
 from pacer.typings import Actions, NumDemos, NumPoints, States, npDType
 
 ## ── Interactive Drawer ───────────────────────────────────────────────────────
@@ -203,6 +205,44 @@ class InteractiveDataSet(Generic[NumDemos, NumPoints]):
         print("Interactive drawing window opened.")
         plt.show(block=True)
         return drawer.to_demonstrations()
+
+    # ── From LASA ──────────────────────────────────────
+    @classmethod
+    def from_LASA(
+        cls,
+        pattern: SinglePatternMotion,
+        demo_indices: list[int] | slice | int | None = None,
+        min_points_to_accept: int = 5,
+    ) -> Self:
+        """Load one or more LASA demonstrations into the interactive drawer."""
+        lasa_ds = LASADataSet(pattern)
+
+        demo_positions: Array3D[Any, THOUSAND, TWO, np.dtype[npDType]]
+        if demo_indices is None:
+            demo_positions = lasa_ds.positions
+        elif isinstance(demo_indices, int):
+            demo_positions = lasa_ds.positions[[demo_indices]]
+        elif isinstance(demo_indices, slice):
+            demo_positions = lasa_ds.positions[list(range(*demo_indices.indices(7)))]
+        else:
+            demo_positions = lasa_ds.positions[demo_indices]
+
+        drawer = cls(min_points_to_accept=min_points_to_accept, _suppress_welcome=True)
+
+        # Load the demonstrations
+        for i, positions in enumerate(demo_positions):
+            drawer.demos.append([(float(x), float(y)) for x, y in positions])
+            color = drawer.colors[i % len(drawer.colors)]
+            (line,) = drawer.ax.plot(
+                positions[:, 0], positions[:, 1], lw=2.2, color=color, alpha=0.9
+            )
+            drawer.demo_lines.append(line)
+
+        drawer.ax.autoscale()
+        drawer.ax.set_title(f"LASA '{pattern}' loaded — continue drawing or modify")
+
+        print(f"Loaded {len(drawer.demos)} demonstration(s) from LASA '{pattern}'")
+        return drawer
 
 
 ## ─────────────────────────────────────────────────────────────────────────────
