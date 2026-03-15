@@ -42,7 +42,6 @@ def plot_trajectories(
     plt.legend()
     plt.axis("equal")
     plt.tight_layout()
-    plt.show()
 
 
 def plot_phases(
@@ -59,7 +58,6 @@ def plot_phases(
     plt.title(title)
     plt.legend()
     plt.tight_layout()
-    plt.show()
 
 
 def plot_trust_values(
@@ -76,7 +74,6 @@ def plot_trust_values(
     plt.title(title)
     plt.legend()
     plt.tight_layout()
-    plt.show()
 
 
 def plot_action_comparison(
@@ -102,7 +99,6 @@ def plot_action_comparison(
     axes[-1].set_xlabel("Time index t")  # type: ignore
     fig.suptitle(title)
     plt.tight_layout()
-    plt.show()
 
 
 def plot_ribbon_action_field(
@@ -137,7 +133,6 @@ def plot_ribbon_action_field(
     plt.title(title)
     plt.axis("equal")
     plt.tight_layout()
-    plt.show()
 
 
 def full_diagnostic(

@@ -116,3 +116,4 @@ if __name__ == "__main__":
     demonstrations = get_demonstrations()
     test_bc(demonstrations)
     test_pacerbc(demonstrations)
+    plt.show()
