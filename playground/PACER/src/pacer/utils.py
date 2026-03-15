@@ -15,6 +15,7 @@ import numpy.linalg as la
 import numpy.typing as npt
 import optype.numpy as onp
 import torch
+from torch._prims_common import DeviceLikeType
 
 from pacer import console
 from pacer.typings import npDType
@@ -35,15 +36,25 @@ def set_seed(seed: int = SEED) -> None:
     torch.backends.cudnn.benchmark = False
 
 
-def get_torch_device_auto() -> torch.device:
+def _get_torch_device_auto() -> torch.device:
     if torch.backends.mps.is_available():
-        torch_device_auto = torch.device("mps")
+        device = torch.device("mps")
     elif torch.cuda.is_available():
-        torch_device_auto = torch.device("cuda")
+        device = torch.device("cuda")
     else:
-        torch_device_auto = torch.device("cpu")
-    console.print(f"Using device: [green]{torch_device_auto}[/]")
-    return torch_device_auto
+        device = torch.device("cpu")
+    console.print(f"Default device: [green]{device}[/]")
+    return device
+
+
+TORCH_DEVICE: torch.device = _get_torch_device_auto()
+
+
+def get_torch_device(device: DeviceLikeType = TORCH_DEVICE) -> torch.device:
+    device = torch.device(device)
+    if device != TORCH_DEVICE:
+        console.print(f"Using device: [green]{device}[/]")
+    return device
 
 
 def median(

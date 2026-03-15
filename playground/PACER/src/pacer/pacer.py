@@ -16,8 +16,8 @@ from typing import Any, cast
 
 import numpy as np
 import numpy.linalg as la
-import torch
 from torch import Tensor
+from torch._prims_common import DeviceLikeType
 from typingkit.core import RuntimeGeneric, TypedList
 from typingkit.numpy._typed.helpers import Array1D
 
@@ -49,15 +49,7 @@ from pacer.typings import (
     ZScoresCollection,
     npDType,
 )
-from pacer.utils import (
-    EPS,
-    MAD_SCALE,
-    SEED,
-    get_torch_device_auto,
-    median,
-    normalise,
-    set_seed,
-)
+from pacer.utils import EPS, MAD_SCALE, SEED, TORCH_DEVICE, median, normalise, set_seed
 
 ## ── PACER ────────────────────────────────────────────────────────────────────
 
@@ -421,7 +413,7 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
         self,
         *,
         seed: int = SEED,
-        device: torch.device | None = None,
+        device: DeviceLikeType = TORCH_DEVICE,
         phase_hidden_dim: int = 128,
         phase_margin: float = 1.0,
         phase_lr: float = 1e-3,
@@ -434,7 +426,6 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
         temporal_smoothing_weight: npDType | float = 0.0,  # kappa
     ) -> Tensor:
         set_seed(seed)
-        device = device or get_torch_device_auto()
         self.phase_estimator = PhaseEstimator(self.demonstrations, device=device)
         loss = self.phase_estimator.train(
             hidden_dim=phase_hidden_dim,

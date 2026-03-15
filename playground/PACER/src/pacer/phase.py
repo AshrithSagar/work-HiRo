@@ -6,7 +6,7 @@ Phase alignment
 
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
-from dataclasses import dataclass, field
+from dataclasses import InitVar, dataclass, field
 
 import numpy as np
 import torch
@@ -14,6 +14,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from rich.progress import track
 from torch import Tensor
+from torch._prims_common import DeviceLikeType
 from typingkit.core import RuntimeGeneric
 
 from pacer.base import Demonstrations
@@ -25,7 +26,7 @@ from pacer.typings import (
     Phases,
     PhasesCollection,
 )
-from pacer.utils import EPS, get_torch_device_auto, normalise
+from pacer.utils import EPS, TORCH_DEVICE, get_torch_device, normalise
 
 ## ── Phase Alignment ──────────────────────────────────────────────────────────
 
@@ -54,15 +55,19 @@ class PhaseScorer(nn.Module, RuntimeGeneric[DimState]):
 @dataclass
 class PhaseEstimator(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
-    device: torch.device = field(kw_only=True, default_factory=get_torch_device_auto)
+    device: InitVar[DeviceLikeType] = field(default=TORCH_DEVICE, kw_only=True)
     ##
+    device_: torch.device = field(init=False)
     scorer: PhaseScorer[DimState] = field(init=False)
     optimiser: torch.optim.Optimizer = field(init=False)
 
+    def __post_init__(self, device: DeviceLikeType) -> None:
+        self.device_ = get_torch_device(device)
+
     def compute_ranking_loss(self, margin: float = 1.0) -> Tensor:  # L_rank
-        loss = torch.tensor(0.0, device=self.device)
+        loss = torch.tensor(0.0, device=self.device_)
         for demo in self.demonstrations:
-            states = Tensor(np.array(demo.states)).float().to(self.device)
+            states = Tensor(np.array(demo.states)).float().to(self.device_)
             scores: Tensor = self.scorer(states)  # (T_i,)
             diff = scores.unsqueeze(0) - scores.unsqueeze(1)  # (T_i, T_i)
             mask = torch.ones_like(diff).triu(diagonal=1)  # Enforces `t > t'`
@@ -82,7 +87,7 @@ class PhaseEstimator(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
     ) -> Tensor:
         state_dim = self.demonstrations.state_dim
         scorer = PhaseScorer(state_dim=state_dim, hidden_dim=hidden_dim)
-        self.scorer = scorer.to(self.device)
+        self.scorer = scorer.to(self.device_)
         self.optimiser = torch.optim.Adam(self.scorer.parameters(), lr=lr)
 
         self.scorer.train()
@@ -101,7 +106,7 @@ class PhaseEstimator(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
         phases = PhasesCollection[NumDemos, NumPoints]()
         with torch.no_grad():
             for demo in self.demonstrations:
-                states = Tensor(np.array(demo.states)).float().to(self.device)
+                states = Tensor(np.array(demo.states)).float().to(self.device_)
                 scores: Tensor = self.scorer(states)
                 _scores = scores.cpu().numpy()
                 normalised = Phases[NumPoints](normalise(_scores, method="MINMAX"))

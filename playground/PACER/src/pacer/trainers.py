@@ -6,7 +6,7 @@ Policy training
 
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
-from dataclasses import dataclass, field
+from dataclasses import InitVar, dataclass, field
 
 import numpy as np
 import torch
@@ -14,6 +14,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from rich.progress import track
 from torch import Tensor
+from torch._prims_common import DeviceLikeType
 from typingkit.core import RuntimeGeneric
 
 from pacer.base import Demonstrations
@@ -29,7 +30,7 @@ from pacer.typings import (
     States,
     torchDType,
 )
-from pacer.utils import SEED, get_torch_device_auto, set_seed
+from pacer.utils import SEED, TORCH_DEVICE, get_torch_device, set_seed
 
 ## ── Policies ─────────────────────────────────────────────────────────────────
 
@@ -64,21 +65,25 @@ class BCTrainer(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
     """Behavioral cloning policy trainer."""
 
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
-    device: torch.device = field(kw_only=True, default_factory=get_torch_device_auto)
-    seed: int = SEED
+    device: InitVar[DeviceLikeType] = field(default=TORCH_DEVICE, kw_only=True)
+    seed: int = field(default=SEED, kw_only=True)
     ##
+    device_: torch.device = field(init=False)
     policy: BCPolicy[DimState, DimAction] = field(init=False)
     optimiser: torch.optim.Optimizer = field(init=False)
 
+    def __post_init__(self, device: DeviceLikeType) -> None:
+        self.device_ = get_torch_device(device)
+
     def compute_huber_loss(self) -> Tensor:  # L
-        loss = torch.tensor(0.0, dtype=torchDType, device=self.device)
+        loss = torch.tensor(0.0, dtype=torchDType, device=self.device_)
         total_samples: int = 0
         for demo in self.demonstrations:
             states = torch.tensor(
-                np.array(demo.states), dtype=torchDType, device=self.device
+                np.array(demo.states), dtype=torchDType, device=self.device_
             )  # (T_i, state_dim)
             targets = torch.tensor(
-                np.array(demo.actions), dtype=torchDType, device=self.device
+                np.array(demo.actions), dtype=torchDType, device=self.device_
             )  # (T_i, action_dim)
             preds: Tensor = self.policy(states)  # (T_i, action_dim)
 
@@ -106,7 +111,7 @@ class BCTrainer(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
             action_dim=self.demonstrations.action_dim,
             hidden_dim=policy_hidden_dim,
         )
-        self.policy = policy.to(self.device)
+        self.policy = policy.to(self.device_)
         self.optimiser = torch.optim.Adam(self.policy.parameters(), lr=policy_lr)
 
         self.policy.train()
@@ -126,7 +131,7 @@ class BCTrainer(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
     ) -> Actions[NumPoints, DimAction]:
         self.policy.eval()
         with torch.no_grad():
-            states_tensor = Tensor(np.array(states)).float().to(self.device)
+            states_tensor = Tensor(np.array(states)).float().to(self.device_)
             actions_tensor: Tensor = self.policy(states_tensor)
             actions_np = actions_tensor.cpu().numpy()
         actions = Actions[NumPoints, DimAction](
@@ -140,28 +145,32 @@ class PACERBCTrainer(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimA
     """PACER + Behavioral cloning policy trainer."""
 
     pacer: PACER[NumBins, NumDemos, NumPoints, DimState, DimAction]
-    device: torch.device = field(kw_only=True, default_factory=get_torch_device_auto)
-    seed: int = SEED
+    device: InitVar[DeviceLikeType] = field(default=TORCH_DEVICE, kw_only=True)
+    seed: int = field(default=SEED, kw_only=True)
     ##
+    device_: torch.device = field(init=False)
     policy: BCPolicy[DimState, DimAction] = field(init=False)
     optimiser: torch.optim.Optimizer = field(init=False)
 
+    def __post_init__(self, device: DeviceLikeType) -> None:
+        self.device_ = get_torch_device(device)
+
     def compute_huber_loss(self) -> Tensor:  # L
-        loss = torch.tensor(0.0, dtype=torchDType, device=self.device)
-        total_weight = torch.tensor(0.0, dtype=torchDType, device=self.device)
+        loss = torch.tensor(0.0, dtype=torchDType, device=self.device_)
+        total_weight = torch.tensor(0.0, dtype=torchDType, device=self.device_)
         for i, demo in enumerate(self.pacer.demonstrations):
             states = torch.tensor(
-                np.array(demo.states), dtype=torchDType, device=self.device
+                np.array(demo.states), dtype=torchDType, device=self.device_
             )  # (T_i, state_dim)
             targets = torch.tensor(
                 np.array(self.pacer.pseudo_labels[i]),
                 dtype=torchDType,
-                device=self.device,
+                device=self.device_,
             )  # (T_i, action_dim)
             weights = torch.tensor(
                 np.array(self.pacer.trust_values[i]),
                 dtype=torchDType,
-                device=self.device,
+                device=self.device_,
             )  # (T_i,)
             preds: Tensor = self.policy(states)  # (T_i, action_dim)
 
@@ -193,7 +202,7 @@ class PACERBCTrainer(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimA
             action_dim=self.pacer.demonstrations.action_dim,
             hidden_dim=policy_hidden_dim,
         )
-        self.policy = policy.to(self.device)
+        self.policy = policy.to(self.device_)
         self.optimiser = torch.optim.Adam(self.policy.parameters(), lr=policy_lr)
 
         self.policy.train()
@@ -213,7 +222,7 @@ class PACERBCTrainer(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimA
     ) -> Actions[NumPoints, DimAction]:
         self.policy.eval()
         with torch.no_grad():
-            states_tensor = Tensor(np.array(states)).float().to(self.device)
+            states_tensor = Tensor(np.array(states)).float().to(self.device_)
             actions_tensor: Tensor = self.policy(states_tensor)
             actions_np = actions_tensor.cpu().numpy()
         actions = Actions[NumPoints, DimAction](
