@@ -990,7 +990,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=2.4.3" },
     { name = "optype", extras = ["numpy"], specifier = ">=0.17.0" },
     { name = "pygame", specifier = ">=2.6.1" },
-    { name = "pylasahandwritingdataset", specifier = ">=0.1.3" },
+    { name = "pylasahandwritingdataset", git = "https://github.com/AshrithSagar/pyLASAHandwritingDataset.git?rev=main" },
     { name = "rich", specifier = ">=14.3.3" },
     { name = "scikit-learn", specifier = ">=1.8.0" },
     { name = "scipy", specifier = ">=1.17.1" },
@@ -1205,17 +1205,13 @@ wheels = [
 [[package]]
 name = "pylasahandwritingdataset"
 version = "0.1.3"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/AshrithSagar/pyLASAHandwritingDataset.git?rev=main#317d93f27e012172a0ea8662e41fef7b36e18ab6" }
 dependencies = [
     { name = "numpy" },
     { name = "platformdirs" },
     { name = "pooch" },
     { name = "scipy" },
     { name = "tqdm" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/1f/38/9878d23cccc70bcda8ebfc1b06e427b9234f984022e51540567dd83dffcb/pylasahandwritingdataset-0.1.3.tar.gz", hash = "sha256:f7f1dc60f7a9d623deef9c06dc7fec08c5897a93fb6918aaa19b46ba7ed5ffc4", size = 81345, upload-time = "2026-03-15T10:07:13.53Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/2a/bc/c99b557a2e7c67962fcae550cfdb3103100b09d5a289e2dc369c1d64b383/pylasahandwritingdataset-0.1.3-py3-none-any.whl", hash = "sha256:e157b1b6e031afa9cff98ef205953dfe28a46434a3f5c9697112ae7dcc4f3d30", size = 7414, upload-time = "2026-03-15T10:07:14.969Z" },
 ]
 
 [[package]]

@@ -66,3 +66,4 @@ ignore = ["F403", "F405"]
 [tool.uv.sources]
 microsoft-python-type-stubs = { git = "https://github.com/microsoft/python-type-stubs.git" }
 typingkit = { git = "https://github.com/AshrithSagar/typingkit.git", rev = "main" }
+pylasahandwritingdataset = { git = "https://github.com/AshrithSagar/pyLASAHandwritingDataset.git", rev = "main" }
