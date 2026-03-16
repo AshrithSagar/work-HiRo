@@ -79,7 +79,7 @@ def test_pacerbc(
     console.print(f"Phase scorer loss: {phase_loss}")
 
     # Behavioral cloning
-    trainer = PACERBCTrainer(pacer)
+    trainer = PACERBCTrainer(pacer, device="cpu")
     policy_loss = trainer.train(
         policy_hidden_dim=128,
         policy_lr=1e-3,
@@ -107,7 +107,7 @@ def test_bc(
         demonstrations = corrupter.inject_corruptions()
 
     # Behavioral cloning
-    trainer = BCTrainer(demonstrations)
+    trainer = BCTrainer(demonstrations, device="cpu")
     policy_loss = trainer.train(
         policy_hidden_dim=128,
         policy_lr=1e-3,
