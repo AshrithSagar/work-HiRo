@@ -44,6 +44,7 @@ class LASADataSet:
         )
         self.positions_diff = Array_7x1000x2(
             np.diff(self.positions, axis=-2, append=np.zeros((7, 1, 2), dtype=npDType))
+            / self.data.dt
         )
 
     def __len__(self) -> SEVEN:
