@@ -24,6 +24,7 @@ from pacer.typings import (
     DimState,
     NumDemos,
     NumPoints,
+    Phase,
     Phases,
     PhasesCollection,
 )
@@ -127,6 +128,30 @@ class MLPPhaseEstimator(
                 _scores = scores.cpu().numpy()
                 normalised = Phases[NumPoints](normalise(_scores, method="MINMAX"))
                 phases.append(normalised)
+        return phases
+
+
+# ── Normalised Time Index Phase Estimation ────────────────────────────────────
+
+
+# tau_{i, t} = t / (T_i - 1)
+@dataclass
+class NormalisedTimeIndexPhaseEstimator(
+    RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction],
+    PhaseEstimatorProtocol[NumDemos, NumPoints, DimState, DimAction],
+):
+    demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
+
+    def estimate_phases(self) -> PhasesCollection[NumDemos, NumPoints]:
+        # [[tau_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
+        phases = PhasesCollection[NumDemos, NumPoints]()
+        for demo in self.demonstrations:
+            T_i = demo.states.length
+            assert T_i > 1
+            phases_for_demo = Phases[NumPoints](
+                [Phase(t / (T_i - 1)) for t in range(T_i)]
+            )
+            phases.append(phases_for_demo)
         return phases
 
 
