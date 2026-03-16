@@ -16,13 +16,11 @@ from typing import Any, cast
 
 import numpy as np
 import numpy.linalg as la
-from torch import Tensor
-from torch._prims_common import DeviceLikeType
 from typingkit.core import RuntimeGeneric, TypedList
 from typingkit.numpy._typed.helpers import Array1D
 
 from pacer.base import Demonstrations, Sample, Samples, SamplesCollection
-from pacer.phase import MLPPhaseEstimator, PhaseEstimatorProtocol
+from pacer.phase import PhaseEstimatorProtocol
 from pacer.typings import (
     Action,
     Actions,
@@ -49,7 +47,7 @@ from pacer.typings import (
     ZScoresCollection,
     npDType,
 )
-from pacer.utils import EPS, MAD_SCALE, SEED, TORCH_DEVICE, median, normalise, set_seed
+from pacer.utils import EPS, MAD_SCALE, SEED, median, normalise, set_seed
 
 ## ── PACER ────────────────────────────────────────────────────────────────────
 
@@ -129,11 +127,10 @@ class Bin(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
 @dataclass
 class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
+    phase_estimator: PhaseEstimatorProtocol[NumDemos, NumPoints, DimState, DimAction]
     n_bins: NumBins = field(default=cast(NumBins, 96), kw_only=True)  # B
+    seed: int = field(default=SEED, kw_only=True)
     ##
-    phase_estimator: PhaseEstimatorProtocol[
-        NumDemos, NumPoints, DimState, DimAction
-    ] = field(init=False)
     bins: TypedList[NumBins, Bin[NumDemos, NumPoints, DimState, DimAction]] = field(
         init=False
     )
@@ -412,27 +409,14 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
     def prepare(
         self,
         *,
-        seed: int = SEED,
-        device: DeviceLikeType = TORCH_DEVICE,
-        phase_hidden_dim: int = 128,
-        phase_margin: float = 1.0,
-        phase_lr: float = 1e-3,
-        phase_epochs: int = 240,
         tukey_cutoff: npDType | float = 4.685,  # c
         min_trust: npDType | float = 0.02,  # w_min
         debias_weight: npDType | float = 0.5,  # lambda_{debias}
         sideways_attenuation_shrinkage: npDType | float = 0.5,  # rho_0
         speed_regularisation_influence: npDType | float = 0.5,  # eta_0
         temporal_smoothing_weight: npDType | float = 0.0,  # kappa
-    ) -> Tensor:
-        set_seed(seed)
-        self.phase_estimator = MLPPhaseEstimator(self.demonstrations, device=device)
-        loss = self.phase_estimator.train(
-            hidden_dim=phase_hidden_dim,
-            margin=phase_margin,
-            lr=phase_lr,
-            epochs=phase_epochs,
-        )
+    ) -> None:
+        set_seed(self.seed)
         self.make_bins()
         self.trust_values = self.compute_trust_values(
             cutoff=tukey_cutoff,
@@ -445,7 +429,6 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
             speed_regularisation_influence=speed_regularisation_influence,
             temporal_smoothing_weight=temporal_smoothing_weight,
         )
-        return loss
 
 
 ## ─────────────────────────────────────────────────────────────────────────────

@@ -28,7 +28,7 @@ from pacer.typings import (
     Phases,
     PhasesCollection,
 )
-from pacer.utils import EPS, TORCH_DEVICE, get_torch_device, normalise
+from pacer.utils import EPS, SEED, TORCH_DEVICE, get_torch_device, normalise, set_seed
 
 ## ── Phase Alignment ──────────────────────────────────────────────────────────
 
@@ -73,6 +73,7 @@ class MLPPhaseEstimator(
 ):
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     device: InitVar[DeviceLikeType] = field(default=TORCH_DEVICE, kw_only=True)
+    seed: int = field(default=SEED, kw_only=True)
     ##
     device_: torch.device = field(init=False)
     scorer: MLPPhaseScorer[DimState] = field(init=False)
@@ -102,6 +103,7 @@ class MLPPhaseEstimator(
         lr: float = 1e-3,
         epochs: int = 240,
     ) -> Tensor:
+        set_seed(self.seed)
         state_dim = self.demonstrations.state_dim
         scorer = MLPPhaseScorer(state_dim=state_dim, hidden_dim=hidden_dim)
         self.scorer = scorer.to(self.device_)

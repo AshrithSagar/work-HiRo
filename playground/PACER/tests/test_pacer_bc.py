@@ -14,6 +14,11 @@ from pacer.corruptions import DemonstrationCorrupter
 from pacer.interactive import InteractiveDataSet
 from pacer.lasa import LASADataSet
 from pacer.pacer import PACER
+from pacer.phase import (
+    MLPPhaseEstimator,
+    NormalisedTimeIndexPhaseEstimator,
+    PhaseEstimatorProtocol,
+)
 from pacer.plotting import full_diagnostic
 from pacer.trainers import BCTrainer, PACERBCTrainer
 from pacer.typings import NumDemos, NumPoints
@@ -43,6 +48,26 @@ def get_demonstrations(
     raise ValueError
 
 
+def get_phase_estimator(
+    demonstrations: Demonstrations[NumDemos, NumPoints, TWO, TWO],
+    choice: Literal["MLP", "NORMALISED_TIME_INDEX"] = "MLP",
+) -> PhaseEstimatorProtocol[NumDemos, NumPoints, TWO, TWO]:
+    match choice:
+        case "MLP":
+            phase_estimator = MLPPhaseEstimator(demonstrations)
+            phase_loss = phase_estimator.train(
+                hidden_dim=128,
+                margin=1.0,  # m
+                lr=1e-3,
+                epochs=240,
+            )
+            console.print(f"Phase scorer loss: {phase_loss}")
+            return phase_estimator
+        case "NORMALISED_TIME_INDEX":
+            return NormalisedTimeIndexPhaseEstimator(demonstrations)
+    raise ValueError
+
+
 def test_pacerbc(
     demonstrations: Demonstrations[NumDemos, NumPoints, TWO, TWO],
     use_corruptions: bool = False,
@@ -60,15 +85,13 @@ def test_pacerbc(
         demonstrations = corrupter.inject_corruptions()
 
     # PACER
+    phase_estimator = get_phase_estimator(demonstrations)
     pacer = PACER(
         demonstrations,
+        phase_estimator,
         n_bins=96,  # B
     )
-    phase_loss = pacer.prepare(
-        phase_hidden_dim=128,
-        phase_margin=1.0,  # m
-        phase_lr=1e-3,
-        phase_epochs=240,
+    pacer.prepare(
         tukey_cutoff=4.685,  # c
         min_trust=0.02,  # w_min
         debias_weight=0.5,  # lambda_{debias}
@@ -76,7 +99,6 @@ def test_pacerbc(
         speed_regularisation_influence=0.5,  # eta_0
         temporal_smoothing_weight=0.0,  # kappa
     )
-    console.print(f"Phase scorer loss: {phase_loss}")
 
     # Behavioral cloning
     trainer = PACERBCTrainer(pacer, device="cpu")
