@@ -19,6 +19,7 @@ from pyLASAHandwritingDataset import SinglePatternMotion
 from typingkit.core import TypedList
 from typingkit.numpy._typed.helpers import TWO, Array3D
 
+from pacer import console
 from pacer.base import Action, Demonstration, Demonstrations, State
 from pacer.lasa import THOUSAND, LASADataSet
 from pacer.typings import Actions, NumDemos, NumPoints, States, npDType
@@ -44,7 +45,7 @@ class InteractiveDataSet(Generic[NumDemos, NumPoints]):
         self.ax.set_aspect("equal")
 
         if not _suppress_welcome:
-            print(
+            console.print(
                 "PACER – Draw your own demonstrations\n"
                 "------------------------------------\n"
                 "Left-click + drag     = draw a trajectory (one demonstration)\n"
@@ -100,11 +101,11 @@ class InteractiveDataSet(Generic[NumDemos, NumPoints]):
             self.demos.append(self.current_stroke)
             assert self.current_artist is not None
             self.demo_lines.append(self.current_artist)
-            print(
+            console.print(
                 f"Demo {len(self.demos)} accepted ({len(self.current_stroke)} points)"
             )
         else:
-            print(f"Ignored short stroke ({len(self.current_stroke)} points)")
+            console.print(f"Ignored short stroke ({len(self.current_stroke)} points)")
             # Remove the tiny/invalid stroke
             if self.current_artist is not None:
                 self.current_artist.remove()
@@ -117,18 +118,20 @@ class InteractiveDataSet(Generic[NumDemos, NumPoints]):
         if event.key == "q":
             self.finished = True
             plt.close(self.fig)
-            print(f"\nFinished drawing — {len(self.demos)} demonstrations created.")
+            console.print(
+                f"\nFinished drawing — {len(self.demos)} demonstrations created."
+            )
         elif event.key == "u":
             if self.demos and self.demo_lines:
                 self.demos.pop()
                 last_line = self.demo_lines.pop()
                 last_line.remove()
                 self.fig.canvas.draw_idle()
-                print(f"Undid last demo — now {len(self.demos)} left")
+                console.print(f"Undid last demo — now {len(self.demos)} left")
             elif self.demos:
-                print("No line to remove (inconsistent state)")
+                console.print("No line to remove (inconsistent state)")
             else:
-                print("Nothing to undo.")
+                console.print("Nothing to undo.")
         elif event.key == "r":
             self.demos.clear()
             self.demo_lines.clear()
@@ -142,7 +145,7 @@ class InteractiveDataSet(Generic[NumDemos, NumPoints]):
             self.ax.set_aspect("equal")
             self.ax.set_title("Canvas reset — start drawing again")
             self.fig.canvas.draw_idle()
-            print("Canvas reset")
+            console.print("Canvas reset")
         elif event.key == "n":
             if self.current_stroke:
                 # Commit current stroke
@@ -181,12 +184,12 @@ class InteractiveDataSet(Generic[NumDemos, NumPoints]):
     # ── Save / Load ──────────────────────────────────────
     def save(self, filepath: str) -> None:
         if not self.demos:
-            print("Nothing drawn — nothing saved.")
+            console.print("Nothing drawn — nothing saved.")
             return
         raw_arrays = [np.array(pts, dtype=npDType) for pts in self.demos]
         ragged_array = np.array(raw_arrays, dtype=object)
         np.savez_compressed(filepath, demos=ragged_array)
-        print(f"Saved {len(self.demos)} demos to {filepath}")
+        console.print(f"Saved {len(self.demos)} demos to {filepath}")
 
     @classmethod
     def load(cls, filepath: str) -> Self:
@@ -195,14 +198,14 @@ class InteractiveDataSet(Generic[NumDemos, NumPoints]):
         raw_list = ragged_array.tolist()
         ds = cls(_suppress_welcome=True)
         ds.demos = [list(map(tuple, arr)) for arr in raw_list]
-        print(f"Loaded {len(ds.demos)} raw demonstrations from {filepath}")
+        console.print(f"Loaded {len(ds.demos)} raw demonstrations from {filepath}")
         return ds
 
     @classmethod
     def draw(cls, **kwargs: Any) -> Demonstrations[NumDemos, NumPoints, TWO, TWO]:
         """Convenience: draw -> return Demonstrations object"""
         drawer = cls(**kwargs)
-        print("Interactive drawing window opened.")
+        console.print("Interactive drawing window opened.")
         plt.show(block=True)
         return drawer.to_demonstrations()
 
@@ -241,7 +244,9 @@ class InteractiveDataSet(Generic[NumDemos, NumPoints]):
         drawer.ax.autoscale()
         drawer.ax.set_title(f"LASA '{pattern}' loaded — continue drawing or modify")
 
-        print(f"Loaded {len(drawer.demos)} demonstration(s) from LASA '{pattern}'")
+        console.print(
+            f"Loaded {len(drawer.demos)} demonstration(s) from LASA '{pattern}'"
+        )
         return drawer
 
 
