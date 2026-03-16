@@ -70,9 +70,10 @@ def get_phase_estimator(
 
 def test_pacerbc(
     demonstrations: Demonstrations[NumDemos, NumPoints, TWO, TWO],
+    phase_estimator_choice: Literal["MLP", "NORMALISED_TIME_INDEX"] = "MLP",
     use_corruptions: bool = False,
 ) -> None:
-    console.rule("PACER + BC policy")
+    console.rule(f"PACER[{phase_estimator_choice}_PHASE_ESTIMATION] + BC policy")
 
     if use_corruptions:
         corrupter = DemonstrationCorrupter(
@@ -85,7 +86,7 @@ def test_pacerbc(
         demonstrations = corrupter.inject_corruptions()
 
     # PACER
-    phase_estimator = get_phase_estimator(demonstrations)
+    phase_estimator = get_phase_estimator(demonstrations, choice=phase_estimator_choice)
     pacer = PACER(
         demonstrations,
         phase_estimator,
@@ -139,7 +140,7 @@ def test_bc(
 
 
 if __name__ == "__main__":
-    demonstrations = get_demonstrations()
+    demonstrations = get_demonstrations(choice="FROM_LASA")
     test_bc(demonstrations)
-    test_pacerbc(demonstrations)
+    test_pacerbc(demonstrations, phase_estimator_choice="MLP")
     plt.show()

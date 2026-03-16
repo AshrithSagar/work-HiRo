@@ -39,7 +39,7 @@ def get_demonstrations(
 
 
 if __name__ == "__main__":
-    demonstrations = get_demonstrations()
+    demonstrations = get_demonstrations(choice="FROM_LASA")
     plot_states_and_actions(
         demonstrations,
         demo_indices=None,
