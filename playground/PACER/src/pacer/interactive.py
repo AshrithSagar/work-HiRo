@@ -189,6 +189,7 @@ class InteractiveDataSet(Generic[NumDemos, NumPoints]):
         raw_arrays = [np.array(pts, dtype=npDType) for pts in self.demos]
         ragged_array = np.array(raw_arrays, dtype=object)
         np.savez_compressed(filepath, demos=ragged_array)
+        filepath = f"{filepath}.npz" if not filepath.endswith(".npz") else filepath
         console.print(f"Saved {len(self.demos)} demos to {filepath}")
 
     @classmethod

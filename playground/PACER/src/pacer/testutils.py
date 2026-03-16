@@ -39,24 +39,29 @@ type PhaseEstimatorChoice = Literal["MLP", "NORMALISED_TIME_INDEX"]
 def get_demonstrations(
     choice: DemonstrationsChoice = "FROM_LASA",
     *,
-    pattern: SinglePatternMotion = "GShape",
-    filepath: str = "hand_drawn_demos.npz",
+    pattern: SinglePatternMotion | None = None,
+    filepath: str | None = None,
     use_corruptions: bool = False,
 ) -> Demonstrations[Any, Any, TWO, TWO]:
     demonstrations: Demonstrations[Any, Any, TWO, TWO]
     match choice:
         case "FROM_LASA":
+            assert pattern is not None
             demonstrations = LASADataSet(pattern).to_demonstrations()
         case "CUSTOM_FROM_LOAD":
+            assert filepath is not None
             drawer = InteractiveDataSet.load(filepath)
             demonstrations = drawer.to_demonstrations()
         case "CUSTOM_FROM_LASA":
+            assert pattern is not None
             drawer = InteractiveDataSet.from_LASA(pattern)
             plt.show(block=True)  # pyright: ignore[reportUnknownMemberType]
             demonstrations = drawer.to_demonstrations()
         case "CUSTOM_DRAW":
             drawer = InteractiveDataSet()
             plt.show(block=True)  # pyright: ignore[reportUnknownMemberType]
+            if filepath is not None:
+                drawer.save(filepath)
             demonstrations = drawer.to_demonstrations()
         case _:
             raise ValueError
