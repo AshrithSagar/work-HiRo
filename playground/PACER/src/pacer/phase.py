@@ -7,6 +7,7 @@ Phase alignment
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
 from dataclasses import InitVar, dataclass, field
+from typing import Protocol
 
 import numpy as np
 import torch
@@ -31,7 +32,19 @@ from pacer.utils import EPS, TORCH_DEVICE, get_torch_device, normalise
 ## ── Phase Alignment ──────────────────────────────────────────────────────────
 
 
-class PhaseScorer(nn.Module, RuntimeGeneric[DimState]):
+class PhaseEstimatorProtocol(Protocol[NumDemos, NumPoints, DimState, DimAction]):
+    """Protocol to estimate phases for a set of demonstrations."""
+
+    demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
+
+    # [[tau_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
+    def estimate_phases(self) -> PhasesCollection[NumDemos, NumPoints]: ...
+
+
+# ── MLP Phase Scorer ──────────────────────────────────────────────────────────
+
+
+class MLPPhaseScorer(nn.Module, RuntimeGeneric[DimState]):
     """A small neural network (MLP) to estimate state-dependent phase score `g_psi`."""
 
     def __init__(self, state_dim: DimState, hidden_dim: int = 64):
@@ -53,12 +66,15 @@ class PhaseScorer(nn.Module, RuntimeGeneric[DimState]):
 
 
 @dataclass
-class PhaseEstimator(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
+class MLPPhaseEstimator(
+    RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction],
+    PhaseEstimatorProtocol[NumDemos, NumPoints, DimState, DimAction],
+):
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     device: InitVar[DeviceLikeType] = field(default=TORCH_DEVICE, kw_only=True)
     ##
     device_: torch.device = field(init=False)
-    scorer: PhaseScorer[DimState] = field(init=False)
+    scorer: MLPPhaseScorer[DimState] = field(init=False)
     optimiser: torch.optim.Optimizer = field(init=False)
 
     def __post_init__(self, device: DeviceLikeType) -> None:
@@ -86,7 +102,7 @@ class PhaseEstimator(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
         epochs: int = 240,
     ) -> Tensor:
         state_dim = self.demonstrations.state_dim
-        scorer = PhaseScorer(state_dim=state_dim, hidden_dim=hidden_dim)
+        scorer = MLPPhaseScorer(state_dim=state_dim, hidden_dim=hidden_dim)
         self.scorer = scorer.to(self.device_)
         self.optimiser = torch.optim.Adam(self.scorer.parameters(), lr=lr)
 

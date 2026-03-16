@@ -22,7 +22,7 @@ from typingkit.core import RuntimeGeneric, TypedList
 from typingkit.numpy._typed.helpers import Array1D
 
 from pacer.base import Demonstrations, Sample, Samples, SamplesCollection
-from pacer.phase import PhaseEstimator
+from pacer.phase import MLPPhaseEstimator, PhaseEstimatorProtocol
 from pacer.typings import (
     Action,
     Actions,
@@ -131,9 +131,9 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     n_bins: NumBins = field(default=cast(NumBins, 96), kw_only=True)  # B
     ##
-    phase_estimator: PhaseEstimator[NumDemos, NumPoints, DimState, DimAction] = field(
-        init=False
-    )
+    phase_estimator: PhaseEstimatorProtocol[
+        NumDemos, NumPoints, DimState, DimAction
+    ] = field(init=False)
     bins: TypedList[NumBins, Bin[NumDemos, NumPoints, DimState, DimAction]] = field(
         init=False
     )
@@ -426,7 +426,7 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
         temporal_smoothing_weight: npDType | float = 0.0,  # kappa
     ) -> Tensor:
         set_seed(seed)
-        self.phase_estimator = PhaseEstimator(self.demonstrations, device=device)
+        self.phase_estimator = MLPPhaseEstimator(self.demonstrations, device=device)
         loss = self.phase_estimator.train(
             hidden_dim=phase_hidden_dim,
             margin=phase_margin,
