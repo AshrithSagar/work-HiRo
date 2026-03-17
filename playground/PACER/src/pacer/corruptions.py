@@ -13,8 +13,8 @@ import numpy as np
 import numpy.linalg as la
 from typingkit.core import RuntimeGeneric, TypedList
 
-from pacer.base import Demonstration, Demonstrations
-from pacer.typings import Action, Actions, DimAction, DimState, NumDemos, NumPoints
+from pacer.base import Action, Actions, Demonstration, Demonstrations
+from pacer.typings import DimAction, DimState, NumDemos, NumPoints
 from pacer.utils import EPS, SEED, set_seed
 
 ## ── Corruptions ──────────────────────────────────────────────────────────────

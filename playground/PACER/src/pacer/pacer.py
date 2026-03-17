@@ -19,23 +19,20 @@ import numpy.linalg as la
 from typingkit.core import RuntimeGeneric, TypedList
 from typingkit.numpy._typed.helpers import Array1D
 
-from pacer.base import Demonstrations, Sample, Samples, SamplesCollection
-from pacer.phase import PhaseEstimatorProtocol
-from pacer.typings import (
+from pacer.base import (
     Action,
     Actions,
     ActionsCollection,
     BinIndex,
     DemoIndex,
-    DimAction,
-    DimState,
-    NumBins,
-    NumDemos,
-    NumPoints,
+    Demonstrations,
     Phase,
     PhasesCollection,
     Residual,
+    Sample,
     SampleIndex,
+    Samples,
+    SamplesCollection,
     State,
     States,
     TimeIndex,
@@ -45,8 +42,9 @@ from pacer.typings import (
     ZScore,
     ZScores,
     ZScoresCollection,
-    npDType,
 )
+from pacer.phase import PhaseEstimatorProtocol
+from pacer.typings import DimAction, DimState, NumBins, NumDemos, NumPoints, npDType
 from pacer.utils import EPS, MAD_SCALE, SEED, median, normalise, set_seed
 
 ## ── PACER ────────────────────────────────────────────────────────────────────

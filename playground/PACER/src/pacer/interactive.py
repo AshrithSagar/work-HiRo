@@ -20,9 +20,9 @@ from typingkit.core import TypedList
 from typingkit.numpy._typed.helpers import TWO, Array3D
 
 from pacer import console
-from pacer.base import Action, Demonstration, Demonstrations, State
+from pacer.base import Action, Actions, Demonstration, Demonstrations, State, States
 from pacer.lasa import THOUSAND, LASADataSet
-from pacer.typings import Actions, NumDemos, NumPoints, States, npDType
+from pacer.typings import NumDemos, NumPoints, npDType
 
 ## ── Interactive Drawer ───────────────────────────────────────────────────────
 

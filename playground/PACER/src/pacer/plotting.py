@@ -10,18 +10,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 from typingkit.numpy._typed.helpers import TWO
 
-from pacer.base import Demonstrations
+from pacer.base import Actions, Demonstrations, PhasesCollection, TrustValuesCollection
 from pacer.pacer import PACER
 from pacer.trainers import PACERBCTrainer
-from pacer.typings import (
-    Actions,
-    DimAction,
-    NumBins,
-    NumDemos,
-    NumPoints,
-    PhasesCollection,
-    TrustValuesCollection,
-)
+from pacer.typings import DimAction, NumBins, NumDemos, NumPoints
 
 
 def plot_trajectories(

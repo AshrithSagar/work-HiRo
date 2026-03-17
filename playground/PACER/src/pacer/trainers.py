@@ -17,19 +17,9 @@ from torch import Tensor
 from torch._prims_common import DeviceLikeType
 from typingkit.core import RuntimeGeneric
 
-from pacer.base import Demonstrations
+from pacer.base import Action, Actions, Demonstrations, States
 from pacer.pacer import PACER
-from pacer.typings import (
-    Action,
-    Actions,
-    DimAction,
-    DimState,
-    NumBins,
-    NumDemos,
-    NumPoints,
-    States,
-    torchDType,
-)
+from pacer.typings import DimAction, DimState, NumBins, NumDemos, NumPoints, torchDType
 from pacer.utils import SEED, TORCH_DEVICE, get_torch_device, set_seed
 
 ## ── Policies ─────────────────────────────────────────────────────────────────

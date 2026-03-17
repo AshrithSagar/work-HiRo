@@ -16,8 +16,8 @@ from typingkit.core import RuntimeGeneric, TypedList
 from typingkit.numpy import enforce_shapes
 from typingkit.numpy._typed.helpers import THREE, TWO, Array3D
 
-from pacer.base import Demonstration, Demonstrations
-from pacer.typings import Actions, States, npDType
+from pacer.base import Actions, Demonstration, Demonstrations, States
+from pacer.typings import npDType
 
 ## ── Typings ──────────────────────────────────────────────────────────────────
 
