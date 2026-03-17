@@ -195,8 +195,8 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
             la.norm(states[t + 1] - states[t]) for t in range(len(states) - 1)
         ]
 
-        median_action = Action[DimAction](median(actions, axis=0))
-        median_state = State[DimState](median(states, axis=0))
+        median_action = Action[DimAction](median(actions, axis=0), dtype=npDType)
+        median_state = State[DimState](median(states, axis=0), dtype=npDType)
         median_action_strength = npDType(median(action_norms, axis=0))
         median_state_change = npDType(median(state_change_norms, axis=0))
 
@@ -213,8 +213,8 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
         # (N x T_)
         z_scores = ZScoresCollection[NumDemos, NumPoints].full(
             N,
-            lambda i: ZScores[NumPoints](
-                [ZScore(0) for _ in self.demonstrations[i].time_indices]
+            lambda i: ZScores[NumPoints].full(
+                self.demonstrations[i].time_indices.length, ZScore(0)
             ),
         )
 
@@ -257,23 +257,26 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
         assert 3 <= cutoff <= 5
         N = self.demonstrations.__len__()
         trust_values = TrustValuesCollection[NumDemos, NumPoints].full(
-            N, TrustValues[NumPoints]()
+            N,
+            lambda i: TrustValues[NumPoints].full(
+                self.demonstrations[i].time_indices.length, TrustValue(0)
+            ),
         )  # (N x T_)
         z_scores = self.compute_z_scores()
         for i, scores in enumerate(z_scores):
-            for _t, z_score in enumerate(scores):
+            for t, z_score in enumerate(scores):
                 if z_score <= cutoff:
                     trust_value = (1 - (z_score / cutoff) ** 2) ** 2
                 else:
                     trust_value = TrustValue(0)
                 if trust_value < min_trust:
                     trust_value = TrustValue(min_trust)
-                trust_values[i].append(trust_value)
+                trust_values[i][t] = trust_value
         return trust_values  # [[w_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
 
     def consolidate_ribbon_tokens(self) -> None:
-        bin_median_actions = Actions[NumPoints, DimAction]()
-        bin_median_states = States[NumPoints, DimState]()
+        bin_median_actions = Actions[NumBins, DimAction]()
+        bin_median_states = States[NumBins, DimState]()
 
         for bin in self.bins:
             stats = self.compute_robust_consensus_statistics(bin)
@@ -300,7 +303,8 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
             bin_median_actions.append(stats.median_action)
             bin_median_states.append(stats.median_state)
 
-        for b, bin in enumerate(self.bins):
+        for bin in self.bins:
+            b = bin.index
             if b == 0:
                 p, q, f = b + 1, b, 1.0
             elif b == self.n_bins - 1:
@@ -328,16 +332,19 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
         N = self.demonstrations.__len__()
         da = self.demonstrations.action_dim
         pseudo_labels = ActionsCollection[NumDemos, NumPoints, DimAction].full(
-            N, Actions[NumPoints, DimAction]()
+            N,
+            lambda i: Actions[NumPoints, DimAction].full(
+                self.demonstrations[i].time_indices.length,
+                Action[DimAction](np.zeros((da,), dtype=npDType)),
+            ),
         )
         _labels = ActionsCollection[NumDemos, NumPoints, DimAction].full(
             N,
             lambda i: Actions[NumPoints, DimAction].full(
                 self.demonstrations[i].time_indices.length,
-                Action[DimAction](np.zeros((da), dtype=npDType)),
+                Action[DimAction](np.zeros((da,), dtype=npDType)),
             ),
-        )
-        # [[y^{(3)}_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
+        )  # [[y^{(3)}_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
         self.consolidate_ribbon_tokens()
         rho_0 = sideways_attenuation_shrinkage
         assert 0 <= rho_0 <= 1
@@ -401,7 +408,7 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
                 ystar = Action[DimAction](
                     (1 - kappa) * y3 + kappa * ystar_prev, dtype=npDType
                 )
-                pseudo_labels[i].append(ystar)
+                pseudo_labels[i][t] = ystar
                 ystar_prev = ystar
 
         return pseudo_labels
