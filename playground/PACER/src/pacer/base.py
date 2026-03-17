@@ -9,9 +9,10 @@ Core data structures for representing demonstrations and samples.
 
 from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Any, TypeAlias, overload
+from typing import Any, Self, TypeAlias, cast, overload
 
 import numpy as np
+import optype.numpy as onp
 from typingkit.core import RuntimeGeneric, TypedDict, TypedList
 from typingkit.numpy._typed.helpers import Array1D
 
@@ -30,7 +31,10 @@ from pacer.typings import (
 
 ## ── Base ─────────────────────────────────────────────────────────────────────
 
-State: TypeAlias = Array1D[DimState, np.dtype[npDType]]  # x_{i, t} \in R^{d_x}
+
+class State(Array1D[DimState, np.dtype[npDType]]):  # x_{i, t} \in R^{d_x}
+    def __new__(cls, object: onp.ToArrayStrict1D) -> Self:
+        return cast(Self, super().__new__(cls, object, dtype=npDType))
 
 
 class States(TypedList[NumPoints, State[DimState]]):
@@ -42,7 +46,10 @@ StatesCollection: TypeAlias = TypedList[NumDemos, States[NumPoints, DimState]]
 
 # ──────────────────────────────────────────────────────────────────────────────
 
-Action: TypeAlias = Array1D[DimAction, np.dtype[npDType]]  # a_{i, t} \in R^{d_a}
+
+class Action(Array1D[DimAction, np.dtype[npDType]]):  # a_{i, t} \in R^{d_a}
+    def __new__(cls, object: onp.ToArrayStrict1D) -> Self:
+        return cast(Self, super().__new__(cls, object, dtype=npDType))
 
 
 class Actions(TypedList[NumPoints, Action[DimAction]]):

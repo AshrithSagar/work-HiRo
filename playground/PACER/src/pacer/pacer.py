@@ -200,8 +200,8 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
             la.norm(states[t + 1] - states[t]) for t in range(len(states) - 1)
         ]
 
-        median_action = Action[DimAction](median(actions, axis=0), dtype=npDType)
-        median_state = State[DimState](median(states, axis=0), dtype=npDType)
+        median_action = Action[DimAction](median(actions, axis=0))
+        median_state = State[DimState](median(states, axis=0))
         median_action_strength = npDType(median(action_norms, axis=0))
         median_state_change = npDType(median(state_change_norms, axis=0))
 
@@ -398,7 +398,7 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
                     beta_a = bin.ribbon_token.median_action_strength
                     s = (1 - eta) * la.norm(y2) + eta * beta_a  # s_{i, t}
                     y3 = Action[DimAction](
-                        s * (y2 / (la.norm(y2) + EPS)), dtype=npDType
+                        s * (y2 / (la.norm(y2) + EPS))
                     )  # y^{(3)}_{i, t}
 
                     _labels[j][t] = y3
@@ -410,9 +410,7 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
                 y3 = _labels[i][t]
                 if ystar_prev is None:  # t = 0
                     ystar_prev = y3
-                ystar = Action[DimAction](
-                    (1 - kappa) * y3 + kappa * ystar_prev, dtype=npDType
-                )
+                ystar = Action[DimAction]((1 - kappa) * y3 + kappa * ystar_prev)
                 pseudo_labels[i][t] = ystar
                 ystar_prev = ystar
 

@@ -16,7 +16,7 @@ from typingkit.core import RuntimeGeneric, TypedList
 from typingkit.numpy import enforce_shapes
 from typingkit.numpy._typed.helpers import THREE, TWO, Array3D
 
-from pacer.base import Actions, Demonstration, Demonstrations, States
+from pacer.base import Action, Actions, Demonstration, Demonstrations, State, States
 from pacer.typings import npDType
 
 ## ── Typings ──────────────────────────────────────────────────────────────────
@@ -56,8 +56,12 @@ class LASADataSet:
                 [
                     Demonstration(
                         index=index,  # i
-                        states=States[THOUSAND, TWO](states),
-                        actions=Actions[THOUSAND, TWO](actions),
+                        states=States[THOUSAND, TWO](
+                            State[TWO](state) for state in states
+                        ),
+                        actions=Actions[THOUSAND, TWO](
+                            Action[TWO](action) for action in actions
+                        ),
                     )
                     for index, (states, actions) in enumerate(
                         zip(self.positions, self.velocities)
