@@ -23,18 +23,26 @@ from pacer.base import (
     Action,
     Actions,
     ActionsCollection,
-    BinIndex,
-    DemoIndex,
     Demonstrations,
-    Phase,
-    PhasesCollection,
-    Residual,
     Sample,
-    SampleIndex,
     Samples,
     SamplesCollection,
     State,
     States,
+)
+from pacer.phase import PhaseEstimatorProtocol
+from pacer.typings import (
+    BinIndex,
+    DemoIndex,
+    DimAction,
+    DimState,
+    NumBins,
+    NumDemos,
+    NumPoints,
+    Phase,
+    PhasesCollection,
+    Residual,
+    SampleIndex,
     TimeIndex,
     TrustValue,
     TrustValues,
@@ -42,9 +50,8 @@ from pacer.base import (
     ZScore,
     ZScores,
     ZScoresCollection,
+    npDType,
 )
-from pacer.phase import PhaseEstimatorProtocol
-from pacer.typings import DimAction, DimState, NumBins, NumDemos, NumPoints, npDType
 from pacer.utils import EPS, MAD_SCALE, SEED, median, normalise, set_seed
 
 ## ── PACER ────────────────────────────────────────────────────────────────────

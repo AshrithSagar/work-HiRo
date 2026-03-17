@@ -18,8 +18,16 @@ from torch import Tensor
 from torch._prims_common import DeviceLikeType
 from typingkit.core import RuntimeGeneric
 
-from pacer.base import Demonstrations, Phase, Phases, PhasesCollection
-from pacer.typings import DimAction, DimState, NumDemos, NumPoints
+from pacer.base import Demonstrations
+from pacer.typings import (
+    DimAction,
+    DimState,
+    NumDemos,
+    NumPoints,
+    Phase,
+    Phases,
+    PhasesCollection,
+)
 from pacer.utils import EPS, SEED, TORCH_DEVICE, get_torch_device, normalise, set_seed
 
 ## ── Phase Alignment ──────────────────────────────────────────────────────────
