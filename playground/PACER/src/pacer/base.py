@@ -9,7 +9,7 @@ Core data structures for representing demonstrations and samples.
 
 from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Any, Self, TypeAlias, cast, overload
+from typing import Any, Self, cast, overload
 
 import numpy as np
 import optype.numpy as onp
@@ -36,13 +36,34 @@ class State(Array1D[DimState, np.dtype[npDType]]):  # x_{i, t} \in R^{d_x}
     def __new__(cls, object: onp.ToArrayStrict1D) -> Self:
         return cast(Self, super().__new__(cls, object, dtype=npDType))
 
+    @classmethod
+    def zeros(cls, state_dim: DimState) -> Self:
+        return cls(np.zeros((state_dim,)))
+
 
 class States(TypedList[NumPoints, State[DimState]]):
     def coord(self, dim: int) -> Array1D[NumPoints, np.dtype[npDType]]:
         return Array1D[NumPoints, np.dtype[npDType]](np.asarray(self)[:, dim])
 
+    @classmethod
+    def zeros_like(
+        cls, demonstration: Demonstration[NumPoints, DimState, DimAction]
+    ) -> Self:
+        T_i = demonstration.time_indices.length
+        d_x = demonstration.state_dim
+        return cls.full(T_i, State[DimState].zeros(d_x))
 
-StatesCollection: TypeAlias = TypedList[NumDemos, States[NumPoints, DimState]]
+
+class StatesCollection(TypedList[NumDemos, States[NumPoints, DimState]]):
+    @classmethod
+    def zeros_like(
+        cls, demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
+    ) -> Self:
+        N = demonstrations.__len__()
+        return cls.full(
+            N, lambda i: States[NumPoints, DimState].zeros_like(demonstrations[i])
+        )
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -51,13 +72,34 @@ class Action(Array1D[DimAction, np.dtype[npDType]]):  # a_{i, t} \in R^{d_a}
     def __new__(cls, object: onp.ToArrayStrict1D) -> Self:
         return cast(Self, super().__new__(cls, object, dtype=npDType))
 
+    @classmethod
+    def zeros(cls, action_dim: DimAction) -> Self:
+        return cls(np.zeros((action_dim,)))
+
 
 class Actions(TypedList[NumPoints, Action[DimAction]]):
     def coord(self, dim: int) -> Array1D[NumPoints, np.dtype[npDType]]:
         return Array1D[NumPoints, np.dtype[npDType]](np.asarray(self)[:, dim])
 
+    @classmethod
+    def zeros_like(
+        cls, demonstration: Demonstration[NumPoints, DimState, DimAction]
+    ) -> Self:
+        T_i = demonstration.time_indices.length
+        d_a = demonstration.action_dim
+        return cls.full(T_i, Action[DimAction].zeros(d_a))
 
-ActionsCollection: TypeAlias = TypedList[NumDemos, Actions[NumPoints, DimAction]]
+
+class ActionsCollection(TypedList[NumDemos, Actions[NumPoints, DimAction]]):
+    @classmethod
+    def zeros_like(
+        cls, demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
+    ) -> Self:
+        N = demonstrations.__len__()
+        return cls.full(
+            N, lambda i: Actions[NumPoints, DimAction].zeros_like(demonstrations[i])
+        )
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 

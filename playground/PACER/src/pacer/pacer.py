@@ -334,21 +334,11 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
         speed_regularisation_influence: npDType | float = 0.5,  # eta_0
         temporal_smoothing_weight: npDType | float = 0.0,  # kappa
     ) -> ActionsCollection[NumDemos, NumPoints, DimAction]:  # (N x T_)
-        N = self.demonstrations.__len__()
-        da = self.demonstrations.action_dim
-        pseudo_labels = ActionsCollection[NumDemos, NumPoints, DimAction].full(
-            N,
-            lambda i: Actions[NumPoints, DimAction].full(
-                self.demonstrations[i].time_indices.length,
-                Action[DimAction](np.zeros((da,), dtype=npDType)),
-            ),
-        )
-        _labels = ActionsCollection[NumDemos, NumPoints, DimAction].full(
-            N,
-            lambda i: Actions[NumPoints, DimAction].full(
-                self.demonstrations[i].time_indices.length,
-                Action[DimAction](np.zeros((da,), dtype=npDType)),
-            ),
+        pseudo_labels = ActionsCollection[NumDemos, NumPoints, DimAction].zeros_like(
+            self.demonstrations
+        )  # [[ystar_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
+        _labels = ActionsCollection[NumDemos, NumPoints, DimAction].zeros_like(
+            self.demonstrations
         )  # [[y^{(3)}_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
         self.consolidate_ribbon_tokens()
         rho_0 = sideways_attenuation_shrinkage
