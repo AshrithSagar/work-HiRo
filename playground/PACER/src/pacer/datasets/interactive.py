@@ -3,7 +3,7 @@ Interactive dataset drawing
 =======
 Draw your own custom 2D trajectories with the mouse
 """
-# src/pacer/interactive.py
+# src/pacer/datasets/interactive.py
 
 # pyright: standard
 
@@ -21,7 +21,7 @@ from typingkit.numpy._typed.helpers import TWO, Array3D
 
 from pacer import console
 from pacer.base import Action, Actions, Demonstration, Demonstrations, State, States
-from pacer.lasa import THOUSAND, LASADataSet
+from pacer.datasets.lasa import THOUSAND, LASADataSet
 from pacer.typings import NumDemos, NumPoints, npDType
 
 ## ── Interactive Drawer ───────────────────────────────────────────────────────

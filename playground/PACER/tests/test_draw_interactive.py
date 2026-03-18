@@ -4,7 +4,7 @@
 
 import matplotlib.pyplot as plt
 
-from pacer.interactive import InteractiveDataSet
+from pacer.datasets import InteractiveDataSet
 
 drawer = InteractiveDataSet()
 plt.show(block=True)

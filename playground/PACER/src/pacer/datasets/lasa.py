@@ -2,7 +2,7 @@
 LASA Dataset
 =======
 """
-# src/pacer/lasa.py
+# src/pacer/datasets/lasa.py
 
 # pyright: reportPrivateUsage = false
 

@@ -16,8 +16,7 @@ from typingkit.numpy._typed.helpers import TWO
 from pacer import console
 from pacer.base import Demonstrations
 from pacer.corruptions import DemonstrationCorrupter
-from pacer.interactive import InteractiveDataSet
-from pacer.lasa import LASADataSet
+from pacer.datasets import InteractiveDataSet, LASADataSet
 from pacer.phase import (
     MLPPhaseEstimator,
     NormalisedTimeIndexPhaseEstimator,

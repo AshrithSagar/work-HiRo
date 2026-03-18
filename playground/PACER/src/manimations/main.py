@@ -8,7 +8,7 @@ import manim as mn
 import manim.typing as mnt
 import numpy as np
 
-from pacer.lasa import LASADataSet3D
+from pacer.datasets import LASADataSet3D
 
 
 class DemonstrationScene(mn.Scene):
