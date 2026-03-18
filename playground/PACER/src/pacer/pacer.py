@@ -29,7 +29,7 @@ from pacer.base import (
     State,
     States,
 )
-from pacer.phase import PhaseEstimatorProtocol
+from pacer.phase import Phase, PhaseEstimatorProtocol, PhasesCollection
 from pacer.typings import (
     BinIndex,
     DemoIndex,
@@ -38,8 +38,6 @@ from pacer.typings import (
     NumBins,
     NumDemos,
     NumPoints,
-    Phase,
-    PhasesCollection,
     SampleIndex,
     TimeIndex,
     Vector,

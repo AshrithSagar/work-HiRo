@@ -7,7 +7,7 @@ Phase alignment
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
 from dataclasses import InitVar, dataclass, field
-from typing import Protocol
+from typing import Protocol, TypeAlias
 
 import numpy as np
 import torch
@@ -16,22 +16,18 @@ import torch.nn.functional as F
 from rich.progress import track
 from torch import Tensor
 from torch._prims_common import DeviceLikeType
-from typingkit.core import RuntimeGeneric
+from typingkit.core import RuntimeGeneric, TypedList
 
 from pacer.base import Demonstrations
-from pacer.typings import (
-    DimAction,
-    DimState,
-    NumDemos,
-    NumPoints,
-    Phase,
-    Phases,
-    PhasesCollection,
-    Vector,
-)
+from pacer.typings import DimAction, DimState, NumDemos, NumPoints, Vector, npDType
 from pacer.utils import EPS, SEED, TORCH_DEVICE, get_torch_device, normalise, set_seed
 
 ## ── Phase Alignment ──────────────────────────────────────────────────────────
+
+
+Phase: TypeAlias = npDType  # tau \in [0, 1]
+Phases: TypeAlias = TypedList[NumPoints, Phase]
+PhasesCollection: TypeAlias = TypedList[NumDemos, Phases[NumPoints]]
 
 
 class PhaseEstimatorProtocol(Protocol[NumDemos, NumPoints, DimState, DimAction]):

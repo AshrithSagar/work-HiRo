@@ -32,12 +32,6 @@ Matrix: TypeAlias = Array2D[Dim1, Dim2, np.dtype[npDType]]
 
 # ──────────────────────────────────────────────────────────────────────────────
 
-Phase: TypeAlias = npDType  # tau \in [0, 1]
-Phases: TypeAlias = TypedList[NumPoints, Phase]
-PhasesCollection: TypeAlias = TypedList[NumDemos, Phases[NumPoints]]
-
-# ──────────────────────────────────────────────────────────────────────────────
-
 DemoIndex: TypeAlias = int  # i \in {0, 1, ..., N-1}
 DemoIndices: TypeAlias = TypedList[NumPoints, DemoIndex]
 DemoIndicesCollection: TypeAlias = TypedList[NumDemos, DemoIndices[NumPoints]]
