@@ -7,7 +7,7 @@ Phase alignment
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
 from dataclasses import InitVar, dataclass, field
-from typing import Protocol, TypeAlias
+from typing import Protocol, Self, TypeAlias
 
 import numpy as np
 import optype.numpy as onp
@@ -19,16 +19,31 @@ from torch import Tensor
 from torch._prims_common import DeviceLikeType
 from typingkit.core import RuntimeGeneric, TypedList
 
-from pacer.base import Demonstrations
+from pacer.base import Demonstration, Demonstrations
 from pacer.typings import DimAction, DimState, NumDemos, NumPoints, Vector, npDType
 from pacer.utils import EPS, SEED, TORCH_DEVICE, get_torch_device, normalise, set_seed
 
 ## ── Phase Alignment ──────────────────────────────────────────────────────────
 
-
 Phase: TypeAlias = npDType  # tau \in [0, 1]
-Phases: TypeAlias = TypedList[NumPoints, Phase]
-PhasesCollection: TypeAlias = TypedList[NumDemos, Phases[NumPoints]]
+
+
+class Phases(TypedList[NumPoints, Phase]):
+    @classmethod
+    def zeros_like(
+        cls, demonstration: Demonstration[NumPoints, DimState, DimAction]
+    ) -> Self:
+        T_i = demonstration.time_indices.length
+        return cls.full(T_i, Phase(0))
+
+
+class PhasesCollection(TypedList[NumDemos, Phases[NumPoints]]):
+    @classmethod
+    def zeros_like(
+        cls, demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
+    ) -> Self:
+        N = demonstrations.__len__()
+        return cls.full(N, lambda i: Phases[NumPoints].zeros_like(demonstrations[i]))
 
 
 class PhaseEstimatorProtocol(Protocol[NumDemos, NumPoints, DimState, DimAction]):
@@ -120,14 +135,14 @@ class MLPPhaseEstimator(
     def estimate_phases(self) -> PhasesCollection[NumDemos, NumPoints]:
         # [[tau_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
         self.scorer.eval()
-        phases = PhasesCollection[NumDemos, NumPoints]()
+        phases = PhasesCollection[NumDemos, NumPoints].zeros_like(self.demonstrations)
         with torch.no_grad():
             for demo in self.demonstrations:
                 states = Tensor(demo.states.numpy()).float().to(self.device_)
                 scores: Tensor = self.scorer(states)
                 _scores = scores.cpu().numpy()
                 taus = Phases[NumPoints](normalise(_scores, method="MINMAX"))
-                phases.append(taus)
+                phases[demo.index] = taus
         return phases
 
 
@@ -144,12 +159,12 @@ class NormalisedTimeIndexPhaseEstimator(
 
     def estimate_phases(self) -> PhasesCollection[NumDemos, NumPoints]:
         # [[tau_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
-        phases = PhasesCollection[NumDemos, NumPoints]()
+        phases = PhasesCollection[NumDemos, NumPoints].zeros_like(self.demonstrations)
         for demo in self.demonstrations:
             T_i = demo.states.length
             assert T_i > 1
             taus = Phases[NumPoints]([Phase(t / (T_i - 1)) for t in range(T_i)])
-            phases.append(taus)
+            phases[demo.index] = taus
         return phases
 
 
@@ -164,13 +179,13 @@ class PathLengthPhaseEstimator(
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
 
     def estimate_phases(self) -> PhasesCollection[NumDemos, NumPoints]:
-        phases = PhasesCollection[NumDemos, NumPoints]()
+        phases = PhasesCollection[NumDemos, NumPoints].zeros_like(self.demonstrations)
         for demo in self.demonstrations:
             diffs: onp.Array2D[npDType] = np.diff(demo.states, axis=0)  # (T_i-1, d_x)
             norms: onp.Array1D[npDType] = np.linalg.norm(diffs, axis=1)  # (T_i-1,)
             lengths = Vector[NumPoints](np.r_[0, np.cumsum(norms)])
             taus = Phases[NumPoints](lengths / (lengths[-1] + EPS))
-            phases.append(taus)
+            phases[demo.index] = taus
         return phases
 
 
