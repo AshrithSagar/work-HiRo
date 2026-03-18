@@ -10,6 +10,7 @@ from dataclasses import InitVar, dataclass, field
 from typing import Protocol, TypeAlias
 
 import numpy as np
+import optype.numpy as onp
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -165,10 +166,10 @@ class PathLengthPhaseEstimator(
     def estimate_phases(self) -> PhasesCollection[NumDemos, NumPoints]:
         phases = PhasesCollection[NumDemos, NumPoints]()
         for demo in self.demonstrations:
-            cum_diffs = Vector[NumPoints](
-                np.cumsum(np.linalg.norm(np.diff(demo.states, axis=0), axis=1))
-            )
-            taus = Phases[NumPoints](cum_diffs / (cum_diffs[-1] + EPS))
+            diffs: onp.Array2D[npDType] = np.diff(demo.states, axis=0)  # (T_i-1, d_x)
+            norms: onp.Array1D[npDType] = np.linalg.norm(diffs, axis=1)  # (T_i-1,)
+            lengths = Vector[NumPoints](np.r_[0, np.cumsum(norms)])
+            taus = Phases[NumPoints](lengths / (lengths[-1] + EPS))
             phases.append(taus)
         return phases
 
