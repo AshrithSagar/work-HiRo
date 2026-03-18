@@ -27,6 +27,7 @@ from pacer.typings import (
     Phase,
     Phases,
     PhasesCollection,
+    Vector,
 )
 from pacer.utils import EPS, SEED, TORCH_DEVICE, get_torch_device, normalise, set_seed
 
@@ -125,11 +126,11 @@ class MLPPhaseEstimator(
         phases = PhasesCollection[NumDemos, NumPoints]()
         with torch.no_grad():
             for demo in self.demonstrations:
-                states = Tensor(np.array(demo.states)).float().to(self.device_)
+                states = Tensor(demo.states.numpy()).float().to(self.device_)
                 scores: Tensor = self.scorer(states)
                 _scores = scores.cpu().numpy()
-                normalised = Phases[NumPoints](normalise(_scores, method="MINMAX"))
-                phases.append(normalised)
+                taus = Phases[NumPoints](normalise(_scores, method="MINMAX"))
+                phases.append(taus)
         return phases
 
 
@@ -150,10 +151,29 @@ class NormalisedTimeIndexPhaseEstimator(
         for demo in self.demonstrations:
             T_i = demo.states.length
             assert T_i > 1
-            phases_for_demo = Phases[NumPoints](
-                [Phase(t / (T_i - 1)) for t in range(T_i)]
+            taus = Phases[NumPoints]([Phase(t / (T_i - 1)) for t in range(T_i)])
+            phases.append(taus)
+        return phases
+
+
+# ── Velocity Phase Estimation ─────────────────────────────────────────────────
+
+
+@dataclass
+class VelocityPhaseEstimator(
+    RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction],
+    PhaseEstimatorProtocol[NumDemos, NumPoints, DimState, DimAction],
+):
+    demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
+
+    def estimate_phases(self) -> PhasesCollection[NumDemos, NumPoints]:
+        phases = PhasesCollection[NumDemos, NumPoints]()
+        for demo in self.demonstrations:
+            cum_diffs = Vector[NumPoints](
+                np.cumsum(np.linalg.norm(np.diff(demo.states, axis=0), axis=1))
             )
-            phases.append(phases_for_demo)
+            taus = Phases[NumPoints](cum_diffs / (cum_diffs[-1] + EPS))
+            phases.append(taus)
         return phases
 
 
