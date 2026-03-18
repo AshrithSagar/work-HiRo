@@ -8,7 +8,7 @@ Utils
 
 import random
 from collections.abc import Sequence
-from typing import Literal
+from typing import Final, Literal
 
 import numpy as np
 import numpy.linalg as la
@@ -22,7 +22,7 @@ from pacer.typings import npDType
 
 ## ── Utils ────────────────────────────────────────────────────────────────────
 
-SEED = 42
+SEED: Final = 42
 EPS: float = 1e-8
 MAD_SCALE: float = 1.4826  # Gaussian consistency factor for MAD
 
@@ -66,16 +66,16 @@ def median(
 
 def normalise(
     vec: onp.ToArray1D, /, method: Literal["NORM", "MINMAX", "ZSCORE"]
-) -> np.ndarray:
-    vec = np.asarray(vec, dtype=npDType)
+) -> onp.Array1D[npDType]:
+    _vec: onp.Array1D[npDType] = np.asarray(vec, dtype=npDType)
     match method:
         case "NORM":
-            norm = la.norm(vec)
-            return vec / (norm + EPS)  # type: ignore[no-any-return]  # ty: ignore[unused-ignore-comment]
+            norm: npDType = la.norm(vec)
+            return _vec / (norm + EPS)
         case "MINMAX" | "ZSCORE":
-            min_: float = vec.min()
-            max_: float = vec.max()
-            return (vec - min_) / (max_ - min_ + EPS)
+            _min: npDType = _vec.min()
+            _max: npDType = _vec.max()
+            return (_vec - _min) / (_max - _min + EPS)
 
 
 ## ─────────────────────────────────────────────────────────────────────────────

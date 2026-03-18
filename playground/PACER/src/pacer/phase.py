@@ -152,11 +152,11 @@ class NormalisedTimeIndexPhaseEstimator(
         return phases
 
 
-# ── Velocity Phase Estimation ─────────────────────────────────────────────────
+# ── Path Length Phase Estimation ──────────────────────────────────────────────
 
 
 @dataclass
-class VelocityPhaseEstimator(
+class PathLengthPhaseEstimator(
     RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction],
     PhaseEstimatorProtocol[NumDemos, NumPoints, DimState, DimAction],
 ):

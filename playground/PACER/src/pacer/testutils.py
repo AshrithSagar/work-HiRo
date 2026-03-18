@@ -20,8 +20,8 @@ from pacer.datasets import InteractiveDataSet, LASADataSet
 from pacer.phase import (
     MLPPhaseEstimator,
     NormalisedTimeIndexPhaseEstimator,
+    PathLengthPhaseEstimator,
     PhaseEstimatorProtocol,
-    VelocityPhaseEstimator,
 )
 from pacer.typings import NumDemos, NumPoints
 from pacer.utils import SEED, TORCH_DEVICE
@@ -31,7 +31,7 @@ from pacer.utils import SEED, TORCH_DEVICE
 type DemonstrationsChoice = Literal[
     "FROM_LASA", "CUSTOM_FROM_LOAD", "CUSTOM_FROM_LASA", "CUSTOM_DRAW"
 ]
-type PhaseEstimatorChoice = Literal["MLP", "NORMALISED_TIME_INDEX", "VELOCITY"]
+type PhaseEstimatorChoice = Literal["MLP", "NORMALISED_TIME_INDEX", "PATH_LENGTH"]
 
 ## ── Test Utils ───────────────────────────────────────────────────────────────
 
@@ -105,8 +105,8 @@ def get_phase_estimator(
             return phase_estimator
         case "NORMALISED_TIME_INDEX":
             return NormalisedTimeIndexPhaseEstimator(demonstrations)
-        case "VELOCITY":
-            return VelocityPhaseEstimator(demonstrations)
+        case "PATH_LENGTH":
+            return PathLengthPhaseEstimator(demonstrations)
     raise ValueError
 
 
