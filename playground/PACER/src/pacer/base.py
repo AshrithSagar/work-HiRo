@@ -294,7 +294,7 @@ class Demonstrations(
 
     @property
     def demo_indices(self) -> DemoIndices[NumDemos]:
-        return DemoIndices[NumDemos](range(self.__len__()))
+        return DemoIndices[NumDemos](demo.index for demo in self.demos)
 
     @property
     def state_dim(self) -> DimState:  # d_x
