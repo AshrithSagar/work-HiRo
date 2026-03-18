@@ -9,7 +9,7 @@ Core data structures for representing demonstrations and samples.
 
 from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Any, Self, cast, overload
+from typing import Any, Self, cast, overload, override
 
 import numpy as np
 import optype.numpy as onp
@@ -155,6 +155,7 @@ class SamplesCollection(
         /,
     ) -> Sample[DimState, DimAction]: ...  # (x_{i, t}, a_{i, t})
     #
+    @override
     def __getitem__(
         self, index: DemoIndex | SampleIndex, /
     ) -> Samples[NumPoints, DimState, DimAction] | Sample[DimState, DimAction]:
