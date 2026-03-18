@@ -12,7 +12,7 @@ https://openreview.net/forum?id=gaYyBvP2Rz
 
 from collections.abc import Iterator
 from dataclasses import dataclass, field
-from typing import Any, TypeAlias, cast
+from typing import Any, Self, TypeAlias, cast
 
 import numpy as np
 import numpy.linalg as la
@@ -22,6 +22,7 @@ from pacer.base import (
     Action,
     Actions,
     ActionsCollection,
+    Demonstration,
     Demonstrations,
     Sample,
     Samples,
@@ -51,13 +52,55 @@ Residual: TypeAlias = npDType  # r_{i, t}
 Residuals: TypeAlias = TypedList[NumPoints, Residual]
 ResidualsCollection: TypeAlias = TypedList[NumDemos, Residuals[NumPoints]]
 
+# ──────────────────────────────────────────────────────────────────────────────
+
 ZScore: TypeAlias = npDType  # z_{i, t}
-ZScores: TypeAlias = TypedList[NumPoints, ZScore]
-ZScoresCollection: TypeAlias = TypedList[NumDemos, ZScores[NumPoints]]
+
+
+class ZScores(TypedList[NumPoints, ZScore]):
+    @classmethod
+    def zeros_like(
+        cls, demonstration: Demonstration[NumPoints, DimState, DimAction]
+    ) -> Self:
+        T_i = demonstration.time_indices.length
+        return cls.full(T_i, ZScore(0))
+
+
+class ZScoresCollection(TypedList[NumDemos, ZScores[NumPoints]]):
+    @classmethod
+    def zeros_like(
+        cls, demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
+    ) -> Self:
+        N = demonstrations.__len__()
+        return cls.full(N, lambda i: ZScores[NumPoints].zeros_like(demonstrations[i]))
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 
 TrustValue: TypeAlias = npDType  # w_{i, t}
-TrustValues: TypeAlias = TypedList[NumPoints, TrustValue]
-TrustValuesCollection: TypeAlias = TypedList[NumDemos, TrustValues[NumPoints]]
+
+
+class TrustValues(TypedList[NumPoints, TrustValue]):
+    @classmethod
+    def zeros_like(
+        cls, demonstration: Demonstration[NumPoints, DimState, DimAction]
+    ) -> Self:
+        T_i = demonstration.time_indices.length
+        return cls.full(T_i, TrustValue(0))
+
+
+class TrustValuesCollection(TypedList[NumDemos, TrustValues[NumPoints]]):
+    @classmethod
+    def zeros_like(
+        cls, demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
+    ) -> Self:
+        N = demonstrations.__len__()
+        return cls.full(
+            N, lambda i: TrustValues[NumPoints].zeros_like(demonstrations[i])
+        )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 
 
 @dataclass(kw_only=True)
@@ -216,15 +259,9 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
         )
 
     def compute_z_scores(self) -> ZScoresCollection[NumDemos, NumPoints]:  # (N x T_)
-        N = self.demonstrations.__len__()
-
-        # (N x T_)
-        z_scores = ZScoresCollection[NumDemos, NumPoints].full(
-            N,
-            lambda i: ZScores[NumPoints].full(
-                self.demonstrations[i].time_indices.length, ZScore(0)
-            ),
-        )
+        z_scores = ZScoresCollection[NumDemos, NumPoints].zeros_like(
+            self.demonstrations
+        )  # (N x T_)
 
         for bin in self.bins:
             for i in self.demonstrations.demo_indices:
@@ -263,12 +300,8 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
         min_trust: npDType | float,  # w_min
     ) -> TrustValuesCollection[NumDemos, NumPoints]:  # (N x T_)
         assert 3 <= cutoff <= 5
-        N = self.demonstrations.__len__()
-        trust_values = TrustValuesCollection[NumDemos, NumPoints].full(
-            N,
-            lambda i: TrustValues[NumPoints].full(
-                self.demonstrations[i].time_indices.length, TrustValue(0)
-            ),
+        trust_values = TrustValuesCollection[NumDemos, NumPoints].zeros_like(
+            self.demonstrations
         )  # (N x T_)
         z_scores = self.compute_z_scores()
         for i, scores in enumerate(z_scores):
