@@ -17,10 +17,18 @@ import torch.nn.functional as F
 from rich.progress import track
 from torch import Tensor
 from torch._prims_common import DeviceLikeType
-from typingkit.core import RuntimeGeneric, TypedList
+from typingkit.core import RuntimeGeneric, TypedDict, TypedList
 
 from pacer.base import Demonstration, Demonstrations
-from pacer.typings import DimAction, DimState, NumDemos, NumPoints, Vector, npDType
+from pacer.typings import (
+    DemoIndex,
+    DimAction,
+    DimState,
+    NumDemos,
+    NumPoints,
+    Vector,
+    npDType,
+)
 from pacer.utils import EPS, SEED, TORCH_DEVICE, get_torch_device, normalise, set_seed
 
 ## ── Phase Alignment ──────────────────────────────────────────────────────────
@@ -37,13 +45,18 @@ class Phases(TypedList[NumPoints, Phase]):
         return cls.full(T_i, Phase(0))
 
 
-class PhasesCollection(TypedList[NumDemos, Phases[NumPoints]]):
+class PhasesCollection(TypedDict[NumDemos, DemoIndex, Phases[NumPoints]]):
     @classmethod
     def zeros_like(
         cls, demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     ) -> Self:
-        N = demonstrations.__len__()
-        return cls.full(N, lambda i: Phases[NumPoints].zeros_like(demonstrations[i]))
+        return cls.full(
+            demonstrations.demo_indices,
+            lambda i: Phases[NumPoints].zeros_like(demonstrations[i]),
+        )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 
 
 class PhaseEstimatorProtocol(Protocol[NumDemos, NumPoints, DimState, DimAction]):

@@ -297,6 +297,12 @@ class Demonstrations(
         return DemoIndices[NumDemos](demo.index for demo in self.demos)
 
     @property
+    def sample_indices(self) -> Iterator[SampleIndex]:
+        for i in self.demo_indices:
+            for t in self[i].time_indices:
+                yield SampleIndex(i, t)
+
+    @property
     def state_dim(self) -> DimState:  # d_x
         return self.demos[0].state_dim
 

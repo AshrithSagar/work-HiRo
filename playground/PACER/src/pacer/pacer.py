@@ -40,7 +40,6 @@ from pacer.typings import (
     NumDemos,
     NumPoints,
     SampleIndex,
-    TimeIndex,
     Vector,
     npDType,
 )
@@ -199,15 +198,6 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
         assert 0 <= bin_idx < self.n_bins
         return bin_idx
 
-    @property
-    def sample_indices(self) -> Iterator[SampleIndex]:
-        i: DemoIndex
-        t: TimeIndex
-        for i in range(self.phases.__len__()):
-            for t in range(self.phases[i].__len__()):
-                sample_idx = SampleIndex(i, t)
-                yield sample_idx
-
     def make_bins(self) -> None:
         self.phases = self.phase_estimator.estimate_phases()
         self.bins = TypedList[
@@ -221,7 +211,7 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
                 ]({i: Samples() for i in self.demonstrations.demo_indices}),
             ),
         )
-        for sample_idx in self.sample_indices:
+        for sample_idx in self.demonstrations.sample_indices:
             demo_idx, time_idx = sample_idx
             bin_idx = self.sample_index_to_bin_index(sample_idx)
             bin = self.bins[bin_idx]

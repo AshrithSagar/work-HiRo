@@ -99,7 +99,7 @@ def plot_phases(
 ) -> None:
     """Plot tau_{i,t} for each demonstration."""
     plt.figure(figsize=(8, 4))
-    for i, tau in enumerate(phases):
+    for i, tau in phases.items():
         plt.plot(tau, label=f"Demo {i}", alpha=0.8)
     plt.xlabel("Time index t")
     plt.ylabel(r"Phase $\tau$")
