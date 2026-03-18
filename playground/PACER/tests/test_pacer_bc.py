@@ -59,7 +59,7 @@ def run_pacerbc(
     console.print(f"Policy loss: {policy_loss}")
 
     if show_plots:
-        full_diagnostic(trainer)
+        full_diagnostic(trainer.pacer)
 
 
 def run_bc(demonstrations: Demonstrations[NumDemos, NumPoints, TWO, TWO]) -> None:

@@ -12,7 +12,6 @@ from typingkit.numpy._typed.helpers import TWO
 
 from pacer.base import Actions, Demonstrations
 from pacer.pacer import PACER
-from pacer.trainers import PACERBCTrainer
 from pacer.typings import (
     DimAction,
     NumBins,
@@ -191,15 +190,13 @@ def plot_ribbon_action_field(
     plt.tight_layout()
 
 
-def full_diagnostic(
-    trainer: PACERBCTrainer[NumBins, NumDemos, NumPoints, TWO, TWO],
-) -> None:
-    plot_trajectories(trainer.pacer.demonstrations)
-    plot_phases(trainer.pacer.phase_estimator.estimate_phases())
-    plot_trust_values(trainer.pacer.trust_values)
-    plot_ribbon_action_field(trainer.pacer)
+def full_diagnostic(pacer: PACER[NumBins, NumDemos, NumPoints, TWO, TWO]) -> None:
+    plot_trajectories(pacer.demonstrations)
+    plot_phases(pacer.phases)
+    plot_trust_values(pacer.trust_values)
+    plot_ribbon_action_field(pacer)
     plot_action_comparison(
-        trainer.pacer.demonstrations.demos[0].actions,
-        trainer.pacer.pseudo_labels[0],
+        pacer.demonstrations.demos[0].actions,
+        pacer.pseudo_labels[0],
         title="Demo 0: Action refinement",
     )
