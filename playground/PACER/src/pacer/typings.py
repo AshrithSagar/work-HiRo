@@ -36,18 +36,6 @@ Phase: TypeAlias = npDType  # tau \in [0, 1]
 Phases: TypeAlias = TypedList[NumPoints, Phase]
 PhasesCollection: TypeAlias = TypedList[NumDemos, Phases[NumPoints]]
 
-Residual: TypeAlias = npDType  # r_{i, t}
-Residuals: TypeAlias = TypedList[NumPoints, Residual]
-ResidualsCollection: TypeAlias = TypedList[NumDemos, Residuals[NumPoints]]
-
-ZScore: TypeAlias = npDType  # z_{i, t}
-ZScores: TypeAlias = TypedList[NumPoints, ZScore]
-ZScoresCollection: TypeAlias = TypedList[NumDemos, ZScores[NumPoints]]
-
-TrustValue: TypeAlias = npDType  # w_{i, t}
-TrustValues: TypeAlias = TypedList[NumPoints, TrustValue]
-TrustValuesCollection: TypeAlias = TypedList[NumDemos, TrustValues[NumPoints]]
-
 # ──────────────────────────────────────────────────────────────────────────────
 
 DemoIndex: TypeAlias = int  # i \in {0, 1, ..., N-1}

@@ -12,12 +12,11 @@ https://openreview.net/forum?id=gaYyBvP2Rz
 
 from collections.abc import Iterator
 from dataclasses import dataclass, field
-from typing import Any, cast
+from typing import Any, TypeAlias, cast
 
 import numpy as np
 import numpy.linalg as la
 from typingkit.core import RuntimeGeneric, TypedList
-from typingkit.numpy._typed.helpers import Array1D
 
 from pacer.base import (
     Action,
@@ -41,20 +40,26 @@ from pacer.typings import (
     NumPoints,
     Phase,
     PhasesCollection,
-    Residual,
     SampleIndex,
     TimeIndex,
-    TrustValue,
-    TrustValues,
-    TrustValuesCollection,
-    ZScore,
-    ZScores,
-    ZScoresCollection,
+    Vector,
     npDType,
 )
 from pacer.utils import EPS, MAD_SCALE, SEED, median, normalise, set_seed
 
 ## ── PACER ────────────────────────────────────────────────────────────────────
+
+Residual: TypeAlias = npDType  # r_{i, t}
+Residuals: TypeAlias = TypedList[NumPoints, Residual]
+ResidualsCollection: TypeAlias = TypedList[NumDemos, Residuals[NumPoints]]
+
+ZScore: TypeAlias = npDType  # z_{i, t}
+ZScores: TypeAlias = TypedList[NumPoints, ZScore]
+ZScoresCollection: TypeAlias = TypedList[NumDemos, ZScores[NumPoints]]
+
+TrustValue: TypeAlias = npDType  # w_{i, t}
+TrustValues: TypeAlias = TypedList[NumPoints, TrustValue]
+TrustValuesCollection: TypeAlias = TypedList[NumDemos, TrustValues[NumPoints]]
 
 
 @dataclass(kw_only=True)
@@ -355,7 +360,7 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
                 if token.state_tangent is not None
                 else token.action_tangent
             )
-            unit_tangent = Array1D[int](normalise(tangent, method="NORM"))  # t_{dir}[b]
+            unit_tangent = Vector[int](normalise(tangent, method="NORM"))  # t_{dir}[b]
 
             for j in self.demonstrations.demo_indices:
                 loo_stats = self.compute_robust_consensus_statistics(
