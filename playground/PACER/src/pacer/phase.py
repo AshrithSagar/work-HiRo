@@ -85,7 +85,7 @@ class MLPPhaseEstimator(
     def compute_ranking_loss(self, margin: float = 1.0) -> Tensor:  # L_rank
         loss = torch.tensor(0.0, device=self.device_)
         for demo in self.demonstrations:
-            states = Tensor(np.array(demo.states)).float().to(self.device_)
+            states = Tensor(demo.states.numpy()).float().to(self.device_)
             scores: Tensor = self.scorer(states)  # (T_i,)
             diff = scores.unsqueeze(0) - scores.unsqueeze(1)  # (T_i, T_i)
             mask = torch.ones_like(diff).triu(diagonal=1)  # Enforces `t > t'`

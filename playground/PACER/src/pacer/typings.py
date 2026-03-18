@@ -12,17 +12,23 @@ from typing import NamedTuple, TypeAlias, TypeVar
 import numpy as np
 import torch
 from typingkit.core import TypedList
+from typingkit.numpy._typed.helpers import Array1D, Array2D, Dim1, Dim2
 
 ## ── Typings ──────────────────────────────────────────────────────────────────
-
-npDType: TypeAlias = np.float32
-torchDType = torch.float32
 
 DimState = TypeVar("DimState", bound=int, default=int)  # d_x
 DimAction = TypeVar("DimAction", bound=int, default=int)  # d_a
 NumPoints = TypeVar("NumPoints", bound=int, default=int)  # T_i
 NumDemos = TypeVar("NumDemos", bound=int, default=int)  # N
 NumBins = TypeVar("NumBins", bound=int, default=int)  # B
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+npDType: TypeAlias = np.float32
+torchDType = torch.float32
+
+Vector: TypeAlias = Array1D[Dim1, np.dtype[npDType]]
+Matrix: TypeAlias = Array2D[Dim1, Dim2, np.dtype[npDType]]
 
 # ──────────────────────────────────────────────────────────────────────────────
 

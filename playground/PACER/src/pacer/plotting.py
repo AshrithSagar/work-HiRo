@@ -7,7 +7,6 @@ Plotting utils
 # pyright: standard
 
 import matplotlib.pyplot as plt
-import numpy as np
 from typingkit.numpy._typed.helpers import TWO
 
 from pacer.base import Actions, Demonstrations
@@ -138,8 +137,8 @@ def plot_action_comparison(
     title: str = "Original vs Pseudo actions",
 ) -> None:
     """Compare action vectors over time (per dimension)."""
-    _original = np.array(original)
-    _pseudo = np.array(pseudo)
+    _original = original.numpy()
+    _pseudo = pseudo.numpy()
     dim = _original.shape[1]
 
     fig, _axes = plt.subplots(dim, 1, figsize=(8, 3 * dim))

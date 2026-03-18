@@ -70,10 +70,10 @@ class BCTrainer(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
         total_samples: int = 0
         for demo in self.demonstrations:
             states = torch.tensor(
-                np.array(demo.states), dtype=torchDType, device=self.device_
+                demo.states.numpy(), dtype=torchDType, device=self.device_
             )  # (T_i, state_dim)
             targets = torch.tensor(
-                np.array(demo.actions), dtype=torchDType, device=self.device_
+                demo.actions.numpy(), dtype=torchDType, device=self.device_
             )  # (T_i, action_dim)
             preds: Tensor = self.policy(states)  # (T_i, action_dim)
 
@@ -121,7 +121,7 @@ class BCTrainer(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
     ) -> Actions[NumPoints, DimAction]:
         self.policy.eval()
         with torch.no_grad():
-            states_tensor = Tensor(np.array(states)).float().to(self.device_)
+            states_tensor = Tensor(states.numpy()).float().to(self.device_)
             actions_tensor: Tensor = self.policy(states_tensor)
             actions_np = actions_tensor.cpu().numpy()
         actions = Actions[NumPoints, DimAction](
@@ -150,10 +150,10 @@ class PACERBCTrainer(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimA
         total_weight = torch.tensor(0.0, dtype=torchDType, device=self.device_)
         for i, demo in enumerate(self.pacer.demonstrations):
             states = torch.tensor(
-                np.array(demo.states), dtype=torchDType, device=self.device_
+                demo.states.numpy(), dtype=torchDType, device=self.device_
             )  # (T_i, state_dim)
             targets = torch.tensor(
-                np.array(self.pacer.pseudo_labels[i]),
+                self.pacer.pseudo_labels[i].numpy(),
                 dtype=torchDType,
                 device=self.device_,
             )  # (T_i, action_dim)
@@ -212,7 +212,7 @@ class PACERBCTrainer(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimA
     ) -> Actions[NumPoints, DimAction]:
         self.policy.eval()
         with torch.no_grad():
-            states_tensor = Tensor(np.array(states)).float().to(self.device_)
+            states_tensor = Tensor(states.numpy()).float().to(self.device_)
             actions_tensor: Tensor = self.policy(states_tensor)
             actions_np = actions_tensor.cpu().numpy()
         actions = Actions[NumPoints, DimAction](

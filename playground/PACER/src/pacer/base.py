@@ -14,25 +14,26 @@ from typing import Any, Self, cast, overload, override
 import numpy as np
 import optype.numpy as onp
 from typingkit.core import RuntimeGeneric, TypedDict, TypedList
-from typingkit.numpy._typed.helpers import Array1D
 
 from pacer.typings import (
     DemoIndex,
     DemoIndices,
     DimAction,
     DimState,
+    Matrix,
     NumDemos,
     NumPoints,
     SampleIndex,
     TimeIndex,
     TimeIndices,
+    Vector,
     npDType,
 )
 
 ## ── Base ─────────────────────────────────────────────────────────────────────
 
 
-class State(Array1D[DimState, np.dtype[npDType]]):  # x_{i, t} \in R^{d_x}
+class State(Vector[DimState]):  # x_{i, t} \in R^{d_x}
     def __new__(cls, object: onp.ToArrayStrict1D) -> Self:
         return cast(Self, super().__new__(cls, object, dtype=npDType))
 
@@ -42,8 +43,11 @@ class State(Array1D[DimState, np.dtype[npDType]]):  # x_{i, t} \in R^{d_x}
 
 
 class States(TypedList[NumPoints, State[DimState]]):
-    def coord(self, dim: int) -> Array1D[NumPoints, np.dtype[npDType]]:
-        return Array1D[NumPoints, np.dtype[npDType]](np.asarray(self)[:, dim])
+    def numpy(self) -> Matrix[NumPoints, DimState]:
+        return Matrix[NumPoints, DimState](self)
+
+    def coord(self, dim: int) -> Vector[NumPoints]:
+        return Vector[NumPoints](self.numpy()[:, dim])
 
     @classmethod
     def zeros_like(
@@ -68,7 +72,7 @@ class StatesCollection(TypedList[NumDemos, States[NumPoints, DimState]]):
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-class Action(Array1D[DimAction, np.dtype[npDType]]):  # a_{i, t} \in R^{d_a}
+class Action(Vector[DimAction]):  # a_{i, t} \in R^{d_a}
     def __new__(cls, object: onp.ToArrayStrict1D) -> Self:
         return cast(Self, super().__new__(cls, object, dtype=npDType))
 
@@ -78,8 +82,11 @@ class Action(Array1D[DimAction, np.dtype[npDType]]):  # a_{i, t} \in R^{d_a}
 
 
 class Actions(TypedList[NumPoints, Action[DimAction]]):
-    def coord(self, dim: int) -> Array1D[NumPoints, np.dtype[npDType]]:
-        return Array1D[NumPoints, np.dtype[npDType]](np.asarray(self)[:, dim])
+    def numpy(self) -> Matrix[NumPoints, DimAction]:
+        return Matrix[NumPoints, DimAction](self)
+
+    def coord(self, dim: int) -> Vector[NumPoints]:
+        return Vector[NumPoints](self.numpy()[:, dim])
 
     @classmethod
     def zeros_like(
