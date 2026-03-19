@@ -246,13 +246,11 @@ class Binner(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
 
 
 @dataclass
-class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
+class TrustValueComputer(
+    RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]
+):
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     bins: Bins[NumBins, NumDemos, NumPoints, DimState, DimAction]
-    seed: int = field(default=SEED, kw_only=True)
-    ##
-    trust_values: TrustValuesCollection[NumDemos, NumPoints] = field(init=False)
-    pseudo_labels: ActionsCollection[NumDemos, NumPoints, DimAction] = field(init=False)
 
     def compute_z_scores(self) -> ZScoresCollection[NumDemos, NumPoints]:  # (N x T_)
         z_scores = ZScoresCollection[NumDemos, NumPoints].zeros_like(
@@ -292,24 +290,34 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
     def compute_trust_values(
         self,
         *,
-        cutoff: npDType | float,  # c
+        tukey_cutoff: npDType | float,  # c
         min_trust: npDType | float,  # w_min
     ) -> TrustValuesCollection[NumDemos, NumPoints]:  # (N x T_)
-        assert 3 <= cutoff <= 5
+        assert 3 <= tukey_cutoff <= 5
         trust_values = TrustValuesCollection[NumDemos, NumPoints].zeros_like(
             self.demonstrations
         )  # (N x T_)
         z_scores = self.compute_z_scores()
         for i, scores in z_scores.items():
             for t, z_score in enumerate(scores):
-                if z_score <= cutoff:
-                    trust_value = (1 - (z_score / cutoff) ** 2) ** 2
+                if z_score <= tukey_cutoff:
+                    trust_value = (1 - (z_score / tukey_cutoff) ** 2) ** 2
                 else:
                     trust_value = TrustValue(0)
                 if trust_value < min_trust:
                     trust_value = TrustValue(min_trust)
                 trust_values[i][t] = trust_value
         return trust_values  # [[w_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
+
+
+@dataclass
+class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
+    demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
+    bins: Bins[NumBins, NumDemos, NumPoints, DimState, DimAction]
+    trust_values: TrustValuesCollection[NumDemos, NumPoints]
+    seed: int = field(default=SEED, kw_only=True)
+    ##
+    pseudo_labels: ActionsCollection[NumDemos, NumPoints, DimAction] = field(init=False)
 
     def consolidate_ribbon_tokens(self) -> None:
         bin_median_actions = Actions[NumBins, DimAction]()
@@ -441,18 +449,12 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
     def prepare(
         self,
         *,
-        tukey_cutoff: npDType | float = 4.685,  # c
-        min_trust: npDType | float = 0.02,  # w_min
         debias_weight: npDType | float = 0.5,  # lambda_{debias}
         sideways_attenuation_shrinkage: npDType | float = 0.5,  # rho_0
         speed_regularisation_influence: npDType | float = 0.5,  # eta_0
         temporal_smoothing_weight: npDType | float = 0.0,  # kappa
     ) -> None:
         set_seed(self.seed)
-        self.trust_values = self.compute_trust_values(
-            cutoff=tukey_cutoff,
-            min_trust=min_trust,
-        )
         self.pseudo_labels = self.compute_pseudo_labels(
             self.trust_values,
             debias_weight=debias_weight,

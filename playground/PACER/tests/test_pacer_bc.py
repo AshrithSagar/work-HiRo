@@ -12,7 +12,7 @@ from typingkit.numpy._typed.helpers import TWO
 
 from pacer import console
 from pacer.base import Demonstrations
-from pacer.pacer import PACER, Binner
+from pacer.pacer import PACER, Binner, TrustValueComputer
 from pacer.plotting import (
     plot_action_comparison,
     plot_phases,
@@ -44,16 +44,17 @@ def run_pacerbc(
 
     # PACER
     phases = get_phases(demonstrations, choice=phase_estimator_choice)
-    binner = Binner(
+    bins = Binner(
         demonstrations,
         phases,
         n_bins=96,  # B
-    )
-    bins = binner.make_bins()
-    pacer = PACER(demonstrations, bins)
-    pacer.prepare(
+    ).make_bins()
+    trust_values = TrustValueComputer(demonstrations, bins).compute_trust_values(
         tukey_cutoff=4.685,  # c
         min_trust=0.02,  # w_min
+    )
+    pacer = PACER(demonstrations, bins, trust_values)
+    pacer.prepare(
         debias_weight=0.5,  # lambda_{debias}
         sideways_attenuation_shrinkage=0.5,  # rho_0
         speed_regularisation_influence=0.5,  # eta_0
@@ -72,7 +73,7 @@ def run_pacerbc(
     if show_plots:
         plot_trajectories(demonstrations)
         plot_phases(phases)
-        plot_trust_values(pacer.trust_values)
+        plot_trust_values(trust_values)
         plot_ribbon_action_field(pacer)
         plot_action_comparison(
             demonstrations.demos[0].actions,
