@@ -12,7 +12,7 @@ from typingkit.numpy._typed.helpers import TWO
 
 from pacer import console
 from pacer.base import Demonstrations
-from pacer.pacer import PACER, Binner, TrustValueComputer
+from pacer.pacer import PACER, Binner, RibbonTokenConsolidator, TrustValueComputer
 from pacer.plotting import (
     plot_action_comparison,
     plot_phases,
@@ -49,6 +49,7 @@ def run_pacerbc(
         phases,
         n_bins=96,  # B
     ).make_bins()
+    bins = RibbonTokenConsolidator(bins).consolidate_ribbon_tokens()
     trust_values = TrustValueComputer(demonstrations, bins).compute_trust_values(
         tukey_cutoff=4.685,  # c
         min_trust=0.02,  # w_min

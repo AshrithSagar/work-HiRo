@@ -246,6 +246,63 @@ class Binner(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
 
 
 @dataclass
+class RibbonTokenConsolidator(
+    RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]
+):
+    bins: Bins[NumBins, NumDemos, NumPoints, DimState, DimAction]
+
+    def consolidate_ribbon_tokens(
+        self,
+    ) -> Bins[NumBins, NumDemos, NumPoints, DimState, DimAction]:
+        bin_median_actions = Actions[NumBins, DimAction]()
+        bin_median_states = States[NumBins, DimState]()
+
+        for bin in self.bins:
+            stats = RobustStatistics[DimState, DimAction].for_bin(bin)
+
+            bin_median_action = stats.median_action  # alpha_a[b]
+            bin_action_residuals = list[Residual]()
+            for action in bin.actions():
+                residual = Residual(la.norm(action - bin_median_action))  # r_{i, t}
+                bin_action_residuals.append(residual)
+            bin_median_action_residual = Residual(median(bin_action_residuals))
+            abs_deviations = list[Residual]()
+            for residual in bin_action_residuals:
+                abs_deviation = Residual(abs(residual - bin_median_action_residual))
+                abs_deviations.append(abs_deviation)
+            MAD_action_residual = Residual(MAD_SCALE * median(abs_deviations))
+
+            bin.ribbon_token = RibbonToken(
+                median_action=stats.median_action,
+                median_action_strength=stats.median_action_strength,
+                median_state=stats.median_state,
+                median_state_change=stats.median_state_change,
+                MAD_action_residual=MAD_action_residual,
+            )
+            bin_median_actions.append(stats.median_action)
+            bin_median_states.append(stats.median_state)
+
+        for bin in self.bins:
+            b = bin.index
+            if b == 0:
+                p, q, f = b + 1, b, 1.0
+            elif b == self.bins.length - 1:
+                p, q, f = b, b - 1, 1.0
+            else:
+                p, q, f = b, b - 1, 0.5
+            action_tangent = Action[DimAction](
+                f * (bin_median_actions[p] - bin_median_actions[q])
+            )
+            state_tangent = State[DimState](
+                f * (bin_median_states[p] - bin_median_states[q])
+            )
+            bin.ribbon_token.action_tangent = action_tangent
+            bin.ribbon_token.state_tangent = state_tangent
+
+        return self.bins
+
+
+@dataclass
 class TrustValueComputer(
     RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]
 ):
@@ -319,52 +376,6 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
     ##
     pseudo_labels: ActionsCollection[NumDemos, NumPoints, DimAction] = field(init=False)
 
-    def consolidate_ribbon_tokens(self) -> None:
-        bin_median_actions = Actions[NumBins, DimAction]()
-        bin_median_states = States[NumBins, DimState]()
-
-        for bin in self.bins:
-            stats = RobustStatistics[DimState, DimAction].for_bin(bin)
-
-            bin_median_action = stats.median_action  # alpha_a[b]
-            bin_action_residuals = list[Residual]()
-            for action in bin.actions():
-                residual = Residual(la.norm(action - bin_median_action))  # r_{i, t}
-                bin_action_residuals.append(residual)
-            bin_median_action_residual = Residual(median(bin_action_residuals))
-            abs_deviations = list[Residual]()
-            for residual in bin_action_residuals:
-                abs_deviation = Residual(abs(residual - bin_median_action_residual))
-                abs_deviations.append(abs_deviation)
-            MAD_action_residual = Residual(MAD_SCALE * median(abs_deviations))
-
-            bin.ribbon_token = RibbonToken(
-                median_action=stats.median_action,
-                median_action_strength=stats.median_action_strength,
-                median_state=stats.median_state,
-                median_state_change=stats.median_state_change,
-                MAD_action_residual=MAD_action_residual,
-            )
-            bin_median_actions.append(stats.median_action)
-            bin_median_states.append(stats.median_state)
-
-        for bin in self.bins:
-            b = bin.index
-            if b == 0:
-                p, q, f = b + 1, b, 1.0
-            elif b == self.bins.length - 1:
-                p, q, f = b, b - 1, 1.0
-            else:
-                p, q, f = b, b - 1, 0.5
-            action_tangent = Action[DimAction](
-                f * (bin_median_actions[p] - bin_median_actions[q])
-            )
-            state_tangent = State[DimState](
-                f * (bin_median_states[p] - bin_median_states[q])
-            )
-            bin.ribbon_token.action_tangent = action_tangent
-            bin.ribbon_token.state_tangent = state_tangent
-
     def compute_pseudo_labels(
         self,
         trust_values: TrustValuesCollection[NumDemos, NumPoints],
@@ -380,7 +391,6 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
         _labels = ActionsCollection[NumDemos, NumPoints, DimAction].zeros_like(
             self.demonstrations
         )  # [[y^{(3)}_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
-        self.consolidate_ribbon_tokens()
         rho_0 = sideways_attenuation_shrinkage
         assert 0 <= rho_0 <= 1
         eta_0 = speed_regularisation_influence
