@@ -6,10 +6,15 @@ Phase alignment
 
 from pacer.phase.base import Phase, Phases, PhasesCollection
 from pacer.phase.estimation import PhaseEstimator
+from pacer.phase.evaluation import PhaseEvaluationReport, PhaseEvaluator
 
 __all__ = [
     "Phase",
     "Phases",
     "PhasesCollection",
+    #
     "PhaseEstimator",
+    #
+    "PhaseEvaluator",
+    "PhaseEvaluationReport",
 ]

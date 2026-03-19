@@ -10,6 +10,7 @@ from typing import Any, Literal
 
 import matplotlib.pyplot as plt
 from pyLASAHandwritingDataset import SinglePatternMotion
+from rich.pretty import Pretty
 from torch._prims_common import DeviceLikeType
 from typingkit.numpy._typed.helpers import TWO
 
@@ -24,6 +25,7 @@ from pacer.phase.estimation import (
     PathLengthPhaseEstimator,
     PhaseEstimator,
 )
+from pacer.phase.evaluation import PhaseEvaluationReport
 from pacer.typings import DimAction, DimState, NumDemos, NumPoints
 from pacer.utils import SEED, TORCH_DEVICE
 
@@ -86,10 +88,13 @@ def get_phases(
     *,
     device: DeviceLikeType = TORCH_DEVICE,
     seed: int = SEED,
+    #
     phase_hidden_dim: int = 128,
     phase_margin: float = 1.0,  # m
     phase_lr: float = 1e-3,
     phase_epochs: int = 240,
+    #
+    evaluate_phases: bool = False,
 ) -> PhasesCollection[NumDemos, NumPoints]:
     phase_estimator: PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]
     match choice:
@@ -110,6 +115,11 @@ def get_phases(
             phase_estimator = PathLengthPhaseEstimator(demonstrations)
 
     phases = phase_estimator.estimate_phases()
+
+    if evaluate_phases:
+        report = PhaseEvaluationReport.evaluate(demonstrations, phases)
+        console.print(Pretty(report, expand_all=True))
+
     return phases
 
 
