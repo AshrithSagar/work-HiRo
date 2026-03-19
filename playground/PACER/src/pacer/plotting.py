@@ -11,7 +11,7 @@ from typingkit.numpy._typed.helpers import TWO
 
 from pacer.base import Actions, Demonstrations
 from pacer.pacer import PACER, TrustValuesCollection
-from pacer.phase import PhasesCollection
+from pacer.phase.base import PhasesCollection
 from pacer.typings import DimAction, NumBins, NumDemos, NumPoints
 
 

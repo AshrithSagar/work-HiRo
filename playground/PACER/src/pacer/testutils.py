@@ -17,12 +17,12 @@ from pacer import console
 from pacer.base import Demonstrations
 from pacer.corruptions import DemonstrationCorrupter
 from pacer.datasets import InteractiveDataSet, LASADataSet
-from pacer.phase import (
+from pacer.phase.base import PhasesCollection
+from pacer.phase.estimation import (
     MLPPhaseEstimator,
     NormalisedTimeIndexPhaseEstimator,
     PathLengthPhaseEstimator,
     PhaseEstimator,
-    PhasesCollection,
 )
 from pacer.typings import DimAction, DimState, NumDemos, NumPoints
 from pacer.utils import SEED, TORCH_DEVICE

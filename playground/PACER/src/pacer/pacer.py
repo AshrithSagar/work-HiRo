@@ -30,7 +30,7 @@ from pacer.base import (
     State,
     States,
 )
-from pacer.phase import Phase, PhasesCollection
+from pacer.phase.base import Phase, PhasesCollection
 from pacer.typings import (
     BinIndex,
     DemoIndex,

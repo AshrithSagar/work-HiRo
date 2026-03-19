@@ -1,14 +1,13 @@
 """
-Phase alignment
+Phase estimation
 =======
 """
-# src/pacer/phase.py
+# src/pacer/phase/estimation.py
 
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
 from abc import ABC, abstractmethod
 from dataclasses import InitVar, dataclass, field
-from typing import Self, TypeAlias
 
 import numpy as np
 import optype.numpy as onp
@@ -18,49 +17,14 @@ import torch.nn.functional as F
 from rich.progress import track
 from torch import Tensor
 from torch._prims_common import DeviceLikeType
-from typingkit.core import RuntimeGeneric, TypedDict, TypedList
+from typingkit.core import RuntimeGeneric
 
-from pacer.base import Demonstration, Demonstrations
-from pacer.typings import (
-    DemoIndex,
-    DimAction,
-    DimState,
-    NumDemos,
-    NumPoints,
-    Vector,
-    npDType,
-)
+from pacer.base import Demonstrations
+from pacer.phase.base import Phase, Phases, PhasesCollection
+from pacer.typings import DimAction, DimState, NumDemos, NumPoints, Vector, npDType
 from pacer.utils import EPS, SEED, TORCH_DEVICE, get_torch_device, normalise, set_seed
 
 ## ── Phase Alignment ──────────────────────────────────────────────────────────
-
-Phase: TypeAlias = npDType  # tau \in [0, 1]
-
-
-class Phases(TypedList[NumPoints, Phase]):
-    def numpy(self) -> Vector[NumPoints]:
-        return Vector[NumPoints](self)
-
-    @classmethod
-    def zeros_like(
-        cls, demonstration: Demonstration[NumPoints, DimState, DimAction]
-    ) -> Self:
-        T_i = demonstration.time_indices.length
-        return cls.full(T_i, Phase(0))
-
-
-class PhasesCollection(TypedDict[NumDemos, DemoIndex, Phases[NumPoints]]):
-    @classmethod
-    def zeros_like(
-        cls, demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
-    ) -> Self:
-        return cls.full(
-            demonstrations.demo_indices,
-            lambda i: Phases[NumPoints].zeros_like(demonstrations[i]),
-        )
-
-
-# ──────────────────────────────────────────────────────────────────────────────
 
 
 @dataclass
