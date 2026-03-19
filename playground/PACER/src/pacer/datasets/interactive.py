@@ -246,7 +246,7 @@ class InteractiveDataSet(Generic[NumDemos, NumPoints]):
         drawer.ax.set_title(f"LASA '{pattern}' loaded — continue drawing or modify")
 
         console.print(
-            f"Loaded {len(drawer.demos)} demonstration(s) from LASA '{pattern}'"
+            f"Loaded {len(drawer.demos)} [default]demonstration(s)[/default] from LASA '{pattern}'"
         )
         return drawer
 

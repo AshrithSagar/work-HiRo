@@ -3,7 +3,7 @@ Test BC Policy vs. PACER + BC Policy.
 """
 # tests/test_pacer_bc.py
 
-# pyright: standard
+from typing import Literal
 
 import matplotlib.pyplot as plt
 from pyLASAHandwritingDataset import ALL_SINGLE_PATTERN_MOTIONS, SinglePatternMotion
@@ -31,7 +31,10 @@ def run_pacerbc(
     phase_estimator_choice: PhaseEstimatorChoice = "MLP",
     show_plots: bool = True,
 ) -> None:
-    console.rule(f"PACER[{phase_estimator_choice}_PHASE_ESTIMATION] + BC policy")
+    console.rule(
+        f"[blue]PACER[{phase_estimator_choice}_PHASE_ESTIMATION] + BC policy[/blue]",
+        style="blue",
+    )
 
     # PACER
     phases = get_phases(demonstrations, choice=phase_estimator_choice)
@@ -63,7 +66,7 @@ def run_pacerbc(
 
 
 def run_bc(demonstrations: Demonstrations[NumDemos, NumPoints, TWO, TWO]) -> None:
-    console.rule("BC policy")
+    console.rule("[blue]BC policy[/blue]", style="blue")
 
     # Behavioral cloning
     trainer = BCTrainer(demonstrations, device="cpu")
@@ -76,49 +79,93 @@ def run_bc(demonstrations: Demonstrations[NumDemos, NumPoints, TWO, TWO]) -> Non
 
 
 def test_pacer_bc(
-    for_all_lasa_single_pattern_motions: bool = False,
     show_plots: bool = True,
     demonstrations_choice: DemonstrationsChoice = "FROM_LASA",
-    LASA_pattern: SinglePatternMotion | None = None,
-    phase_estimator_choice: PhaseEstimatorChoice = "MLP",
+    LASA_pattern: list[SinglePatternMotion]
+    | SinglePatternMotion
+    | Literal["ALL"]
+    | None = None,
+    phase_estimator_choice: list[PhaseEstimatorChoice]
+    | PhaseEstimatorChoice
+    | Literal["ALL"] = "MLP",
     use_corruptions: bool = False,
     filepath: str | None = None,
 ) -> None:
-    def bc_and_pacerbc(pattern: SinglePatternMotion | None = None) -> None:
+
+    # Resolve LASA patterns
+    LASA_patterns: list[SinglePatternMotion | None]
+    match LASA_pattern:
+        case list():
+            LASA_patterns = list(LASA_pattern)
+        case str():
+            match LASA_pattern:
+                case "ALL":
+                    LASA_patterns = list(ALL_SINGLE_PATTERN_MOTIONS)
+                case _:
+                    LASA_patterns = [LASA_pattern]
+        case None:
+            LASA_patterns = [None]
+
+    # Resolve phase estimator choices
+    phase_estimator_choices: list[PhaseEstimatorChoice]
+    match phase_estimator_choice:
+        case list():
+            phase_estimator_choices = phase_estimator_choice
+        case str():
+            match phase_estimator_choice:
+                case "ALL":
+                    phase_estimator_choices = [
+                        "MLP",
+                        "NORMALISED_TIME_INDEX",
+                        "PATH_LENGTH",
+                    ]
+                case _:
+                    phase_estimator_choices = [phase_estimator_choice]
+
+    for pattern in LASA_patterns:
         match demonstrations_choice:
             case "FROM_LASA" | "CUSTOM_FROM_LASA":
                 assert pattern is not None
-                console.rule(f"LASA Pattern: {pattern}", style="blue")
+                console.rule(
+                    f"[bold gold3]LASA Pattern: {pattern}[/bold gold3]",
+                    characters="\u2501",
+                    style="gold3",
+                )
             case "CUSTOM_FROM_LOAD":
                 assert filepath is not None
-                console.rule(f"File: {filepath}", style="blue")
+                console.rule(
+                    f"[bold gold3]File: {filepath}[/gold3]",
+                    characters="\u2501",
+                    style="bold gold3",
+                )
             case "CUSTOM_DRAW":
-                console.rule("Custom demonstrations", style="blue")
+                console.rule(
+                    "[bold gold3]Custom demonstrations[/bold gold3]",
+                    characters="\u2501",
+                    style="gold3",
+                )
+
         demonstrations = get_demonstrations(
             choice=demonstrations_choice,
             pattern=pattern,
             filepath=filepath,
             use_corruptions=use_corruptions,
         )
-        run_bc(demonstrations)
-        run_pacerbc(
-            demonstrations,
-            phase_estimator_choice=phase_estimator_choice,
-            show_plots=show_plots,
-        )
-        if show_plots:
-            plt.show()
 
-    if for_all_lasa_single_pattern_motions:
-        for pattern in ALL_SINGLE_PATTERN_MOTIONS:
-            bc_and_pacerbc(pattern)
-    else:
-        bc_and_pacerbc(pattern=LASA_pattern)
+        run_bc(demonstrations)
+        for phase_estimator_choice in phase_estimator_choices:
+            run_pacerbc(demonstrations, phase_estimator_choice, show_plots=show_plots)
+            if show_plots:
+                plt.show()  # pyright: ignore[reportUnknownMemberType]
+
+        if demonstrations_choice in {"CUSTOM_FROM_LOAD", "CUSTOM_DRAW"}:
+            break
+
+    console.rule(characters="\u2501", style="gold3")
 
 
 if __name__ == "__main__":
     test_pacer_bc(
-        for_all_lasa_single_pattern_motions=False,
         show_plots=True,
         demonstrations_choice="FROM_LASA",
         LASA_pattern="GShape",
