@@ -43,17 +43,20 @@ def _get_torch_device_auto() -> torch.device:
         device = torch.device("cuda")
     else:
         device = torch.device("cpu")
-    console.print(f"Default device: [green]{device}[/]")
+    console.print(f"Default device: [green]{device}[/green]")
     return device
 
 
 TORCH_DEVICE: torch.device = _get_torch_device_auto()
+_last_used_device: torch.device | None = None
 
 
 def get_torch_device(device: DeviceLikeType = TORCH_DEVICE) -> torch.device:
+    global _last_used_device
     device = torch.device(device)
-    if device != TORCH_DEVICE:
-        console.print(f"Using device: [green]{device}[/]")
+    if device != _last_used_device:
+        console.print(f"Using device: [green]{device}[/green]")
+        _last_used_device = device
     return device
 
 
