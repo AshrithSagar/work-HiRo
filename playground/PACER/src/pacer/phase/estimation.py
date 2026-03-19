@@ -141,7 +141,7 @@ class NormalisedTimeIndexPhaseEstimator(
         for demo in self.demonstrations:
             T_i = demo.states.length
             assert T_i > 1
-            taus = Phases[NumPoints]([Phase(t / (T_i - 1)) for t in range(T_i)])
+            taus = Phases[NumPoints]([Phase(t / (T_i - 1)) for t in demo.time_indices])
             phases[demo.index] = taus
         self.phases = phases
         return phases
