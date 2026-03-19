@@ -16,7 +16,7 @@ from typing import Any, Self, TypeAlias, cast
 
 import numpy as np
 import numpy.linalg as la
-from typingkit.core import RuntimeGeneric, TypedList
+from typingkit.core import RuntimeGeneric, TypedDict, TypedList
 
 from pacer.base import (
     Action,
@@ -65,13 +65,15 @@ class ZScores(TypedList[NumPoints, ZScore]):
         return cls.full(T_i, ZScore(0))
 
 
-class ZScoresCollection(TypedList[NumDemos, ZScores[NumPoints]]):
+class ZScoresCollection(TypedDict[NumDemos, DemoIndex, ZScores[NumPoints]]):
     @classmethod
     def zeros_like(
         cls, demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     ) -> Self:
-        N = demonstrations.__len__()
-        return cls.full(N, lambda i: ZScores[NumPoints].zeros_like(demonstrations[i]))
+        return cls.full(
+            demonstrations.demo_indices,
+            lambda i: ZScores[NumPoints].zeros_like(demonstrations[i]),
+        )
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -88,14 +90,14 @@ class TrustValues(TypedList[NumPoints, TrustValue]):
         return cls.full(T_i, TrustValue(0))
 
 
-class TrustValuesCollection(TypedList[NumDemos, TrustValues[NumPoints]]):
+class TrustValuesCollection(TypedDict[NumDemos, DemoIndex, TrustValues[NumPoints]]):
     @classmethod
     def zeros_like(
         cls, demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     ) -> Self:
-        N = demonstrations.__len__()
         return cls.full(
-            N, lambda i: TrustValues[NumPoints].zeros_like(demonstrations[i])
+            demonstrations.demo_indices,
+            lambda i: TrustValues[NumPoints].zeros_like(demonstrations[i]),
         )
 
 
@@ -294,7 +296,7 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
             self.demonstrations
         )  # (N x T_)
         z_scores = self.compute_z_scores()
-        for i, scores in enumerate(z_scores):
+        for i, scores in z_scores.items():
             for t, z_score in enumerate(scores):
                 if z_score <= cutoff:
                     trust_value = (1 - (z_score / cutoff) ** 2) ** 2

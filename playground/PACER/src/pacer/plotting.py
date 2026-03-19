@@ -115,7 +115,7 @@ def plot_trust_values(
 ) -> None:
     """Plot w_{i,t}."""
     plt.figure(figsize=(8, 4))
-    for i, w in enumerate(trust_values):
+    for i, w in trust_values.items():
         plt.plot(w, label=f"Demo {i}", alpha=0.8)
     plt.xlabel("Time index t")
     plt.ylabel("Trust w")
