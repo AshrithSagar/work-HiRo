@@ -124,6 +124,36 @@ class RobustStatistics(RuntimeGeneric[DimState, DimAction]):
     # NOTE: `action_tangent` and `state_tangent` are not stored here,
     # but instead, computed and stored in RibbonToken.
 
+    @classmethod
+    def for_bin(
+        cls,
+        bin: Bin[NumDemos, NumPoints, DimState, DimAction],
+        *,
+        LOO_demo_index: DemoIndex | None = None,
+    ) -> Self:
+        states = States[Any, DimState]()
+        actions = Actions[Any, DimAction]()
+        for sample in bin.samples(LOO_demo_index=LOO_demo_index):
+            states.append(sample.state)
+            actions.append(sample.action)
+
+        action_norms = [la.norm(action) for action in actions]
+        state_change_norms = [
+            la.norm(states[t + 1] - states[t]) for t in range(len(states) - 1)
+        ]
+
+        median_action = Action[DimAction](median(actions, axis=0))
+        median_state = State[DimState](median(states, axis=0))
+        median_action_strength = npDType(median(action_norms, axis=0))
+        median_state_change = npDType(median(state_change_norms, axis=0))
+
+        return cls(
+            median_action=median_action,
+            median_state=median_state,
+            median_action_strength=median_action_strength,
+            median_state_change=median_state_change,
+        )
+
 
 @dataclass(kw_only=True)
 class RibbonToken(RuntimeGeneric[DimState, DimAction]):  # z_b
@@ -224,35 +254,6 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
     trust_values: TrustValuesCollection[NumDemos, NumPoints] = field(init=False)
     pseudo_labels: ActionsCollection[NumDemos, NumPoints, DimAction] = field(init=False)
 
-    def compute_robust_consensus_statistics(
-        self,
-        bin: Bin[NumDemos, NumPoints, DimState, DimAction],
-        *,
-        LOO_demo_index: DemoIndex | None = None,
-    ) -> RobustStatistics[DimState, DimAction]:
-        states = States[Any, DimState]()
-        actions = Actions[Any, DimAction]()
-        for sample in bin.samples(LOO_demo_index=LOO_demo_index):
-            states.append(sample.state)
-            actions.append(sample.action)
-
-        action_norms = [la.norm(action) for action in actions]
-        state_change_norms = [
-            la.norm(states[t + 1] - states[t]) for t in range(len(states) - 1)
-        ]
-
-        median_action = Action[DimAction](median(actions, axis=0))
-        median_state = State[DimState](median(states, axis=0))
-        median_action_strength = npDType(median(action_norms, axis=0))
-        median_state_change = npDType(median(state_change_norms, axis=0))
-
-        return RobustStatistics(
-            median_action=median_action,
-            median_state=median_state,
-            median_action_strength=median_action_strength,
-            median_state_change=median_state_change,
-        )
-
     def compute_z_scores(self) -> ZScoresCollection[NumDemos, NumPoints]:  # (N x T_)
         z_scores = ZScoresCollection[NumDemos, NumPoints].zeros_like(
             self.demonstrations
@@ -260,7 +261,7 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
 
         for bin in self.bins:
             for i in self.demonstrations.demo_indices:
-                loo_stats = self.compute_robust_consensus_statistics(
+                loo_stats = RobustStatistics[DimState, DimAction].for_bin(
                     bin, LOO_demo_index=i
                 )
                 loo_median_action = loo_stats.median_action  # alpha_a^{(-i)}[b]
@@ -315,7 +316,7 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
         bin_median_states = States[NumBins, DimState]()
 
         for bin in self.bins:
-            stats = self.compute_robust_consensus_statistics(bin)
+            stats = RobustStatistics[DimState, DimAction].for_bin(bin)
 
             bin_median_action = stats.median_action  # alpha_a[b]
             bin_action_residuals = list[Residual]()
@@ -389,7 +390,7 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
             unit_tangent = Vector[int](normalise(tangent, method="NORM"))  # t_{dir}[b]
 
             for j in self.demonstrations.demo_indices:
-                loo_stats = self.compute_robust_consensus_statistics(
+                loo_stats = RobustStatistics[DimState, DimAction].for_bin(
                     bin, LOO_demo_index=j
                 )
                 bin_median_action = loo_stats.median_action  # alpha_a^{(-j)}[b]
