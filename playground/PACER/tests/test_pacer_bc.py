@@ -12,8 +12,14 @@ from typingkit.numpy._typed.helpers import TWO
 
 from pacer import console
 from pacer.base import Demonstrations
-from pacer.pacer import PACER
-from pacer.plotting import full_diagnostic
+from pacer.pacer import PACER, Binner
+from pacer.plotting import (
+    plot_action_comparison,
+    plot_phases,
+    plot_ribbon_action_field,
+    plot_trajectories,
+    plot_trust_values,
+)
 from pacer.testutils import (
     DemonstrationsChoice,
     PhaseEstimatorChoice,
@@ -38,11 +44,13 @@ def run_pacerbc(
 
     # PACER
     phases = get_phases(demonstrations, choice=phase_estimator_choice)
-    pacer = PACER(
+    binner = Binner(
         demonstrations,
         phases,
         n_bins=96,  # B
     )
+    bins = binner.make_bins()
+    pacer = PACER(demonstrations, bins)
     pacer.prepare(
         tukey_cutoff=4.685,  # c
         min_trust=0.02,  # w_min
@@ -62,7 +70,15 @@ def run_pacerbc(
     console.print(f"Policy loss: {policy_loss}")
 
     if show_plots:
-        full_diagnostic(trainer.pacer)
+        plot_trajectories(demonstrations)
+        plot_phases(phases)
+        plot_trust_values(pacer.trust_values)
+        plot_ribbon_action_field(pacer)
+        plot_action_comparison(
+            demonstrations.demos[0].actions,
+            pacer.pseudo_labels[0],
+            title="Demo 0: Action refinement",
+        )
 
 
 def run_bc(demonstrations: Demonstrations[NumDemos, NumPoints, TWO, TWO]) -> None:

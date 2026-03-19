@@ -176,18 +176,14 @@ class Bin(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
         return self.samples_collection.actions(LOO_demo_index=LOO_demo_index)
 
 
+Bins: TypeAlias = TypedList[NumBins, Bin[NumDemos, NumPoints, DimState, DimAction]]
+
+
 @dataclass
-class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
+class Binner(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     phases: PhasesCollection[NumDemos, NumPoints]
     n_bins: NumBins = field(default=cast(NumBins, 96), kw_only=True)  # B
-    seed: int = field(default=SEED, kw_only=True)
-    ##
-    bins: TypedList[NumBins, Bin[NumDemos, NumPoints, DimState, DimAction]] = field(
-        init=False
-    )
-    trust_values: TrustValuesCollection[NumDemos, NumPoints] = field(init=False)
-    pseudo_labels: ActionsCollection[NumDemos, NumPoints, DimAction] = field(init=False)
 
     def phase_range(self, bin_idx: BinIndex) -> tuple[Phase, Phase]:
         return (Phase(bin_idx / self.n_bins), Phase((bin_idx + 1) / self.n_bins))
@@ -199,10 +195,8 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
         assert 0 <= bin_idx < self.n_bins
         return bin_idx
 
-    def make_bins(self) -> None:
-        self.bins = TypedList[
-            NumBins, Bin[NumDemos, NumPoints, DimState, DimAction]
-        ].full(
+    def make_bins(self) -> Bins[NumBins, NumDemos, NumPoints, DimState, DimAction]:
+        bins = Bins[NumBins, NumDemos, NumPoints, DimState, DimAction].full(
             self.n_bins,
             lambda bin_idx: Bin(
                 index=bin_idx,
@@ -214,10 +208,21 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
         for sample_idx in self.demonstrations.sample_indices:
             demo_idx, time_idx = sample_idx
             bin_idx = self.sample_index_to_bin_index(sample_idx)
-            bin = self.bins[bin_idx]
+            bin = bins[bin_idx]
             sample = self.demonstrations[sample_idx]
             samples = bin.samples_collection[demo_idx]
             samples[time_idx] = sample
+        return bins
+
+
+@dataclass
+class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
+    demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
+    bins: Bins[NumBins, NumDemos, NumPoints, DimState, DimAction]
+    seed: int = field(default=SEED, kw_only=True)
+    ##
+    trust_values: TrustValuesCollection[NumDemos, NumPoints] = field(init=False)
+    pseudo_labels: ActionsCollection[NumDemos, NumPoints, DimAction] = field(init=False)
 
     def compute_robust_consensus_statistics(
         self,
@@ -338,7 +343,7 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
             b = bin.index
             if b == 0:
                 p, q, f = b + 1, b, 1.0
-            elif b == self.n_bins - 1:
+            elif b == self.bins.length - 1:
                 p, q, f = b, b - 1, 1.0
             else:
                 p, q, f = b, b - 1, 0.5
@@ -443,7 +448,6 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
         temporal_smoothing_weight: npDType | float = 0.0,  # kappa
     ) -> None:
         set_seed(self.seed)
-        self.make_bins()
         self.trust_values = self.compute_trust_values(
             cutoff=tukey_cutoff,
             min_trust=min_trust,

@@ -181,15 +181,3 @@ def plot_ribbon_action_field(
     plt.title(title)
     plt.axis("equal")
     plt.tight_layout()
-
-
-def full_diagnostic(pacer: PACER[NumBins, NumDemos, NumPoints, TWO, TWO]) -> None:
-    plot_trajectories(pacer.demonstrations)
-    plot_phases(pacer.phases)
-    plot_trust_values(pacer.trust_values)
-    plot_ribbon_action_field(pacer)
-    plot_action_comparison(
-        pacer.demonstrations.demos[0].actions,
-        pacer.pseudo_labels[0],
-        title="Demo 0: Action refinement",
-    )
