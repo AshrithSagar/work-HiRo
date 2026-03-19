@@ -30,7 +30,7 @@ from pacer.base import (
     State,
     States,
 )
-from pacer.phase import Phase, PhaseEstimator, PhasesCollection
+from pacer.phase import Phase, PhasesCollection
 from pacer.typings import (
     BinIndex,
     DemoIndex,
@@ -179,14 +179,13 @@ class Bin(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
 @dataclass
 class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
-    phase_estimator: PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]
+    phases: PhasesCollection[NumDemos, NumPoints]
     n_bins: NumBins = field(default=cast(NumBins, 96), kw_only=True)  # B
     seed: int = field(default=SEED, kw_only=True)
     ##
     bins: TypedList[NumBins, Bin[NumDemos, NumPoints, DimState, DimAction]] = field(
         init=False
     )
-    phases: PhasesCollection[NumDemos, NumPoints] = field(init=False)
     trust_values: TrustValuesCollection[NumDemos, NumPoints] = field(init=False)
     pseudo_labels: ActionsCollection[NumDemos, NumPoints, DimAction] = field(init=False)
 
@@ -201,7 +200,6 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
         return bin_idx
 
     def make_bins(self) -> None:
-        self.phases = self.phase_estimator.estimate_phases()
         self.bins = TypedList[
             NumBins, Bin[NumDemos, NumPoints, DimState, DimAction]
         ].full(

@@ -22,8 +22,9 @@ from pacer.phase import (
     NormalisedTimeIndexPhaseEstimator,
     PathLengthPhaseEstimator,
     PhaseEstimator,
+    PhasesCollection,
 )
-from pacer.typings import NumDemos, NumPoints
+from pacer.typings import DimAction, DimState, NumDemos, NumPoints
 from pacer.utils import SEED, TORCH_DEVICE
 
 ## ── Typings ──────────────────────────────────────────────────────────────────
@@ -79,8 +80,8 @@ def get_demonstrations(
     return demonstrations
 
 
-def get_phase_estimator(
-    demonstrations: Demonstrations[NumDemos, NumPoints, TWO, TWO],
+def get_phases(
+    demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction],
     choice: PhaseEstimatorChoice = "MLP",
     *,
     device: DeviceLikeType = TORCH_DEVICE,
@@ -89,25 +90,27 @@ def get_phase_estimator(
     phase_margin: float = 1.0,  # m
     phase_lr: float = 1e-3,
     phase_epochs: int = 240,
-) -> PhaseEstimator[NumDemos, NumPoints, TWO, TWO]:
+) -> PhasesCollection[NumDemos, NumPoints]:
+    phase_estimator: PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]
     match choice:
         case "MLP":
             phase_estimator = MLPPhaseEstimator(
                 demonstrations, device=device, seed=seed
             )
-            phase_loss = phase_estimator.train(
+            scorer_loss = phase_estimator.train(
                 hidden_dim=phase_hidden_dim,
                 margin=phase_margin,  # m
                 lr=phase_lr,
                 epochs=phase_epochs,
             )
-            console.print(f"Phase scorer loss: {phase_loss}")
-            return phase_estimator
+            console.print(f"Phase scorer loss: {scorer_loss}")
         case "NORMALISED_TIME_INDEX":
-            return NormalisedTimeIndexPhaseEstimator(demonstrations)
+            phase_estimator = NormalisedTimeIndexPhaseEstimator(demonstrations)
         case "PATH_LENGTH":
-            return PathLengthPhaseEstimator(demonstrations)
-    raise ValueError
+            phase_estimator = PathLengthPhaseEstimator(demonstrations)
+
+    phases = phase_estimator.estimate_phases()
+    return phases
 
 
 ## ─────────────────────────────────────────────────────────────────────────────

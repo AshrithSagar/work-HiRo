@@ -18,7 +18,7 @@ from pacer.testutils import (
     DemonstrationsChoice,
     PhaseEstimatorChoice,
     get_demonstrations,
-    get_phase_estimator,
+    get_phases,
 )
 from pacer.trainers import BCTrainer, PACERBCTrainer
 from pacer.typings import NumDemos, NumPoints
@@ -34,10 +34,10 @@ def run_pacerbc(
     console.rule(f"PACER[{phase_estimator_choice}_PHASE_ESTIMATION] + BC policy")
 
     # PACER
-    phase_estimator = get_phase_estimator(demonstrations, choice=phase_estimator_choice)
+    phases = get_phases(demonstrations, choice=phase_estimator_choice)
     pacer = PACER(
         demonstrations,
-        phase_estimator,
+        phases,
         n_bins=96,  # B
     )
     pacer.prepare(

@@ -38,6 +38,9 @@ Phase: TypeAlias = npDType  # tau \in [0, 1]
 
 
 class Phases(TypedList[NumPoints, Phase]):
+    def numpy(self) -> Vector[NumPoints]:
+        return Vector[NumPoints](self)
+
     @classmethod
     def zeros_like(
         cls, demonstration: Demonstration[NumPoints, DimState, DimAction]
@@ -60,10 +63,13 @@ class PhasesCollection(TypedDict[NumDemos, DemoIndex, Phases[NumPoints]]):
 # ──────────────────────────────────────────────────────────────────────────────
 
 
+@dataclass
 class PhaseEstimator(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction], ABC):
     """Abstract interface to estimate phases for a set of demonstrations."""
 
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
+    ##
+    phases: PhasesCollection[NumDemos, NumPoints] = field(init=False)
 
     # [[tau_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
     @abstractmethod
@@ -97,7 +103,6 @@ class MLPPhaseScorer(nn.Module, RuntimeGeneric[DimState]):
 
 @dataclass
 class MLPPhaseEstimator(PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]):
-    demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     device: InitVar[DeviceLikeType] = field(default=TORCH_DEVICE, kw_only=True)
     seed: int = field(default=SEED, kw_only=True)
     ##
@@ -146,7 +151,6 @@ class MLPPhaseEstimator(PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]
         return loss
 
     def estimate_phases(self) -> PhasesCollection[NumDemos, NumPoints]:
-        # [[tau_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
         self.scorer.eval()
         phases = PhasesCollection[NumDemos, NumPoints].zeros_like(self.demonstrations)
         with torch.no_grad():
@@ -156,6 +160,7 @@ class MLPPhaseEstimator(PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]
                 _scores = scores.cpu().numpy()
                 taus = Phases[NumPoints](normalise(_scores, method="MINMAX"))
                 phases[demo.index] = taus
+        self.phases = phases
         return phases
 
 
@@ -167,16 +172,14 @@ class MLPPhaseEstimator(PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]
 class NormalisedTimeIndexPhaseEstimator(
     PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]
 ):
-    demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
-
     def estimate_phases(self) -> PhasesCollection[NumDemos, NumPoints]:
-        # [[tau_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
         phases = PhasesCollection[NumDemos, NumPoints].zeros_like(self.demonstrations)
         for demo in self.demonstrations:
             T_i = demo.states.length
             assert T_i > 1
             taus = Phases[NumPoints]([Phase(t / (T_i - 1)) for t in range(T_i)])
             phases[demo.index] = taus
+        self.phases = phases
         return phases
 
 
@@ -187,8 +190,6 @@ class NormalisedTimeIndexPhaseEstimator(
 class PathLengthPhaseEstimator(
     PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]
 ):
-    demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
-
     def estimate_phases(self) -> PhasesCollection[NumDemos, NumPoints]:
         phases = PhasesCollection[NumDemos, NumPoints].zeros_like(self.demonstrations)
         for demo in self.demonstrations:
@@ -197,6 +198,7 @@ class PathLengthPhaseEstimator(
             lengths = Vector[NumPoints](np.r_[0, np.cumsum(norms)])
             taus = Phases[NumPoints](lengths / (lengths[-1] + EPS))
             phases[demo.index] = taus
+        self.phases = phases
         return phases
 
 
