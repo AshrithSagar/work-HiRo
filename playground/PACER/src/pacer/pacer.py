@@ -30,7 +30,7 @@ from pacer.base import (
     State,
     States,
 )
-from pacer.phase import Phase, PhaseEstimatorProtocol, PhasesCollection
+from pacer.phase import Phase, PhaseEstimator, PhasesCollection
 from pacer.typings import (
     BinIndex,
     DemoIndex,
@@ -179,7 +179,7 @@ class Bin(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
 @dataclass
 class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
-    phase_estimator: PhaseEstimatorProtocol[NumDemos, NumPoints, DimState, DimAction]
+    phase_estimator: PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]
     n_bins: NumBins = field(default=cast(NumBins, 96), kw_only=True)  # B
     seed: int = field(default=SEED, kw_only=True)
     ##

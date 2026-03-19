@@ -21,7 +21,7 @@ from pacer.phase import (
     MLPPhaseEstimator,
     NormalisedTimeIndexPhaseEstimator,
     PathLengthPhaseEstimator,
-    PhaseEstimatorProtocol,
+    PhaseEstimator,
 )
 from pacer.typings import NumDemos, NumPoints
 from pacer.utils import SEED, TORCH_DEVICE
@@ -89,7 +89,7 @@ def get_phase_estimator(
     phase_margin: float = 1.0,  # m
     phase_lr: float = 1e-3,
     phase_epochs: int = 240,
-) -> PhaseEstimatorProtocol[NumDemos, NumPoints, TWO, TWO]:
+) -> PhaseEstimator[NumDemos, NumPoints, TWO, TWO]:
     match choice:
         case "MLP":
             phase_estimator = MLPPhaseEstimator(

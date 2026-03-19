@@ -6,8 +6,9 @@ Phase alignment
 
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
+from abc import ABC, abstractmethod
 from dataclasses import InitVar, dataclass, field
-from typing import Protocol, Self, TypeAlias
+from typing import Self, TypeAlias
 
 import numpy as np
 import optype.numpy as onp
@@ -59,13 +60,15 @@ class PhasesCollection(TypedDict[NumDemos, DemoIndex, Phases[NumPoints]]):
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-class PhaseEstimatorProtocol(Protocol[NumDemos, NumPoints, DimState, DimAction]):
-    """Protocol to estimate phases for a set of demonstrations."""
+class PhaseEstimator(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction], ABC):
+    """Abstract interface to estimate phases for a set of demonstrations."""
 
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
 
     # [[tau_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
-    def estimate_phases(self) -> PhasesCollection[NumDemos, NumPoints]: ...
+    @abstractmethod
+    def estimate_phases(self) -> PhasesCollection[NumDemos, NumPoints]:
+        raise NotImplementedError
 
 
 # ── MLP Phase Scorer ──────────────────────────────────────────────────────────
@@ -93,10 +96,7 @@ class MLPPhaseScorer(nn.Module, RuntimeGeneric[DimState]):
 
 
 @dataclass
-class MLPPhaseEstimator(
-    RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction],
-    PhaseEstimatorProtocol[NumDemos, NumPoints, DimState, DimAction],
-):
+class MLPPhaseEstimator(PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]):
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     device: InitVar[DeviceLikeType] = field(default=TORCH_DEVICE, kw_only=True)
     seed: int = field(default=SEED, kw_only=True)
@@ -165,8 +165,7 @@ class MLPPhaseEstimator(
 # tau_{i, t} = t / (T_i - 1)
 @dataclass
 class NormalisedTimeIndexPhaseEstimator(
-    RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction],
-    PhaseEstimatorProtocol[NumDemos, NumPoints, DimState, DimAction],
+    PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]
 ):
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
 
@@ -186,8 +185,7 @@ class NormalisedTimeIndexPhaseEstimator(
 
 @dataclass
 class PathLengthPhaseEstimator(
-    RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction],
-    PhaseEstimatorProtocol[NumDemos, NumPoints, DimState, DimAction],
+    PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]
 ):
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
 
