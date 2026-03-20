@@ -12,7 +12,12 @@ from typingkit.numpy._typed.helpers import TWO
 
 from pacer import console
 from pacer.base import Demonstrations
-from pacer.pacer import PACER, Binner, RibbonTokenConsolidator, TrustValueComputer
+from pacer.pacer import (
+    Binner,
+    PseudoLabelComputer,
+    RibbonTokenConsolidator,
+    TrustValueComputer,
+)
 from pacer.plotting import (
     plot_action_comparison,
     plot_phases,
@@ -54,8 +59,9 @@ def run_pacerbc(
         tukey_cutoff=4.685,  # c
         min_trust=0.02,  # w_min
     )
-    pacer = PACER(demonstrations, bins, trust_values)
-    pacer.prepare(
+    pseudo_labels = PseudoLabelComputer(
+        demonstrations, bins, trust_values
+    ).compute_pseudo_labels(
         debias_weight=0.5,  # lambda_{debias}
         sideways_attenuation_shrinkage=0.5,  # rho_0
         speed_regularisation_influence=0.5,  # eta_0
@@ -63,7 +69,9 @@ def run_pacerbc(
     )
 
     # Behavioral cloning
-    trainer = PACERBCTrainer(pacer, device="cpu")
+    trainer = PACERBCTrainer(
+        demonstrations, bins, trust_values, pseudo_labels, device="cpu"
+    )
     policy_loss = trainer.train(
         policy_hidden_dim=128,
         policy_lr=1e-3,
@@ -75,10 +83,10 @@ def run_pacerbc(
         plot_trajectories(demonstrations)
         plot_phases(phases)
         plot_trust_values(trust_values)
-        plot_ribbon_action_field(pacer)
+        plot_ribbon_action_field(bins)
         plot_action_comparison(
             demonstrations.demos[0].actions,
-            pacer.pseudo_labels[0],
+            pseudo_labels[0],
             title="Demo 0: Action refinement",
         )
 

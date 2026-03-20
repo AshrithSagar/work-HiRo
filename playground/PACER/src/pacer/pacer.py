@@ -43,7 +43,7 @@ from pacer.typings import (
     Vector,
     npDType,
 )
-from pacer.utils import EPS, MAD_SCALE, SEED, median, normalise, set_seed
+from pacer.utils import EPS, MAD_SCALE, median, normalise
 
 ## ── PACER ────────────────────────────────────────────────────────────────────
 
@@ -368,19 +368,17 @@ class TrustValueComputer(
 
 
 @dataclass
-class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
+class PseudoLabelComputer(
+    RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]
+):
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     bins: Bins[NumBins, NumDemos, NumPoints, DimState, DimAction]
     trust_values: TrustValuesCollection[NumDemos, NumPoints]
-    seed: int = field(default=SEED, kw_only=True)
-    ##
-    pseudo_labels: ActionsCollection[NumDemos, NumPoints, DimAction] = field(init=False)
 
     def compute_pseudo_labels(
         self,
-        trust_values: TrustValuesCollection[NumDemos, NumPoints],
         *,
-        debias_weight: npDType | float,  # lambda_{debias}
+        debias_weight: npDType | float = 0.5,  # lambda_{debias}
         sideways_attenuation_shrinkage: npDType | float = 0.5,  # rho_0
         speed_regularisation_influence: npDType | float = 0.5,  # eta_0
         temporal_smoothing_weight: npDType | float = 0.0,  # kappa
@@ -415,7 +413,7 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
 
                 demo_samples = bin.samples_collection[j]
                 for t, sample in demo_samples.items():
-                    w = trust_values[j][t]  # w_{i, t}
+                    w = self.trust_values[j][t]  # w_{i, t}
 
                     # Debiasing towards the anchor
                     gamma = 1 - debias_weight * (1 - w)  # gamma_{i, t}
@@ -455,23 +453,6 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
                 ystar_prev = ystar
 
         return pseudo_labels
-
-    def prepare(
-        self,
-        *,
-        debias_weight: npDType | float = 0.5,  # lambda_{debias}
-        sideways_attenuation_shrinkage: npDType | float = 0.5,  # rho_0
-        speed_regularisation_influence: npDType | float = 0.5,  # eta_0
-        temporal_smoothing_weight: npDType | float = 0.0,  # kappa
-    ) -> None:
-        set_seed(self.seed)
-        self.pseudo_labels = self.compute_pseudo_labels(
-            self.trust_values,
-            debias_weight=debias_weight,
-            sideways_attenuation_shrinkage=sideways_attenuation_shrinkage,
-            speed_regularisation_influence=speed_regularisation_influence,
-            temporal_smoothing_weight=temporal_smoothing_weight,
-        )
 
 
 ## ─────────────────────────────────────────────────────────────────────────────

@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from typingkit.numpy._typed.helpers import TWO
 
 from pacer.base import Actions, Demonstrations
-from pacer.pacer import PACER, TrustValuesCollection
+from pacer.pacer import Bins, TrustValuesCollection
 from pacer.phase.base import PhasesCollection
 from pacer.typings import DimAction, NumBins, NumDemos, NumPoints
 
@@ -150,7 +150,7 @@ def plot_action_comparison(
 
 
 def plot_ribbon_action_field(
-    pacer: PACER[NumBins, NumDemos, NumPoints, TWO, TWO],
+    bins: Bins[NumBins, NumDemos, NumPoints, TWO, TWO],
     *,
     title: str = "Ribbon Median Action Field",
     scale: float = 1.0,
@@ -164,7 +164,7 @@ def plot_ribbon_action_field(
     us = []
     vs = []
 
-    for bin in pacer.bins:
+    for bin in bins:
         token = bin.ribbon_token
         state = token.median_state
         action = token.median_action
