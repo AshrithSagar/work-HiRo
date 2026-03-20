@@ -121,7 +121,7 @@ class RobustStatistics(RuntimeGeneric[DimState, DimAction]):
     # beta_s[b] = median{ ||xdot_{i, t}|| : (i, t) \in I_b }
     # Captures typical rate of state change
 
-    median_state_strength: npDType
+    median_state_norm: npDType
 
     ## Local task dynamics
     # NOTE: `action_tangent` and `state_tangent` are not stored here,
@@ -149,14 +149,14 @@ class RobustStatistics(RuntimeGeneric[DimState, DimAction]):
         median_action = Action[DimAction](median(actions, axis=0))
         median_state = State[DimState](median(states, axis=0))
         median_action_strength = npDType(median(action_norms, axis=0))
-        median_state_strength = npDType(median(state_norms, axis=0))
+        median_state_norm = npDType(median(state_norms, axis=0))
         median_state_change = npDType(median(state_change_norms, axis=0))
 
         return cls(
             median_action=median_action,
             median_state=median_state,
             median_action_strength=median_action_strength,
-            median_state_strength=median_state_strength,
+            median_state_norm=median_state_norm,
             median_state_change=median_state_change,
         )
 
@@ -173,7 +173,7 @@ class RibbonToken(RuntimeGeneric[DimState, DimAction]):  # z_b
     median_state: State[DimState]  # alpha_s[b]
     median_state_change: npDType  # beta_s[b]
 
-    median_state_strength: npDType
+    median_state_norm: npDType
 
     ## Local task dynamics
     action_tangent: Action[DimAction] = field(init=False)
@@ -285,7 +285,7 @@ class RibbonTokenConsolidator(
                 median_action_strength=stats.median_action_strength,
                 median_state=stats.median_state,
                 median_state_change=stats.median_state_change,
-                median_state_strength=stats.median_state_strength,
+                median_state_norm=stats.median_state_norm,
                 MAD_action_residual=MAD_action_residual,
             )
             bin_median_actions.append(stats.median_action)
@@ -536,7 +536,7 @@ class PseudoLabelComputer(
 
                     # Speed regularisation
                     eta = eta_0 * (1 - w)
-                    beta_a = bin.ribbon_token.median_state_strength
+                    beta_a = bin.ribbon_token.median_state_norm
                     s = (1 - eta) * la.norm(y2) + eta * beta_a
                     y3 = State[DimState](s * (y2 / (la.norm(y2) + EPS)))
 
