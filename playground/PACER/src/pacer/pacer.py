@@ -12,7 +12,7 @@ https://openreview.net/forum?id=gaYyBvP2Rz
 
 from collections.abc import Iterator
 from dataclasses import dataclass, field
-from typing import Any, Self, TypeAlias, cast
+from typing import Any, Literal, Self, TypeAlias, cast
 
 import numpy as np
 import numpy.linalg as la
@@ -308,6 +308,7 @@ class TrustValueComputer(
 ):
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     bins: Bins[NumBins, NumDemos, NumPoints, DimState, DimAction]
+    choice: Literal["State", "Action"] = "Action"
 
     def compute_z_scores(self) -> ZScoresCollection[NumDemos, NumPoints]:  # (N x T_)
         z_scores = ZScoresCollection[NumDemos, NumPoints].zeros_like(
@@ -319,12 +320,22 @@ class TrustValueComputer(
                 loo_stats = RobustStatistics[DimState, DimAction].for_bin(
                     bin, LOO_demo_index=i
                 )
-                loo_median_action = loo_stats.median_action  # alpha_a^{(-i)}[b]
 
-                loo_residuals = [
-                    Residual(la.norm(action - loo_median_action))
-                    for action in bin.actions(LOO_demo_index=i)
-                ]
+                loo_median: State[DimState] | Action[DimAction]
+                match self.choice:
+                    case "State":
+                        loo_median = loo_stats.median_state
+                        loo_residuals = [
+                            Residual(la.norm(state - loo_median))
+                            for state in bin.states(LOO_demo_index=i)
+                        ]
+                    case "Action":
+                        loo_median = loo_stats.median_action  # alpha_a^{(-i)}[b]
+                        loo_residuals = [
+                            Residual(la.norm(action - loo_median))
+                            for action in bin.actions(LOO_demo_index=i)
+                        ]
+
                 median_residual = Residual(median(loo_residuals))
                 abs_deviations = [
                     Residual(abs(residual - median_residual))
@@ -336,9 +347,14 @@ class TrustValueComputer(
 
                 demo_samples = bin.samples_collection[i]
                 for t, sample in demo_samples.items():
-                    self_residual = Residual(
-                        la.norm(sample.action - loo_median_action)
-                    )  # r^{-i}_{i, t}
+                    match self.choice:
+                        case "State":
+                            self_residual = Residual(la.norm(sample.state - loo_median))
+                        case "Action":
+                            self_residual = Residual(
+                                la.norm(sample.action - loo_median)
+                            )  # r^{-i}_{i, t}
+
                     z_score = ZScore(self_residual / (MAD_residual + EPS))  # z_{i, t}
                     z_scores[i][t] = z_score
 
