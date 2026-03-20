@@ -11,17 +11,20 @@ from typingkit.core import RuntimeOptions, set_global_default_runtime_options
 from typingkit.numpy._typed.helpers import TWO
 
 from pacer import console
-from pacer.base import Demonstrations
+from pacer.base import Demonstrations, StatesCollection
 from pacer.pacer import (
     Binner,
     PseudoLabelComputer,
     RibbonTokenConsolidator,
     TrustValueComputer,
+    TrustValuesCollection,
 )
 from pacer.plotting import (
     plot_action_comparison,
     plot_phases,
     plot_ribbon_action_field,
+    plot_state_comparison,
+    plot_states,
     plot_trajectories,
     plot_trust_values,
 )
@@ -40,6 +43,7 @@ set_global_default_runtime_options(RuntimeOptions(validate=True))
 def run_pacerbc(
     demonstrations: Demonstrations[NumDemos, NumPoints, TWO, TWO],
     phase_estimator_choice: PhaseEstimatorChoice = "MLP",
+    use_state_labels: bool = False,
     show_plots: bool = True,
 ) -> None:
     console.rule(
@@ -55,22 +59,44 @@ def run_pacerbc(
         n_bins=96,  # B
     ).make_bins()
     bins = RibbonTokenConsolidator(bins).consolidate_ribbon_tokens()
-    trust_values = TrustValueComputer(demonstrations, bins).compute_trust_values(
+    action_trust_values = TrustValueComputer(
+        demonstrations, bins, choice="Action"
+    ).compute_trust_values(
         tukey_cutoff=4.685,  # c
         min_trust=0.02,  # w_min
     )
-    pseudo_labels = PseudoLabelComputer(
-        demonstrations, bins, trust_values
-    ).compute_pseudo_labels(
+    pseudo_labels = PseudoLabelComputer(demonstrations, bins).compute_pseudo_labels(
+        action_trust_values,
         debias_weight=0.5,  # lambda_{debias}
         sideways_attenuation_shrinkage=0.5,  # rho_0
         speed_regularisation_influence=0.5,  # eta_0
         temporal_smoothing_weight=0.0,  # kappa
     )
+    state_trust_values: TrustValuesCollection[NumDemos, NumPoints] | None = None
+    state_labels: StatesCollection[NumDemos, NumPoints, TWO] | None = None
+    if use_state_labels:
+        state_trust_values = TrustValueComputer(
+            demonstrations, bins, choice="State"
+        ).compute_trust_values(
+            tukey_cutoff=4.685,  # c
+            min_trust=0.02,  # w_min
+        )
+        state_labels = PseudoLabelComputer(demonstrations, bins).compute_state_labels(
+            state_trust_values,
+            debias_weight=0.5,  # lambda_{debias}
+            sideways_attenuation_shrinkage=0.5,  # rho_0
+            speed_regularisation_influence=0.5,  # eta_0
+            temporal_smoothing_weight=0.0,  # kappa
+        )
 
     # Behavioral cloning
     trainer = PACERBCTrainer(
-        demonstrations, bins, trust_values, pseudo_labels, device="cpu"
+        demonstrations,
+        bins,
+        action_trust_values,
+        pseudo_labels,
+        state_labels=state_labels,
+        device="cpu",
     )
     policy_loss = trainer.train(
         policy_hidden_dim=128,
@@ -82,13 +108,22 @@ def run_pacerbc(
     if show_plots:
         plot_trajectories(demonstrations)
         plot_phases(phases)
-        plot_trust_values(trust_values)
+        plot_trust_values(action_trust_values)
+        if state_trust_values is not None:
+            plot_trust_values(state_trust_values)
         plot_ribbon_action_field(bins)
         plot_action_comparison(
             demonstrations.demos[0].actions,
             pseudo_labels[0],
             title="Demo 0: Action refinement",
         )
+        if state_labels is not None:
+            plot_states(state_labels)
+            plot_state_comparison(
+                demonstrations.demos[0].states,
+                state_labels[0],
+                title="Demo 0: State refinement",
+            )
 
 
 def run_bc(demonstrations: Demonstrations[NumDemos, NumPoints, TWO, TWO]) -> None:
@@ -115,6 +150,7 @@ def test_pacer_bc(
     | PhaseEstimatorChoice
     | Literal["ALL"] = "MLP",
     use_corruptions: bool = False,
+    use_state_labels: bool = False,
     filepath: str | None = None,
 ) -> None:
 
@@ -180,7 +216,12 @@ def test_pacer_bc(
 
         run_bc(demonstrations)
         for phase_estimator_choice in phase_estimator_choices:
-            run_pacerbc(demonstrations, phase_estimator_choice, show_plots=show_plots)
+            run_pacerbc(
+                demonstrations,
+                phase_estimator_choice,
+                use_state_labels=use_state_labels,
+                show_plots=show_plots,
+            )
             if show_plots:
                 plt.show()  # pyright: ignore[reportUnknownMemberType]
 
@@ -197,5 +238,6 @@ if __name__ == "__main__":
         LASA_pattern="GShape",
         phase_estimator_choice="MLP",
         use_corruptions=False,
+        use_state_labels=False,
         filepath=None,
     )

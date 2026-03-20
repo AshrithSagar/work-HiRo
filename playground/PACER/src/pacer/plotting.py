@@ -9,10 +9,10 @@ Plotting utils
 import matplotlib.pyplot as plt
 from typingkit.numpy._typed.helpers import TWO
 
-from pacer.base import Actions, Demonstrations
+from pacer.base import Actions, Demonstrations, States, StatesCollection
 from pacer.pacer import Bins, TrustValuesCollection
 from pacer.phase.base import PhasesCollection
-from pacer.typings import DimAction, NumBins, NumDemos, NumPoints
+from pacer.typings import DimAction, DimState, NumBins, NumDemos, NumPoints
 
 
 def plot_trajectories(
@@ -92,6 +92,24 @@ def plot_states_and_actions(
     plt.tight_layout()
 
 
+def plot_states(
+    states_collection: StatesCollection[NumDemos, NumPoints, TWO],
+    *,
+    title: str = "Demonstration trajectories",
+) -> None:
+    """Plot 2D state trajectories."""
+    plt.figure()
+    for i, states in enumerate(states_collection):
+        plt.plot(states.coord(0), states.coord(1), label=f"Demo {i}")
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title(title)
+    plt.legend()
+    plt.axis("equal")
+    plt.margins(0.05)
+    plt.tight_layout()
+
+
 def plot_phases(
     phases: PhasesCollection[NumDemos, NumPoints],
     *,
@@ -142,6 +160,31 @@ def plot_action_comparison(
         axes[d].plot(_original[:, d], label="Original", alpha=0.8)  # type: ignore
         axes[d].plot(_pseudo[:, d], label="Pseudo", alpha=0.8)  # type: ignore
         axes[d].set_ylabel(f"Action dim {d}")  # type: ignore
+        axes[d].legend()  # type: ignore
+
+    axes[-1].set_xlabel("Time index t")  # type: ignore
+    fig.suptitle(title)
+    plt.tight_layout()
+
+
+def plot_state_comparison(
+    original: States[NumPoints, DimState],
+    pseudo: States[NumPoints, DimState],
+    *,
+    title: str = "Original vs Pseudo states",
+) -> None:
+    """Compare state vectors over time (per dimension)."""
+    _original = original.numpy()
+    _pseudo = pseudo.numpy()
+    dim = _original.shape[1]
+
+    fig, _axes = plt.subplots(dim, 1, figsize=(8, 3 * dim))
+    axes = [_axes] if dim == 1 else _axes
+
+    for d in range(dim):
+        axes[d].plot(_original[:, d], label="Original", alpha=0.8)  # type: ignore
+        axes[d].plot(_pseudo[:, d], label="Pseudo", alpha=0.8)  # type: ignore
+        axes[d].set_ylabel(f"State dim {d}")  # type: ignore
         axes[d].legend()  # type: ignore
 
     axes[-1].set_xlabel("Time index t")  # type: ignore

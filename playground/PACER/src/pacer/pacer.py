@@ -29,6 +29,7 @@ from pacer.base import (
     SamplesCollection,
     State,
     States,
+    StatesCollection,
 )
 from pacer.phase.base import Phase, PhasesCollection
 from pacer.typings import (
@@ -120,6 +121,8 @@ class RobustStatistics(RuntimeGeneric[DimState, DimAction]):
     # beta_s[b] = median{ ||xdot_{i, t}|| : (i, t) \in I_b }
     # Captures typical rate of state change
 
+    median_state_strength: npDType
+
     ## Local task dynamics
     # NOTE: `action_tangent` and `state_tangent` are not stored here,
     # but instead, computed and stored in RibbonToken.
@@ -138,6 +141,7 @@ class RobustStatistics(RuntimeGeneric[DimState, DimAction]):
             actions.append(sample.action)
 
         action_norms = [la.norm(action) for action in actions]
+        state_norms = [la.norm(state) for state in states]
         state_change_norms = [
             la.norm(states[t + 1] - states[t]) for t in range(len(states) - 1)
         ]
@@ -145,12 +149,14 @@ class RobustStatistics(RuntimeGeneric[DimState, DimAction]):
         median_action = Action[DimAction](median(actions, axis=0))
         median_state = State[DimState](median(states, axis=0))
         median_action_strength = npDType(median(action_norms, axis=0))
+        median_state_strength = npDType(median(state_norms, axis=0))
         median_state_change = npDType(median(state_change_norms, axis=0))
 
         return cls(
             median_action=median_action,
             median_state=median_state,
             median_action_strength=median_action_strength,
+            median_state_strength=median_state_strength,
             median_state_change=median_state_change,
         )
 
@@ -166,6 +172,8 @@ class RibbonToken(RuntimeGeneric[DimState, DimAction]):  # z_b
     median_action_strength: npDType  # beta_a[b]
     median_state: State[DimState]  # alpha_s[b]
     median_state_change: npDType  # beta_s[b]
+
+    median_state_strength: npDType
 
     ## Local task dynamics
     action_tangent: Action[DimAction] = field(init=False)
@@ -277,6 +285,7 @@ class RibbonTokenConsolidator(
                 median_action_strength=stats.median_action_strength,
                 median_state=stats.median_state,
                 median_state_change=stats.median_state_change,
+                median_state_strength=stats.median_state_strength,
                 MAD_action_residual=MAD_action_residual,
             )
             bin_median_actions.append(stats.median_action)
@@ -389,10 +398,10 @@ class PseudoLabelComputer(
 ):
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     bins: Bins[NumBins, NumDemos, NumPoints, DimState, DimAction]
-    trust_values: TrustValuesCollection[NumDemos, NumPoints]
 
     def compute_pseudo_labels(
         self,
+        trust_values: TrustValuesCollection[NumDemos, NumPoints],
         *,
         debias_weight: npDType | float = 0.5,  # lambda_{debias}
         sideways_attenuation_shrinkage: npDType | float = 0.5,  # rho_0
@@ -429,7 +438,7 @@ class PseudoLabelComputer(
 
                 demo_samples = bin.samples_collection[j]
                 for t, sample in demo_samples.items():
-                    w = self.trust_values[j][t]  # w_{i, t}
+                    w = trust_values[j][t]  # w_{i, t}
 
                     # Debiasing towards the anchor
                     gamma = 1 - debias_weight * (1 - w)  # gamma_{i, t}
@@ -465,6 +474,82 @@ class PseudoLabelComputer(
                 if ystar_prev is None:  # t = 0
                     ystar_prev = y3
                 ystar = Action[DimAction]((1 - kappa) * y3 + kappa * ystar_prev)
+                pseudo_labels[i][t] = ystar
+                ystar_prev = ystar
+
+        return pseudo_labels
+
+    def compute_state_labels(
+        self,
+        trust_values: TrustValuesCollection[NumDemos, NumPoints],
+        *,
+        debias_weight: npDType | float = 0.5,  # lambda_{debias}
+        sideways_attenuation_shrinkage: npDType | float = 0.5,  # rho_0
+        speed_regularisation_influence: npDType | float = 0.5,  # eta_0
+        temporal_smoothing_weight: npDType | float = 0.0,  # kappa
+    ) -> StatesCollection[NumDemos, NumPoints, DimState]:  # (N x T_)
+        pseudo_labels = StatesCollection[NumDemos, NumPoints, DimState].zeros_like(
+            self.demonstrations
+        )
+        _labels = StatesCollection[NumDemos, NumPoints, DimState].zeros_like(
+            self.demonstrations
+        )
+        rho_0 = sideways_attenuation_shrinkage
+        assert 0 <= rho_0 <= 1
+        eta_0 = speed_regularisation_influence
+        assert 0 <= eta_0 <= 1
+        kappa = temporal_smoothing_weight
+
+        for bin in self.bins:
+            # Alignment with ribbon tangent
+            token = bin.ribbon_token  # z_b
+            tangent = (
+                token.state_tangent
+                if token.state_tangent is not None
+                else token.action_tangent
+            )
+            unit_tangent = Vector[int](normalise(tangent, method="NORM"))  # t_{dir}[b]
+
+            for j in self.demonstrations.demo_indices:
+                loo_stats = RobustStatistics[DimState, DimAction].for_bin(
+                    bin, LOO_demo_index=j
+                )
+                bin_median_state = loo_stats.median_state
+
+                demo_samples = bin.samples_collection[j]
+                for t, sample in demo_samples.items():
+                    w = trust_values[j][t]
+
+                    # Debiasing towards the anchor
+                    gamma = 1 - debias_weight * (1 - w)
+                    assert 0 <= gamma <= 1
+                    y1 = State[DimState](
+                        gamma * sample.state + (1 - gamma) * bin_median_state
+                    )
+
+                    # Sideways attentuation
+                    y1_pll = State[DimState](np.dot(y1, unit_tangent) * unit_tangent)
+                    y1_perp = State[DimState](y1 - y1_pll)
+                    has_state_tangent = token.state_tangent is not None
+                    rho = rho_0 * (1 - w) if has_state_tangent else npDType(0)
+                    y2 = State[DimState](y1_pll + (1 - rho) * y1_perp)
+
+                    # Speed regularisation
+                    eta = eta_0 * (1 - w)
+                    beta_a = bin.ribbon_token.median_state_strength
+                    s = (1 - eta) * la.norm(y2) + eta * beta_a
+                    y3 = State[DimState](s * (y2 / (la.norm(y2) + EPS)))
+
+                    _labels[j][t] = y3
+
+        # Temporal smoothing
+        for i in self.demonstrations.demo_indices:
+            ystar_prev: State[DimState] | None = None
+            for t in self.demonstrations.demos[i].time_indices:
+                y3 = _labels[i][t]
+                if ystar_prev is None:  # t = 0
+                    ystar_prev = y3
+                ystar = State[DimState]((1 - kappa) * y3 + kappa * ystar_prev)
                 pseudo_labels[i][t] = ystar
                 ystar_prev = ystar
 

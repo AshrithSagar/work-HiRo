@@ -17,7 +17,14 @@ from torch import Tensor
 from torch._prims_common import DeviceLikeType
 from typingkit.core import RuntimeGeneric
 
-from pacer.base import Action, Actions, ActionsCollection, Demonstrations, States
+from pacer.base import (
+    Action,
+    Actions,
+    ActionsCollection,
+    Demonstrations,
+    States,
+    StatesCollection,
+)
 from pacer.pacer import Bins, TrustValuesCollection
 from pacer.typings import DimAction, DimState, NumBins, NumDemos, NumPoints, torchDType
 from pacer.utils import SEED, TORCH_DEVICE, get_torch_device, set_seed
@@ -138,6 +145,7 @@ class PACERBCTrainer(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimA
     bins: Bins[NumBins, NumDemos, NumPoints, DimState, DimAction]
     trust_values: TrustValuesCollection[NumDemos, NumPoints]
     pseudo_labels: ActionsCollection[NumDemos, NumPoints, DimAction]
+    state_labels: StatesCollection[NumDemos, NumPoints, DimState] | None = None
     device: InitVar[DeviceLikeType] = field(default=TORCH_DEVICE, kw_only=True)
     seed: int = field(default=SEED, kw_only=True)
     ##
@@ -152,9 +160,14 @@ class PACERBCTrainer(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimA
         loss = torch.tensor(0.0, dtype=torchDType, device=self.device_)
         total_weight = torch.tensor(0.0, dtype=torchDType, device=self.device_)
         for i, demo in enumerate(self.demonstrations):
-            states = torch.tensor(
-                demo.states.numpy(), dtype=torchDType, device=self.device_
-            )  # (T_i, state_dim)
+            if self.state_labels is not None:
+                states = torch.tensor(
+                    self.state_labels[i].numpy(), dtype=torchDType, device=self.device_
+                )  # (T_i, state_dim)
+            else:
+                states = torch.tensor(
+                    demo.states.numpy(), dtype=torchDType, device=self.device_
+                )  # (T_i, state_dim)
             targets = torch.tensor(
                 self.pseudo_labels[i].numpy(),
                 dtype=torchDType,
