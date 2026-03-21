@@ -12,11 +12,12 @@ https://openreview.net/forum?id=gaYyBvP2Rz
 
 from collections.abc import Iterator
 from dataclasses import dataclass, field
-from typing import Any, Literal, Self, TypeAlias, cast
+from typing import Any, Callable, Literal, Self, TypeAlias, TypeVar, cast
 
 import numpy as np
 import numpy.linalg as la
 from typingkit.core import RuntimeGeneric, TypedDict, TypedList
+from typingkit.numpy._typed.helpers import Dim1
 
 from pacer.base import (
     Action,
@@ -392,6 +393,19 @@ class TrustValueComputer(
         return trust_values  # [[w_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
 
 
+@dataclass(kw_only=True)
+class PseudoLabels(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
+    actions: ActionsCollection[NumDemos, NumPoints, DimAction]
+    states: StatesCollection[NumDemos, NumPoints, DimState] | None = None
+
+
+_VecT = TypeVar("_VecT", bound=Vector, default=Vector)
+_VecFromSample = Callable[[Sample[DimState, DimAction]], _VecT]
+_AnchorFromStats = Callable[[RobustStatistics[DimState, DimAction]], _VecT]
+_StrengthFromToken = Callable[[RibbonToken[DimState, DimAction]], npDType]
+_Wrap = Callable[[Any], _VecT]
+
+
 @dataclass
 class PseudoLabelComputer(
     RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]
@@ -399,161 +413,168 @@ class PseudoLabelComputer(
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     bins: Bins[NumBins, NumDemos, NumPoints, DimState, DimAction]
 
+    def _apply_correction(
+        self,
+        v: Vector[Dim1],
+        *,
+        anchor: Vector[Dim1],
+        unit_tangent: Vector[Dim1],
+        median_strength: npDType,
+        trust: npDType,
+        debias_weight: npDType | float,
+        sideways_attenuation_shrinkage: npDType | float,
+        apply_sideways_attenuation: bool,
+        speed_regularisation_influence: npDType | float,
+    ) -> Vector[Dim1]:
+        # Debiasing towards the anchor
+        gamma = 1 - debias_weight * (1 - trust)  # gamma_{i, t}
+        assert 0 <= gamma <= 1
+        y1 = gamma * v + (1 - gamma) * anchor  # y^{(1)}_{i, t}
+
+        # Sideways attentuation
+        y1_pll = np.dot(y1, unit_tangent) * unit_tangent
+        y1_perp = y1 - y1_pll
+        rho = (
+            sideways_attenuation_shrinkage * (1 - trust)
+            if apply_sideways_attenuation
+            else npDType(0)
+        )
+        y2 = y1_pll + (1 - rho) * y1_perp  # y^{(2)}_{i, t}
+
+        # Speed regularisation
+        eta = speed_regularisation_influence * (1 - trust)  # eta_{i, t}
+        s = (1 - eta) * la.norm(y2) + eta * median_strength  # s_{i, t}
+        y3 = s * (y2 / (la.norm(y2) + EPS))  # y^{(3)}_{i, t}
+
+        return y3
+
+    def _compute_labels[Coll, Vec: Vector](
+        self,
+        trust_values: TrustValuesCollection[NumDemos, NumPoints],
+        *,
+        vec_from_sample: _VecFromSample[DimState, DimAction, Vec],
+        anchor_from_stats: _AnchorFromStats[DimState, DimAction, Vec],
+        strength_from_token: _StrengthFromToken[DimState, DimAction],
+        wrap: _Wrap[Vec],
+        attenuation_requires_state_tangent: bool,
+        #
+        debias_weight: npDType | float,
+        sideways_attenuation_shrinkage: npDType | float,
+        speed_regularisation_influence: npDType | float,
+        temporal_smoothing_weight: npDType | float,
+        #
+        make_collection: Callable[
+            [Demonstrations[NumDemos, NumPoints, DimState, DimAction]], Coll
+        ],
+        set_item: Callable[[Coll, DemoIndex, int, Vec], None],
+        get_item: Callable[[Coll, DemoIndex, int], Vec],
+    ) -> Coll:
+        rho_0 = npDType(sideways_attenuation_shrinkage)
+        assert 0 <= rho_0 <= 1
+        eta_0 = npDType(speed_regularisation_influence)
+        assert 0 <= eta_0 <= 1
+        kappa = npDType(temporal_smoothing_weight)
+
+        pre_smooth = make_collection(self.demonstrations)  # y^{(3)} for all (i, t)
+        smoothed = make_collection(self.demonstrations)  # y* for all (i, t)
+
+        for bin in self.bins:
+            token = bin.ribbon_token
+            has_state_tangent = token.state_tangent is not None
+
+            tangent = (
+                token.state_tangent
+                if token.state_tangent is not None
+                else token.action_tangent
+            )
+            unit_tangent = Vector[int](normalise(tangent, method="NORM"))
+
+            apply_attenuation = (
+                not attenuation_requires_state_tangent
+            ) or has_state_tangent
+
+            for j in self.demonstrations.demo_indices:
+                loo_stats = RobustStatistics[DimState, DimAction].for_bin(
+                    bin, LOO_demo_index=j
+                )
+                anchor = anchor_from_stats(loo_stats)
+                median_strength = strength_from_token(token)
+
+                for t, sample in bin.samples_collection[j].items():
+                    w = trust_values[j][t]
+                    y3 = self._apply_correction(
+                        vec_from_sample(sample),
+                        anchor=anchor,
+                        unit_tangent=unit_tangent,
+                        median_strength=median_strength,
+                        trust=w,
+                        debias_weight=debias_weight,
+                        sideways_attenuation_shrinkage=rho_0,
+                        apply_sideways_attenuation=apply_attenuation,
+                        speed_regularisation_influence=eta_0,
+                    )
+                    set_item(pre_smooth, j, t, wrap(y3))
+
+        # Temporal smoothing
+        for i in self.demonstrations.demo_indices:
+            prev = None
+            for t in self.demonstrations.demos[i].time_indices:
+                y3 = get_item(pre_smooth, i, t)
+                prev = y3 if prev is None else wrap((1 - kappa) * y3 + kappa * prev)
+                set_item(smoothed, i, t, prev)
+
+        return smoothed
+
     def compute_pseudo_labels(
         self,
-        trust_values: TrustValuesCollection[NumDemos, NumPoints],
+        action_trust_values: TrustValuesCollection[NumDemos, NumPoints],
+        state_trust_values: TrustValuesCollection[NumDemos, NumPoints] | None = None,
         *,
         debias_weight: npDType | float = 0.5,  # lambda_{debias}
         sideways_attenuation_shrinkage: npDType | float = 0.5,  # rho_0
         speed_regularisation_influence: npDType | float = 0.5,  # eta_0
         temporal_smoothing_weight: npDType | float = 0.0,  # kappa
-    ) -> ActionsCollection[NumDemos, NumPoints, DimAction]:  # (N x T_)
-        pseudo_labels = ActionsCollection[NumDemos, NumPoints, DimAction].zeros_like(
-            self.demonstrations
-        )  # [[ystar_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
-        _labels = ActionsCollection[NumDemos, NumPoints, DimAction].zeros_like(
-            self.demonstrations
-        )  # [[y^{(3)}_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
-        rho_0 = sideways_attenuation_shrinkage
-        assert 0 <= rho_0 <= 1
-        eta_0 = speed_regularisation_influence
-        assert 0 <= eta_0 <= 1
-        kappa = temporal_smoothing_weight
-
-        for bin in self.bins:
-            # Alignment with ribbon tangent
-            token = bin.ribbon_token  # z_b
-            tangent = (
-                token.state_tangent
-                if token.state_tangent is not None
-                else token.action_tangent
-            )
-            unit_tangent = Vector[int](normalise(tangent, method="NORM"))  # t_{dir}[b]
-
-            for j in self.demonstrations.demo_indices:
-                loo_stats = RobustStatistics[DimState, DimAction].for_bin(
-                    bin, LOO_demo_index=j
-                )
-                bin_median_action = loo_stats.median_action  # alpha_a^{(-j)}[b]
-
-                demo_samples = bin.samples_collection[j]
-                for t, sample in demo_samples.items():
-                    w = trust_values[j][t]  # w_{i, t}
-
-                    # Debiasing towards the anchor
-                    gamma = 1 - debias_weight * (1 - w)  # gamma_{i, t}
-                    assert 0 <= gamma <= 1
-                    y1 = Action[DimAction](
-                        gamma * sample.action + (1 - gamma) * bin_median_action
-                    )  # y^{(1)}_{i, t}
-
-                    # Sideways attentuation
-                    y1_pll = Action[DimAction](np.dot(y1, unit_tangent) * unit_tangent)
-                    y1_perp = Action[DimAction](y1 - y1_pll)
-                    has_state_tangent = token.state_tangent is not None
-                    rho = rho_0 * (1 - w) if has_state_tangent else npDType(0)
-                    y2 = Action[DimAction](
-                        y1_pll + (1 - rho) * y1_perp
-                    )  # y^{(2)}_{i, t}
-
-                    # Speed regularisation
-                    eta = eta_0 * (1 - w)  # eta_{i, t}
-                    beta_a = bin.ribbon_token.median_action_strength
-                    s = (1 - eta) * la.norm(y2) + eta * beta_a  # s_{i, t}
-                    y3 = Action[DimAction](
-                        s * (y2 / (la.norm(y2) + EPS))
-                    )  # y^{(3)}_{i, t}
-
-                    _labels[j][t] = y3
-
-        # Temporal smoothing
-        for i in self.demonstrations.demo_indices:
-            ystar_prev: Action[DimAction] | None = None
-            for t in self.demonstrations.demos[i].time_indices:
-                y3 = _labels[i][t]
-                if ystar_prev is None:  # t = 0
-                    ystar_prev = y3
-                ystar = Action[DimAction]((1 - kappa) * y3 + kappa * ystar_prev)
-                pseudo_labels[i][t] = ystar
-                ystar_prev = ystar
-
-        return pseudo_labels
-
-    def compute_state_labels(
-        self,
-        trust_values: TrustValuesCollection[NumDemos, NumPoints],
-        *,
-        debias_weight: npDType | float = 0.5,  # lambda_{debias}
-        sideways_attenuation_shrinkage: npDType | float = 0.5,  # rho_0
-        speed_regularisation_influence: npDType | float = 0.5,  # eta_0
-        temporal_smoothing_weight: npDType | float = 0.0,  # kappa
-    ) -> StatesCollection[NumDemos, NumPoints, DimState]:  # (N x T_)
-        pseudo_labels = StatesCollection[NumDemos, NumPoints, DimState].zeros_like(
-            self.demonstrations
+    ) -> PseudoLabels[NumDemos, NumPoints, DimState, DimAction]:
+        kwargs = dict(
+            debias_weight=debias_weight,
+            sideways_attenuation_shrinkage=sideways_attenuation_shrinkage,
+            speed_regularisation_influence=speed_regularisation_influence,
+            temporal_smoothing_weight=temporal_smoothing_weight,
         )
-        _labels = StatesCollection[NumDemos, NumPoints, DimState].zeros_like(
-            self.demonstrations
+
+        action_labels = self._compute_labels(
+            action_trust_values,
+            vec_from_sample=lambda sample: sample.action,
+            anchor_from_stats=lambda stats: stats.median_action,
+            strength_from_token=lambda token: token.median_action_strength,
+            wrap=Action[DimAction],
+            attenuation_requires_state_tangent=True,
+            make_collection=lambda demos: ActionsCollection[
+                NumDemos, NumPoints, DimAction
+            ].zeros_like(demos),
+            set_item=lambda col, i, t, v: col[i].__setitem__(t, v),
+            get_item=lambda col, i, t: col[i][t],
+            **kwargs,
         )
-        rho_0 = sideways_attenuation_shrinkage
-        assert 0 <= rho_0 <= 1
-        eta_0 = speed_regularisation_influence
-        assert 0 <= eta_0 <= 1
-        kappa = temporal_smoothing_weight
 
-        for bin in self.bins:
-            # Alignment with ribbon tangent
-            token = bin.ribbon_token  # z_b
-            tangent = (
-                token.state_tangent
-                if token.state_tangent is not None
-                else token.action_tangent
+        state_labels = None
+        if state_trust_values is not None:
+            state_labels = self._compute_labels(
+                state_trust_values,
+                vec_from_sample=lambda sample: sample.state,
+                anchor_from_stats=lambda stats: stats.median_state,
+                strength_from_token=lambda token: token.median_state_norm,
+                wrap=State[DimState],
+                attenuation_requires_state_tangent=False,
+                make_collection=lambda demos: StatesCollection[
+                    NumDemos, NumPoints, DimState
+                ].zeros_like(demos),
+                set_item=lambda col, i, t, v: col[i].__setitem__(t, v),
+                get_item=lambda col, i, t: col[i][t],
+                **kwargs,
             )
-            unit_tangent = Vector[int](normalise(tangent, method="NORM"))  # t_{dir}[b]
 
-            for j in self.demonstrations.demo_indices:
-                loo_stats = RobustStatistics[DimState, DimAction].for_bin(
-                    bin, LOO_demo_index=j
-                )
-                bin_median_state = loo_stats.median_state
-
-                demo_samples = bin.samples_collection[j]
-                for t, sample in demo_samples.items():
-                    w = trust_values[j][t]
-
-                    # Debiasing towards the anchor
-                    gamma = 1 - debias_weight * (1 - w)
-                    assert 0 <= gamma <= 1
-                    y1 = State[DimState](
-                        gamma * sample.state + (1 - gamma) * bin_median_state
-                    )
-
-                    # Sideways attentuation
-                    y1_pll = State[DimState](np.dot(y1, unit_tangent) * unit_tangent)
-                    y1_perp = State[DimState](y1 - y1_pll)
-                    has_state_tangent = token.state_tangent is not None
-                    rho = rho_0 * (1 - w) if has_state_tangent else npDType(0)
-                    y2 = State[DimState](y1_pll + (1 - rho) * y1_perp)
-
-                    # Speed regularisation
-                    eta = eta_0 * (1 - w)
-                    beta_a = bin.ribbon_token.median_state_norm
-                    s = (1 - eta) * la.norm(y2) + eta * beta_a
-                    y3 = State[DimState](s * (y2 / (la.norm(y2) + EPS)))
-
-                    _labels[j][t] = y3
-
-        # Temporal smoothing
-        for i in self.demonstrations.demo_indices:
-            ystar_prev: State[DimState] | None = None
-            for t in self.demonstrations.demos[i].time_indices:
-                y3 = _labels[i][t]
-                if ystar_prev is None:  # t = 0
-                    ystar_prev = y3
-                ystar = State[DimState]((1 - kappa) * y3 + kappa * ystar_prev)
-                pseudo_labels[i][t] = ystar
-                ystar_prev = ystar
-
-        return pseudo_labels
+        return PseudoLabels(actions=action_labels, states=state_labels)
 
 
 ## ─────────────────────────────────────────────────────────────────────────────

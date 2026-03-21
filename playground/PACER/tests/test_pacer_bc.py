@@ -11,13 +11,12 @@ from typingkit.core import RuntimeOptions, set_global_default_runtime_options
 from typingkit.numpy._typed.helpers import TWO
 
 from pacer import console
-from pacer.base import Demonstrations, StatesCollection
+from pacer.base import Demonstrations
 from pacer.pacer import (
     Binner,
     PseudoLabelComputer,
     RibbonTokenConsolidator,
     TrustValueComputer,
-    TrustValuesCollection,
 )
 from pacer.plotting import (
     plot_action_comparison,
@@ -65,15 +64,7 @@ def run_pacerbc(
         tukey_cutoff=4.685,  # c
         min_trust=0.02,  # w_min
     )
-    pseudo_labels = PseudoLabelComputer(demonstrations, bins).compute_pseudo_labels(
-        action_trust_values,
-        debias_weight=0.5,  # lambda_{debias}
-        sideways_attenuation_shrinkage=0.5,  # rho_0
-        speed_regularisation_influence=0.5,  # eta_0
-        temporal_smoothing_weight=0.0,  # kappa
-    )
-    state_trust_values: TrustValuesCollection[NumDemos, NumPoints] | None = None
-    state_labels: StatesCollection[NumDemos, NumPoints, TWO] | None = None
+    state_trust_values = None
     if use_state_labels:
         state_trust_values = TrustValueComputer(
             demonstrations, bins, choice="State"
@@ -81,21 +72,22 @@ def run_pacerbc(
             tukey_cutoff=4.685,  # c
             min_trust=0.02,  # w_min
         )
-        state_labels = PseudoLabelComputer(demonstrations, bins).compute_state_labels(
-            state_trust_values,
-            debias_weight=0.5,  # lambda_{debias}
-            sideways_attenuation_shrinkage=0.5,  # rho_0
-            speed_regularisation_influence=0.5,  # eta_0
-            temporal_smoothing_weight=0.0,  # kappa
-        )
+    pseudo_labels = PseudoLabelComputer(demonstrations, bins).compute_pseudo_labels(
+        action_trust_values,
+        state_trust_values,
+        debias_weight=0.5,  # lambda_{debias}
+        sideways_attenuation_shrinkage=0.5,  # rho_0
+        speed_regularisation_influence=0.5,  # eta_0
+        temporal_smoothing_weight=0.0,  # kappa
+    )
 
     # Behavioral cloning
     trainer = PACERBCTrainer(
         demonstrations,
         bins,
         action_trust_values,
-        pseudo_labels,
-        state_labels=state_labels,
+        pseudo_labels.actions,
+        pseudo_labels.states,
         device="cpu",
     )
     policy_loss = trainer.train(
@@ -114,14 +106,14 @@ def run_pacerbc(
         plot_ribbon_action_field(bins)
         plot_action_comparison(
             demonstrations.demos[0].actions,
-            pseudo_labels[0],
+            pseudo_labels.actions[0],
             title="Demo 0: Action refinement",
         )
-        if state_labels is not None:
-            plot_states(state_labels)
+        if pseudo_labels.states is not None:
+            plot_states(pseudo_labels.states)
             plot_state_comparison(
                 demonstrations.demos[0].states,
-                state_labels[0],
+                pseudo_labels.states[0],
                 title="Demo 0: State refinement",
             )
 
