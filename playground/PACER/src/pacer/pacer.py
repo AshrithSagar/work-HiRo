@@ -42,6 +42,7 @@ from pacer.typings import (
     NumDemos,
     NumPoints,
     SampleIndex,
+    TimeIndex,
     Vector,
     npDType,
 )
@@ -399,11 +400,77 @@ class PseudoLabels(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
     states: StatesCollection[NumDemos, NumPoints, DimState] | None = None
 
 
-_VecT = TypeVar("_VecT", bound=Vector, default=Vector)
-_VecFromSample = Callable[[Sample[DimState, DimAction]], _VecT]
-_AnchorFromStats = Callable[[RobustStatistics[DimState, DimAction]], _VecT]
-_StrengthFromToken = Callable[[RibbonToken[DimState, DimAction]], npDType]
-_Wrap = Callable[[Any], _VecT]
+_VecT = TypeVar("_VecT", bound=Vector, default=Vector)  # State / Action
+_Coll = TypeVar("_Coll")  # StatesCollection / ActionsCollection
+
+
+@dataclass(frozen=True)
+class VectorMode(
+    RuntimeGeneric[_Coll, _VecT, NumDemos, NumPoints, DimState, DimAction]
+):
+    # Field access
+    vec_from_sample: Callable[[Sample[DimState, DimAction]], _VecT]
+    anchor_from_stats: Callable[[RobustStatistics[DimState, DimAction]], _VecT]
+    strength_from_token: Callable[[RibbonToken[DimState, DimAction]], npDType]
+
+    # Construction
+    wrap: Callable[[Any], _VecT]
+    make_collection: Callable[
+        [Demonstrations[NumDemos, NumPoints, DimState, DimAction]], _Coll
+    ]
+    set_item: Callable[[_Coll, DemoIndex, TimeIndex, _VecT], None]
+    get_item: Callable[[_Coll, DemoIndex, TimeIndex], _VecT]
+
+    # Correction behaviour
+    attenuation_requires_state_tangent: bool
+
+
+def action_mode(
+    dim_action: DimAction, num_demos: NumDemos, num_points: NumPoints
+) -> VectorMode[
+    ActionsCollection[NumDemos, NumPoints, DimAction],
+    Action[DimAction],
+    NumDemos,
+    NumPoints,
+    DimState,
+    DimAction,
+]:
+    return VectorMode(
+        vec_from_sample=lambda sample: sample.action,
+        anchor_from_stats=lambda stats: stats.median_action,
+        strength_from_token=lambda token: token.median_action_strength,
+        wrap=Action[DimAction],
+        make_collection=lambda demos: ActionsCollection[
+            NumDemos, NumPoints, DimAction
+        ].zeros_like(demos),
+        set_item=lambda col, i, t, v: col[i].__setitem__(t, v),
+        get_item=lambda col, i, t: col[i][t],
+        attenuation_requires_state_tangent=True,
+    )
+
+
+def state_mode(
+    dim_state: DimState, num_demos: NumDemos, num_points: NumPoints
+) -> VectorMode[
+    StatesCollection[NumDemos, NumPoints, DimState],
+    State[DimState],
+    NumDemos,
+    NumPoints,
+    DimState,
+    DimAction,
+]:
+    return VectorMode(
+        vec_from_sample=lambda sample: sample.state,
+        anchor_from_stats=lambda stats: stats.median_state,
+        strength_from_token=lambda token: token.median_state_norm,
+        wrap=State[DimState],
+        make_collection=lambda demos: StatesCollection[
+            NumDemos, NumPoints, DimState
+        ].zeros_like(demos),
+        set_item=lambda col, i, t, v: col[i].__setitem__(t, v),
+        get_item=lambda col, i, t: col[i][t],
+        attenuation_requires_state_tangent=False,
+    )
 
 
 @dataclass
@@ -448,35 +515,24 @@ class PseudoLabelComputer(
 
         return y3
 
-    def _compute_labels[Coll, Vec: Vector](
+    def _compute_labels(
         self,
         trust_values: TrustValuesCollection[NumDemos, NumPoints],
+        mode: VectorMode[_Coll, _VecT, NumDemos, NumPoints, DimState, DimAction],
         *,
-        vec_from_sample: _VecFromSample[DimState, DimAction, Vec],
-        anchor_from_stats: _AnchorFromStats[DimState, DimAction, Vec],
-        strength_from_token: _StrengthFromToken[DimState, DimAction],
-        wrap: _Wrap[Vec],
-        attenuation_requires_state_tangent: bool,
-        #
         debias_weight: npDType | float,
         sideways_attenuation_shrinkage: npDType | float,
         speed_regularisation_influence: npDType | float,
         temporal_smoothing_weight: npDType | float,
-        #
-        make_collection: Callable[
-            [Demonstrations[NumDemos, NumPoints, DimState, DimAction]], Coll
-        ],
-        set_item: Callable[[Coll, DemoIndex, int, Vec], None],
-        get_item: Callable[[Coll, DemoIndex, int], Vec],
-    ) -> Coll:
+    ) -> _Coll:
         rho_0 = npDType(sideways_attenuation_shrinkage)
         assert 0 <= rho_0 <= 1
         eta_0 = npDType(speed_regularisation_influence)
         assert 0 <= eta_0 <= 1
         kappa = npDType(temporal_smoothing_weight)
 
-        pre_smooth = make_collection(self.demonstrations)  # y^{(3)} for all (i, t)
-        smoothed = make_collection(self.demonstrations)  # y* for all (i, t)
+        pre_smooth = mode.make_collection(self.demonstrations)  # y^{(3)} for all (i, t)
+        smoothed = mode.make_collection(self.demonstrations)  # y* for all (i, t)
 
         for bin in self.bins:
             token = bin.ribbon_token
@@ -490,20 +546,20 @@ class PseudoLabelComputer(
             unit_tangent = Vector[int](normalise(tangent, method="NORM"))
 
             apply_attenuation = (
-                not attenuation_requires_state_tangent
+                not mode.attenuation_requires_state_tangent
             ) or has_state_tangent
 
             for j in self.demonstrations.demo_indices:
                 loo_stats = RobustStatistics[DimState, DimAction].for_bin(
                     bin, LOO_demo_index=j
                 )
-                anchor = anchor_from_stats(loo_stats)
-                median_strength = strength_from_token(token)
+                anchor = mode.anchor_from_stats(loo_stats)
+                median_strength = mode.strength_from_token(token)
 
                 for t, sample in bin.samples_collection[j].items():
                     w = trust_values[j][t]
                     y3 = self._apply_correction(
-                        vec_from_sample(sample),
+                        mode.vec_from_sample(sample),
                         anchor=anchor,
                         unit_tangent=unit_tangent,
                         median_strength=median_strength,
@@ -513,15 +569,17 @@ class PseudoLabelComputer(
                         apply_sideways_attenuation=apply_attenuation,
                         speed_regularisation_influence=eta_0,
                     )
-                    set_item(pre_smooth, j, t, wrap(y3))
+                    mode.set_item(pre_smooth, j, t, mode.wrap(y3))
 
         # Temporal smoothing
         for i in self.demonstrations.demo_indices:
             prev = None
             for t in self.demonstrations.demos[i].time_indices:
-                y3 = get_item(pre_smooth, i, t)
-                prev = y3 if prev is None else wrap((1 - kappa) * y3 + kappa * prev)
-                set_item(smoothed, i, t, prev)
+                y3 = mode.get_item(pre_smooth, i, t)
+                prev = (
+                    y3 if prev is None else mode.wrap((1 - kappa) * y3 + kappa * prev)
+                )
+                mode.set_item(smoothed, i, t, prev)
 
         return smoothed
 
@@ -535,6 +593,7 @@ class PseudoLabelComputer(
         speed_regularisation_influence: npDType | float = 0.5,  # eta_0
         temporal_smoothing_weight: npDType | float = 0.0,  # kappa
     ) -> PseudoLabels[NumDemos, NumPoints, DimState, DimAction]:
+        demos = self.demonstrations
         kwargs = dict(
             debias_weight=debias_weight,
             sideways_attenuation_shrinkage=sideways_attenuation_shrinkage,
@@ -542,39 +601,21 @@ class PseudoLabelComputer(
             temporal_smoothing_weight=temporal_smoothing_weight,
         )
 
-        action_labels = self._compute_labels(
+        actions = self._compute_labels(
             action_trust_values,
-            vec_from_sample=lambda sample: sample.action,
-            anchor_from_stats=lambda stats: stats.median_action,
-            strength_from_token=lambda token: token.median_action_strength,
-            wrap=Action[DimAction],
-            attenuation_requires_state_tangent=True,
-            make_collection=lambda demos: ActionsCollection[
-                NumDemos, NumPoints, DimAction
-            ].zeros_like(demos),
-            set_item=lambda col, i, t, v: col[i].__setitem__(t, v),
-            get_item=lambda col, i, t: col[i][t],
+            action_mode(demos.action_dim, demos.__len__(), demos[0].__len__()),
             **kwargs,
         )
-
-        state_labels = None
-        if state_trust_values is not None:
-            state_labels = self._compute_labels(
+        states = (
+            self._compute_labels(
                 state_trust_values,
-                vec_from_sample=lambda sample: sample.state,
-                anchor_from_stats=lambda stats: stats.median_state,
-                strength_from_token=lambda token: token.median_state_norm,
-                wrap=State[DimState],
-                attenuation_requires_state_tangent=False,
-                make_collection=lambda demos: StatesCollection[
-                    NumDemos, NumPoints, DimState
-                ].zeros_like(demos),
-                set_item=lambda col, i, t, v: col[i].__setitem__(t, v),
-                get_item=lambda col, i, t: col[i][t],
+                state_mode(demos.state_dim, demos.__len__(), demos[0].__len__()),
                 **kwargs,
             )
-
-        return PseudoLabels(actions=action_labels, states=state_labels)
+            if state_trust_values is not None
+            else None
+        )
+        return PseudoLabels(actions=actions, states=states)
 
 
 ## ─────────────────────────────────────────────────────────────────────────────
