@@ -66,8 +66,6 @@ def get_demonstrations(
             if filepath is not None:
                 drawer.save(filepath)
             demonstrations = drawer.to_demonstrations()
-        case _:
-            raise ValueError
 
     if use_corruptions:
         corrupter = DemonstrationCorrupter[Any, Any, TWO, TWO](

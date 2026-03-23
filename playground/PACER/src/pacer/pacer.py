@@ -426,7 +426,7 @@ class VectorMode(
 
 
 def action_mode(
-    dim_action: DimAction, num_demos: NumDemos, num_points: NumPoints
+    _dim_action: DimAction, _num_demos: NumDemos, _num_points: NumPoints
 ) -> VectorMode[
     ActionsCollection[NumDemos, NumPoints, DimAction],
     Action[DimAction],
@@ -450,7 +450,7 @@ def action_mode(
 
 
 def state_mode(
-    dim_state: DimState, num_demos: NumDemos, num_points: NumPoints
+    _dim_state: DimState, _num_demos: NumDemos, _num_points: NumPoints
 ) -> VectorMode[
     StatesCollection[NumDemos, NumPoints, DimState],
     State[DimState],
@@ -513,7 +513,7 @@ class PseudoLabelComputer(
         s = (1 - eta) * la.norm(y2) + eta * median_strength  # s_{i, t}
         y3 = s * (y2 / (la.norm(y2) + EPS))  # y^{(3)}_{i, t}
 
-        return y3
+        return Vector[Dim1](y3)
 
     def _compute_labels(
         self,

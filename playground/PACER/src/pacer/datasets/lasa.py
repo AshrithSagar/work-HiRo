@@ -11,7 +11,7 @@ LASA Dataset
 from typing import Literal, TypeAlias, TypeVar
 
 import numpy as np
-from pyLASAHandwritingDataset import DataSet, SinglePatternMotion
+from pyLASAHandwritingDataset import DataSet, LASAMotionPattern, SinglePatternMotion
 from typingkit.core import RuntimeGeneric, TypedList
 from typingkit.numpy import enforce_shapes
 from typingkit.numpy._typed.helpers import THREE, TWO, Array3D
@@ -34,15 +34,15 @@ Array_7x1000x3: TypeAlias = Array3D[SEVEN, THOUSAND, THREE, np.dtype[_ScalarT]]
 
 class LASADataSet:
     def __init__(self, pattern: SinglePatternMotion) -> None:
-        self.data = DataSet[pattern]
+        self.data: LASAMotionPattern = DataSet[pattern]
 
-        self.positions = Array_7x1000x2(
+        self.positions: Array_7x1000x2 = Array_7x1000x2(
             [demo.pos.T for demo in self.data.demos], dtype=npDType
         )
-        self.velocities = Array_7x1000x2(
+        self.velocities: Array_7x1000x2 = Array_7x1000x2(
             [demo.vel.T for demo in self.data.demos], dtype=npDType
         )
-        self.positions_diff = Array_7x1000x2(
+        self.positions_diff: Array_7x1000x2 = Array_7x1000x2(
             np.diff(self.positions, axis=-2, append=np.zeros((7, 1, 2), dtype=npDType))
             / self.data.dt
         )
@@ -86,9 +86,9 @@ class LASADataSet3D(RuntimeGeneric[_ScalarT]):
             out[:, :, :2] = arr
             return out
 
-        self.positions = pad(dataset.positions)
-        self.velocities = pad(dataset.velocities)
-        self.positions_diff = pad(dataset.positions_diff)
+        self.positions: Array_7x1000x3[_ScalarT] = pad(dataset.positions)
+        self.velocities: Array_7x1000x3[_ScalarT] = pad(dataset.velocities)
+        self.positions_diff: Array_7x1000x3[_ScalarT] = pad(dataset.positions_diff)
 
     def __len__(self) -> SEVEN:
         return 7

@@ -9,3 +9,8 @@ dependencies = []
 
 [dependency-groups]
 dev = ["jupyter>=1.1.1", "nbdime>=4.0.2", "nbstripout>=0.8.2"]
+
+[tool.basedpyright]
+reportAny = false
+reportExplicitAny = false
+reportUnusedCallResult = false

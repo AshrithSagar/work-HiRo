@@ -8,7 +8,7 @@ Utils
 
 import random
 from collections.abc import Sequence
-from typing import Final, Literal
+from typing import Final, Literal, cast
 
 import numpy as np
 import numpy.linalg as la
@@ -64,7 +64,7 @@ def median(
     arr: npt.ArrayLike, /, axis: int | Sequence[int] | None = None
 ) -> np.ndarray:
     arr = np.asarray(arr)
-    return np.median(arr, axis=axis)  # type: ignore[no-any-return]  # ty: ignore[unused-ignore-comment]
+    return cast(np.ndarray, np.median(arr, axis=axis))
 
 
 def normalise(
@@ -76,8 +76,8 @@ def normalise(
             norm: npDType = la.norm(vec)
             return _vec / (norm + EPS)
         case "MINMAX" | "ZSCORE":
-            _min: npDType = _vec.min()
-            _max: npDType = _vec.max()
+            _min = min(_vec)
+            _max = max(_vec)
             return (_vec - _min) / (_max - _min + EPS)
 
 

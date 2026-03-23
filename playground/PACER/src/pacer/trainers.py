@@ -7,6 +7,7 @@ Policy training
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
 from dataclasses import InitVar, dataclass, field
+from typing import cast, override
 
 import numpy as np
 import torch
@@ -37,9 +38,9 @@ class BCPolicy(nn.Module, RuntimeGeneric[DimState, DimAction]):
 
     def __init__(
         self, state_dim: DimState, action_dim: DimAction, hidden_dim: int = 128
-    ):
+    ) -> None:
         super().__init__()
-        self.network = nn.Sequential(
+        self.network: nn.Module = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
@@ -47,11 +48,12 @@ class BCPolicy(nn.Module, RuntimeGeneric[DimState, DimAction]):
             nn.Linear(hidden_dim, action_dim),
         )
 
+    @override
     def forward(
         self,
         states: Tensor,  # (batch, state_dim)
     ) -> Tensor:  # (batch,)
-        return self.network(states)  # type: ignore[no-any-return]  # ty: ignore[unused-ignore-comment]
+        return cast(Tensor, self.network(states))
 
 
 ## ── Trainers ─────────────────────────────────────────────────────────────────
@@ -82,7 +84,7 @@ class BCTrainer(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
             targets = torch.tensor(
                 demo.actions.numpy(), dtype=torchDType, device=self.device_
             )  # (T_i, action_dim)
-            preds: Tensor = self.policy(states)  # (T_i, action_dim)
+            preds = cast(Tensor, self.policy(states))  # (T_i, action_dim)
 
             diffs: Tensor = preds - targets  # (T_i, action_dim)
             demo_loss = F.huber_loss(
@@ -118,7 +120,7 @@ class BCTrainer(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
         ):
             self.optimiser.zero_grad()
             loss = self.compute_huber_loss()
-            loss.backward()  # type: ignore[no-untyped-call]  # ty: ignore[unused-ignore-comment]
+            loss.backward()  # type: ignore[no-untyped-call]  # pyright: ignore[reportUnknownMemberType]
             torch.nn.utils.clip_grad_norm_(self.policy.parameters(), 1.0)
             self.optimiser.step()  # pyright: ignore[reportUnknownMemberType]
         return loss
@@ -129,10 +131,10 @@ class BCTrainer(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
         self.policy.eval()
         with torch.no_grad():
             states_tensor = Tensor(states.numpy()).float().to(self.device_)
-            actions_tensor: Tensor = self.policy(states_tensor)
+            actions_tensor = cast(Tensor, self.policy(states_tensor))
             actions_np = actions_tensor.cpu().numpy()
         actions = Actions[NumPoints, DimAction](
-            Action[DimAction](action_np) for action_np in actions_np
+            [Action[DimAction](action_np) for action_np in actions_np]
         )
         return actions
 
@@ -178,7 +180,7 @@ class PACERBCTrainer(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimA
                 dtype=torchDType,
                 device=self.device_,
             )  # (T_i,)
-            preds: Tensor = self.policy(states)  # (T_i, action_dim)
+            preds = cast(Tensor, self.policy(states))  # (T_i, action_dim)
 
             diffs: Tensor = preds - targets  # (T_i, action_dim)
             huber_losses = F.huber_loss(
@@ -218,7 +220,7 @@ class PACERBCTrainer(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimA
         ):
             self.optimiser.zero_grad()
             loss = self.compute_huber_loss()
-            loss.backward()  # type: ignore[no-untyped-call]  # ty: ignore[unused-ignore-comment]
+            loss.backward()  # type: ignore[no-untyped-call]  # pyright: ignore[reportUnknownMemberType]
             torch.nn.utils.clip_grad_norm_(self.policy.parameters(), 1.0)
             self.optimiser.step()  # pyright: ignore[reportUnknownMemberType]
         return loss
@@ -229,7 +231,7 @@ class PACERBCTrainer(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimA
         self.policy.eval()
         with torch.no_grad():
             states_tensor = Tensor(states.numpy()).float().to(self.device_)
-            actions_tensor: Tensor = self.policy(states_tensor)
+            actions_tensor = cast(Tensor, self.policy(states_tensor))
             actions_np = actions_tensor.cpu().numpy()
         actions = Actions[NumPoints, DimAction](
             [Action[DimAction](action_np) for action_np in actions_np]

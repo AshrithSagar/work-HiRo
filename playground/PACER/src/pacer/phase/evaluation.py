@@ -8,7 +8,7 @@ Phase evaluation
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Self
+from typing import Any, Self, override
 
 import numpy as np
 import optype.numpy as onp
@@ -50,6 +50,7 @@ class PhaseEvaluator(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction], A
 class RankingLossEvaluator(PhaseEvaluator[NumDemos, NumPoints, DimState, DimAction]):
     margin: float = 1.0
 
+    @override
     def evaluate(self) -> float:
         loss = float(0.0)
         for taus in self.phases.values():
@@ -66,12 +67,13 @@ class RankingLossEvaluator(PhaseEvaluator[NumDemos, NumPoints, DimState, DimActi
 
 @dataclass
 class SpearmanEvaluator(PhaseEvaluator[NumDemos, NumPoints, DimState, DimAction]):
+    @override
     def evaluate(self) -> float:
         total = float(0.0)
         for taus in self.phases.values():
             _taus = taus.numpy()
             t = np.arange(len(_taus))
-            total += float(spearmanr(t, _taus).correlation)  # type: ignore[attr-defined]
+            total += float(spearmanr(t, _taus).correlation)  # type: ignore[attr-defined]  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType, reportAttributeAccessIssue]
         N = self.phases.__len__()
         return float(total / max(int(N), 1))
 
@@ -80,6 +82,7 @@ class SpearmanEvaluator(PhaseEvaluator[NumDemos, NumPoints, DimState, DimAction]
 class PathConsistencyEvaluator(
     PhaseEvaluator[NumDemos, NumPoints, DimState, DimAction]
 ):
+    @override
     def evaluate(self) -> float:
         total = float(0.0)
         for demo in self.demonstrations:
@@ -114,6 +117,7 @@ class AlignmentEvaluator(PhaseEvaluator[NumDemos, NumPoints, DimState, DimAction
             )
         )
 
+    @override
     def evaluate(self) -> float:
         grid = np.linspace(0, 1, self.n_grid, dtype=npDType)
         _aligned = list[Matrix[Any, DimState]]()

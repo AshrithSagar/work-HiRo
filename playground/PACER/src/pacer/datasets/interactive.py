@@ -63,15 +63,15 @@ class InteractiveDataSet(Generic[NumDemos, NumPoints]):
         self.demo_lines: list[Line2D] = []
         self.current_stroke: list[tuple[float, float]] = []
         self.current_artist: Line2D | None = None
-        self.colors = plt.cm.tab10(np.linspace(0, 1, 10))  # type: ignore[attr-defined]
+        self.colors = plt.cm.tab10(np.linspace(0, 1, 10))  # type: ignore[attr-defined]  # pyright: ignore[reportAttributeAccessIssue]
 
         self.finished = False
 
         # Event connections
-        self.fig.canvas.mpl_connect("button_press_event", self._on_press)  # type: ignore[arg-type]
-        self.fig.canvas.mpl_connect("motion_notify_event", self._on_motion)  # type: ignore[arg-type]
-        self.fig.canvas.mpl_connect("button_release_event", self._on_release)  # type: ignore[arg-type]
-        self.fig.canvas.mpl_connect("key_press_event", self._on_key)  # type: ignore[arg-type]
+        self.fig.canvas.mpl_connect("button_press_event", self._on_press)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+        self.fig.canvas.mpl_connect("motion_notify_event", self._on_motion)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+        self.fig.canvas.mpl_connect("button_release_event", self._on_release)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+        self.fig.canvas.mpl_connect("key_press_event", self._on_key)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
 
     # ── Mouse handlers ───────────────────────────────────────────────────────
     def _on_press(self, event: MouseEvent) -> None:
@@ -149,7 +149,7 @@ class InteractiveDataSet(Generic[NumDemos, NumPoints]):
         elif event.key == "n":
             if self.current_stroke:
                 # Commit current stroke
-                self._on_release(None)  # type: ignore[arg-type]
+                self._on_release(None)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
 
     # ── Build dataset ────────────────────────────────────────────────────────
     def to_demonstrations(self) -> Demonstrations[NumDemos, NumPoints, TWO, TWO]:

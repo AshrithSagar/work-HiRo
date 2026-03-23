@@ -171,7 +171,6 @@ class SamplesCollection(
                 return super().__getitem__(i)[t]
             case DemoIndex() as i:
                 return super().__getitem__(i)
-        raise IndexError
 
     @property
     def demo_indices(self) -> DemoIndices[NumDemos]:
@@ -287,7 +286,6 @@ class Demonstrations(
                 return self.demos[i][t]
             case DemoIndex() as i:
                 return self.demos[i]
-        raise IndexError
 
     def __iter__(self) -> Iterator[Demonstration[NumPoints, DimState, DimAction]]:
         yield from self.demos  # D_i

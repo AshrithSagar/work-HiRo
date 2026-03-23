@@ -4,6 +4,8 @@ PACER manimation
 """
 # src/manimations/main.py
 
+from typing import override
+
 import manim as mn
 import manim.typing as mnt
 import numpy as np
@@ -12,10 +14,12 @@ from pacer.datasets import LASADataSet3D
 
 
 class DemonstrationScene(mn.Scene):
+    @override
     def setup(self) -> None:
         assert isinstance(self.camera, mn.Camera)
         self.camera.background_color = mn.BLACK
 
+    @override
     def construct(self) -> None:
         # ── Introduction ─────────────────────────────────────────────────────────
         # Title introduction

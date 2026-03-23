@@ -8,6 +8,7 @@ Phase estimation
 
 from abc import ABC, abstractmethod
 from dataclasses import InitVar, dataclass, field
+from typing import override
 
 import numpy as np
 import optype.numpy as onp
@@ -49,7 +50,7 @@ class MLPPhaseScorer(nn.Module, RuntimeGeneric[DimState]):
 
     def __init__(self, state_dim: DimState, hidden_dim: int = 64):
         super().__init__()
-        self.network = nn.Sequential(
+        self.network: nn.Module = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
@@ -57,6 +58,7 @@ class MLPPhaseScorer(nn.Module, RuntimeGeneric[DimState]):
             nn.Linear(hidden_dim, 1),
         )
 
+    @override
     def forward(
         self,
         states: Tensor,  # (batch, state_dim)
@@ -109,11 +111,12 @@ class MLPPhaseEstimator(PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]
         for _epoch in track(range(epochs), description="[bold]Phase training[/]"):
             self.optimiser.zero_grad()
             loss = self.compute_ranking_loss(margin=margin)
-            loss.backward()  # type: ignore[no-untyped-call]  # ty: ignore[unused-ignore-comment]
+            loss.backward()  # type: ignore[no-untyped-call]  # pyright: ignore[reportUnknownMemberType]
             torch.nn.utils.clip_grad_norm_(self.scorer.parameters(), 1.0)
             self.optimiser.step()  # pyright: ignore[reportUnknownMemberType]
         return loss
 
+    @override
     def estimate_phases(self) -> PhasesCollection[NumDemos, NumPoints]:
         self.scorer.eval()
         phases = PhasesCollection[NumDemos, NumPoints].zeros_like(self.demonstrations)
@@ -124,7 +127,7 @@ class MLPPhaseEstimator(PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]
                 _scores = scores.cpu().numpy()
                 taus = Phases[NumPoints](normalise(_scores, method="MINMAX"))
                 phases[demo.index] = taus
-        self.phases = phases
+        self.phases: PhasesCollection[NumDemos, NumPoints] = phases
         return phases
 
 
@@ -136,6 +139,7 @@ class MLPPhaseEstimator(PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]
 class NormalisedTimeIndexPhaseEstimator(
     PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]
 ):
+    @override
     def estimate_phases(self) -> PhasesCollection[NumDemos, NumPoints]:
         phases = PhasesCollection[NumDemos, NumPoints].zeros_like(self.demonstrations)
         for demo in self.demonstrations:
@@ -143,7 +147,7 @@ class NormalisedTimeIndexPhaseEstimator(
             assert T_i > 1
             taus = Phases[NumPoints]([Phase(t / (T_i - 1)) for t in demo.time_indices])
             phases[demo.index] = taus
-        self.phases = phases
+        self.phases: PhasesCollection[NumDemos, NumPoints] = phases
         return phases
 
 
@@ -154,6 +158,7 @@ class NormalisedTimeIndexPhaseEstimator(
 class PathLengthPhaseEstimator(
     PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]
 ):
+    @override
     def estimate_phases(self) -> PhasesCollection[NumDemos, NumPoints]:
         phases = PhasesCollection[NumDemos, NumPoints].zeros_like(self.demonstrations)
         for demo in self.demonstrations:
@@ -162,7 +167,7 @@ class PathLengthPhaseEstimator(
             lengths = Vector[NumPoints](np.r_[0, np.cumsum(norms)])
             taus = Phases[NumPoints](lengths / (lengths[-1] + EPS))
             phases[demo.index] = taus
-        self.phases = phases
+        self.phases: PhasesCollection[NumDemos, NumPoints] = phases
         return phases
 
 

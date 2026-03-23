@@ -157,12 +157,12 @@ def plot_action_comparison(
     axes = [_axes] if dim == 1 else _axes
 
     for d in range(dim):
-        axes[d].plot(_original[:, d], label="Original", alpha=0.8)  # type: ignore
-        axes[d].plot(_pseudo[:, d], label="Pseudo", alpha=0.8)  # type: ignore
-        axes[d].set_ylabel(f"Action dim {d}")  # type: ignore
-        axes[d].legend()  # type: ignore
+        axes[d].plot(_original[:, d], label="Original", alpha=0.8)
+        axes[d].plot(_pseudo[:, d], label="Pseudo", alpha=0.8)
+        axes[d].set_ylabel(f"Action dim {d}")
+        axes[d].legend()
 
-    axes[-1].set_xlabel("Time index t")  # type: ignore
+    axes[-1].set_xlabel("Time index t")
     fig.suptitle(title)
     plt.tight_layout()
 
@@ -182,12 +182,12 @@ def plot_state_comparison(
     axes = [_axes] if dim == 1 else _axes
 
     for d in range(dim):
-        axes[d].plot(_original[:, d], label="Original", alpha=0.8)  # type: ignore
-        axes[d].plot(_pseudo[:, d], label="Pseudo", alpha=0.8)  # type: ignore
-        axes[d].set_ylabel(f"State dim {d}")  # type: ignore
-        axes[d].legend()  # type: ignore
+        axes[d].plot(_original[:, d], label="Original", alpha=0.8)
+        axes[d].plot(_pseudo[:, d], label="Pseudo", alpha=0.8)
+        axes[d].set_ylabel(f"State dim {d}")
+        axes[d].legend()
 
-    axes[-1].set_xlabel("Time index t")  # type: ignore
+    axes[-1].set_xlabel("Time index t")
     fig.suptitle(title)
     plt.tight_layout()
 
