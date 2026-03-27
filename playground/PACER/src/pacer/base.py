@@ -224,6 +224,10 @@ class Demonstration(RuntimeGeneric[NumPoints, DimState, DimAction]):  # D_i
         assert self.states.length == self.actions.length
         return self.states.length  # T_i
 
+    @property
+    def length(self) -> NumPoints:
+        return self.__len__()  # T_i
+
     def __getitem__(
         self, index: TimeIndex, /
     ) -> Sample[DimState, DimAction]:  # (x_{i, t}, a_{i, t})

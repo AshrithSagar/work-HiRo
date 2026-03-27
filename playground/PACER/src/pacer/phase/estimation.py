@@ -69,6 +69,13 @@ class MLPPhaseScorer(nn.Module, RuntimeGeneric[DimState]):
 
 @dataclass
 class MLPPhaseEstimator(PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]):
+    r"""
+    MLPPhaseScorer + Ranking loss.
+
+    The model assigns higher scores to later time steps within each demonstration.
+    Predicted scores are min-max normalised to obtain phase values `tau \in [0, 1]`.
+    """
+
     device: InitVar[DeviceLikeType] = field(default=TORCH_DEVICE, kw_only=True)
     seed: int = field(default=SEED, kw_only=True)
     ##
@@ -118,6 +125,8 @@ class MLPPhaseEstimator(PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]
 
     @override
     def estimate_phases(self) -> PhasesCollection[NumDemos, NumPoints]:
+        if not hasattr(self, "scorer"):
+            raise RuntimeError("Model must be trained before estimating phases.")
         self.scorer.eval()
         phases = PhasesCollection[NumDemos, NumPoints].zeros_like(self.demonstrations)
         with torch.no_grad():
@@ -134,16 +143,22 @@ class MLPPhaseEstimator(PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]
 # ── Normalised Time Index Phase Estimation ────────────────────────────────────
 
 
-# tau_{i, t} = t / (T_i - 1)
 @dataclass
 class NormalisedTimeIndexPhaseEstimator(
     PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]
 ):
+    r"""
+    Phase is time index normalised over demonstration length,
+    for every demonstration, while ensuring `tau \in [0, 1]`.
+
+    `tau_{i, t} = t / (T_i - 1)`.
+    """
+
     @override
     def estimate_phases(self) -> PhasesCollection[NumDemos, NumPoints]:
         phases = PhasesCollection[NumDemos, NumPoints].zeros_like(self.demonstrations)
         for demo in self.demonstrations:
-            T_i = demo.states.length
+            T_i = demo.length
             assert T_i > 1
             taus = Phases[NumPoints]([Phase(t / (T_i - 1)) for t in demo.time_indices])
             phases[demo.index] = taus
@@ -158,6 +173,12 @@ class NormalisedTimeIndexPhaseEstimator(
 class PathLengthPhaseEstimator(
     PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]
 ):
+    """
+    Assigns phase based on cumulative path length.
+
+    Computes trajectory progress using distance traveled and normalises it to the range [0, 1].
+    """
+
     @override
     def estimate_phases(self) -> PhasesCollection[NumDemos, NumPoints]:
         phases = PhasesCollection[NumDemos, NumPoints].zeros_like(self.demonstrations)

@@ -35,7 +35,7 @@ class Phases(TypedList[NumPoints, Phase]):
     def zeros_like(
         cls, demonstration: Demonstration[NumPoints, DimState, DimAction]
     ) -> Self:
-        T_i = demonstration.time_indices.length
+        T_i = demonstration.length
         return cls.full(T_i, Phase(0))
 
 
