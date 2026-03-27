@@ -48,6 +48,14 @@ class PhaseEvaluator(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction], A
 
 @dataclass
 class RankingLossEvaluator(PhaseEvaluator[NumDemos, NumPoints, DimState, DimAction]):
+    """
+    Computes a pairwise ranking loss to enforce temporal ordering of phases.
+
+    Penalises cases where later time steps do not have sufficiently larger phase
+    values than earlier ones using a soft margin logistic loss.
+    Lower is better.
+    """
+
     margin: float = 1.0
 
     @override
@@ -67,6 +75,14 @@ class RankingLossEvaluator(PhaseEvaluator[NumDemos, NumPoints, DimState, DimActi
 
 @dataclass
 class SpearmanEvaluator(PhaseEvaluator[NumDemos, NumPoints, DimState, DimAction]):
+    """
+    Measures monotonicity of phases using Spearman rank correlation.
+
+    Compares phase values against time indices to evaluate whether phases
+    increase consistently over the trajectory.
+    Higher is better (max = 1).
+    """
+
     @override
     def evaluate(self) -> float:
         total = float(0.0)
@@ -82,6 +98,14 @@ class SpearmanEvaluator(PhaseEvaluator[NumDemos, NumPoints, DimState, DimAction]
 class PathConsistencyEvaluator(
     PhaseEvaluator[NumDemos, NumPoints, DimState, DimAction]
 ):
+    """
+    Evaluates consistency between phase values and trajectory progress.
+
+    Constructs a reference phase based on cumulative path length and computes
+    mean squared error against predicted phases.
+    Lower is better.
+    """
+
     @override
     def evaluate(self) -> float:
         total = float(0.0)
@@ -98,6 +122,14 @@ class PathConsistencyEvaluator(
 
 @dataclass
 class AlignmentEvaluator(PhaseEvaluator[NumDemos, NumPoints, DimState, DimAction]):
+    """
+    Measures cross-demonstration alignment under phase reparameterisation.
+
+    Resamples trajectories onto a common phase grid and computes variance
+    across demonstrations.
+    Lower variance indicates better alignment.
+    """
+
     n_grid: int = 50
 
     def _resample(
@@ -135,6 +167,8 @@ class AlignmentEvaluator(PhaseEvaluator[NumDemos, NumPoints, DimState, DimAction
 
 @dataclass
 class PhaseEvaluationReport:
+    """Container for phase evaluation metrics."""
+
     ranking_loss: float
     spearman: float
     path_consistency: float
