@@ -42,6 +42,7 @@ set_global_default_runtime_options(RuntimeOptions(validate=True))
 def run_pacerbc(
     demonstrations: Demonstrations[NumDemos, NumPoints, TWO, TWO],
     phase_estimator_choice: PhaseEstimatorChoice = "MLP",
+    evaluate_phases: bool = False,
     use_state_labels: bool = False,
     show_plots: bool = True,
 ) -> None:
@@ -51,7 +52,9 @@ def run_pacerbc(
     )
 
     # PACER
-    phases = get_phases(demonstrations, choice=phase_estimator_choice)
+    phases = get_phases(
+        demonstrations, choice=phase_estimator_choice, evaluate_phases=evaluate_phases
+    )
     bins = Binner(
         demonstrations,
         phases,
@@ -141,6 +144,7 @@ def test_pacer_bc(
     phase_estimator_choice: list[PhaseEstimatorChoice]
     | PhaseEstimatorChoice
     | Literal["ALL"] = "MLP",
+    evaluate_phases: bool = False,
     use_corruptions: bool = False,
     use_state_labels: bool = False,
     filepath: str | None = None,
@@ -211,6 +215,7 @@ def test_pacer_bc(
             run_pacerbc(
                 demonstrations,
                 phase_estimator_choice,
+                evaluate_phases=evaluate_phases,
                 use_state_labels=use_state_labels,
                 show_plots=show_plots,
             )
@@ -229,6 +234,7 @@ if __name__ == "__main__":
         demonstrations_choice="FROM_LASA",
         LASA_pattern="GShape",
         phase_estimator_choice="MLP",
+        evaluate_phases=False,
         use_corruptions=False,
         use_state_labels=False,
         filepath=None,
