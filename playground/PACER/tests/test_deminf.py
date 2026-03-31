@@ -5,8 +5,8 @@ Test DemInf
 
 from typingkit.core import RuntimeOptions, set_global_default_runtime_options
 
+from deminf.deminf import DemInfEstimator, DemInfScorer
 from pacer import console
-from pacer.deminf import DemInfEstimator, DemInfScorer
 from pacer.testutils import get_demonstrations
 
 set_global_default_runtime_options(RuntimeOptions(validate=True))

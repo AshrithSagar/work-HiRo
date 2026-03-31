@@ -25,7 +25,9 @@ from pacer.typings import DemoIndex, DimAction, DimState, Matrix, NumDemos, NumP
 
 ## ── DemInf ───────────────────────────────────────────────────────────────────
 
-Score: TypeAlias = float
+Score: TypeAlias = float  # Sc(tau)
+# Paper uses S for both states and scores, so we'll stick to
+# the notation S for States, and Sc for Scores hereinafter.
 
 
 @dataclass
