@@ -18,7 +18,7 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.special import digamma
 from sklearn.neighbors import NearestNeighbors
-from typingkit.core import TypedDict, TypedList
+from typingkit.core import TypedDict
 
 from pacer.base import Actions, Demonstration, Demonstrations, States
 from pacer.typings import DemoIndex, DimAction, DimState, Matrix, NumDemos, NumPoints
@@ -111,13 +111,13 @@ class DemInfScorer:
             scores[demo.index] = self.score_demonstration(demo)
         return TypedDict[NumDemos, DemoIndex, Score](scores)
 
-    def rank_data(
-        self, demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
-    ) -> TypedList[NumDemos, int]:
-        """Returns demo indices ranked by quality (highest DemInf first)."""
-        scores = self.score_demonstrations(demonstrations)
-        sorted_scores = list[int](sorted(scores, key=scores.get, reverse=True))  # type: ignore[arg-type]  # pyright: ignore[reportCallIssue, reportArgumentType, reportUnknownArgumentType]
-        return TypedList[NumDemos, int](sorted_scores)
+    def rank_scores(
+        self, scores: TypedDict[NumDemos, DemoIndex, Score]
+    ) -> TypedDict[NumDemos, DemoIndex, Score]:
+        """Rank scores by quality (highest DemInf first)."""
+        return TypedDict[NumDemos, DemoIndex, Score](
+            sorted(scores.items(), key=lambda item: item[1], reverse=True)
+        )
 
 
 ## ─────────────────────────────────────────────────────────────────────────────
