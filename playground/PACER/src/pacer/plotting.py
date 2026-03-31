@@ -12,7 +12,7 @@ from typingkit.numpy._typed.helpers import TWO
 from pacer.base import Actions, Demonstrations, States, StatesCollection
 from pacer.pacer import Bins, TrustValuesCollection
 from pacer.phase.base import PhasesCollection
-from pacer.typings import DimAction, DimState, NumBins, NumDemos, NumPoints
+from pacer.typings import DemoIndex, DimAction, DimState, NumBins, NumDemos, NumPoints
 
 
 def plot_trajectories(
@@ -37,7 +37,7 @@ def plot_states_and_actions(
     demonstrations: Demonstrations[NumDemos, NumPoints, TWO, TWO],
     *,
     title: str = "Demonstrations",
-    demo_indices: list[int] | None = None,
+    demo_indices: DemoIndex | list[DemoIndex] | None = None,
     action_scale: float = 1.0,
     action_step: int = 1,
 ) -> None:
@@ -45,9 +45,15 @@ def plot_states_and_actions(
     plt.figure()
 
     for i, demo in enumerate(demonstrations):
-        if demo_indices is not None:
-            if i not in demo_indices:
-                continue
+        match demo_indices:
+            case DemoIndex():
+                if i != demo_indices:
+                    continue
+            case list():
+                if i not in demo_indices:
+                    continue
+            case None:
+                pass
 
         xs = demo.states.coord(0)
         ys = demo.states.coord(1)
