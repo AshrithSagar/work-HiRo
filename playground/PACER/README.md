@@ -5,7 +5,7 @@
 <https://openreview.net/forum?id=gaYyBvP2Rz>
 
 > [!WARNING]
-> This uses my experimental [`typed-numpy`](https://github.com/AshrithSagar/typed-numpy) package.
+> This uses my experimental [`typingkit`](https://github.com/AshrithSagar/typingkit) package.
 
 ## License
 
