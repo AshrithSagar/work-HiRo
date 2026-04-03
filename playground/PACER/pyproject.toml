@@ -32,7 +32,7 @@ dev = [
     "types-networkx>=3.6.1.20260402",
     "types-openpyxl>=3.1.5.20260402",
     "types-pexpect>=4.9.0.20260127",
-    "types-protobuf>=7.34.1.20260402",
+    "types-protobuf>=7.34.1.20260403",
     "types-pygments>=2.19.0.20260402",
     "types-python-dateutil>=2.9.0.20260402",
     "types-pywin32>=311.0.0.20260402",
@@ -42,14 +42,14 @@ dev = [
     "types-tqdm>=4.67.3.20260402",
     "types-xlrd>=2.0.0.20251020",
 ]
-lint = ["ruff>=0.15.8"]
+lint = ["ruff>=0.15.9"]
 test = ["pytest>=9.0.2", "pytest-memray>=1.8.0"]
 typecheck = [
     "basedpyright>=1.39.0",
     "mypy[mypyc]>=1.20.0",
     "pyrefly>=0.59.1",
     "pyright>=1.1.408",
-    "ty>=0.0.27",
+    "ty>=0.0.28",
 ]
 
 [build-system]
