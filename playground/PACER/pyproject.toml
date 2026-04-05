@@ -33,7 +33,7 @@ dev = [
     "types-openpyxl>=3.1.5.20260402",
     "types-pexpect>=4.9.0.20260127",
     "types-protobuf>=7.34.1.20260403",
-    "types-pygments>=2.19.0.20260402",
+    "types-pygments>=2.19.0.20260405",
     "types-python-dateutil>=2.9.0.20260402",
     "types-pywin32>=311.0.0.20260402",
     "types-pyyaml>=6.0.12.20250915",
@@ -49,7 +49,7 @@ typecheck = [
     "mypy[mypyc]>=1.20.0",
     "pyrefly>=0.59.1",
     "pyright>=1.1.408",
-    "ty>=0.0.28",
+    "ty>=0.0.29",
 ]
 
 [build-system]
