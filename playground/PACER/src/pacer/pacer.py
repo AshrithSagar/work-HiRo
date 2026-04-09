@@ -473,6 +473,14 @@ def state_mode(
     )
 
 
+@dataclass(kw_only=True)
+class PseudoLabelParams:
+    debias_weight: npDType | float = 0.5  # lambda_{debias}
+    sideways_attenuation_shrinkage: npDType | float = 0.5  # rho_0
+    speed_regularisation_influence: npDType | float = 0.5  # eta_0
+    temporal_smoothing_weight: npDType | float = 0.0  # kappa
+
+
 @dataclass
 class PseudoLabelComputer(
     RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]
@@ -484,17 +492,15 @@ class PseudoLabelComputer(
         self,
         v: Vector[Dim1],
         *,
+        params: PseudoLabelParams,
         anchor: Vector[Dim1],
         unit_tangent: Vector[Dim1],
         median_strength: npDType,
         trust: npDType,
-        debias_weight: npDType | float,
-        sideways_attenuation_shrinkage: npDType | float,
         apply_sideways_attenuation: bool,
-        speed_regularisation_influence: npDType | float,
     ) -> Vector[Dim1]:
         # Debiasing towards the anchor
-        gamma = 1 - debias_weight * (1 - trust)  # gamma_{i, t}
+        gamma = 1 - params.debias_weight * (1 - trust)  # gamma_{i, t}
         assert 0 <= gamma <= 1
         y1 = gamma * v + (1 - gamma) * anchor  # y^{(1)}_{i, t}
 
@@ -502,14 +508,14 @@ class PseudoLabelComputer(
         y1_pll = np.dot(y1, unit_tangent) * unit_tangent
         y1_perp = y1 - y1_pll
         rho = (
-            sideways_attenuation_shrinkage * (1 - trust)
+            params.sideways_attenuation_shrinkage * (1 - trust)
             if apply_sideways_attenuation
             else npDType(0)
         )
         y2 = y1_pll + (1 - rho) * y1_perp  # y^{(2)}_{i, t}
 
         # Speed regularisation
-        eta = speed_regularisation_influence * (1 - trust)  # eta_{i, t}
+        eta = params.speed_regularisation_influence * (1 - trust)  # eta_{i, t}
         s = (1 - eta) * la.norm(y2) + eta * median_strength  # s_{i, t}
         y3 = s * (y2 / (la.norm(y2) + EPS))  # y^{(3)}_{i, t}
 
@@ -519,17 +525,13 @@ class PseudoLabelComputer(
         self,
         trust_values: TrustValuesCollection[NumDemos, NumPoints],
         mode: VectorMode[_Coll, _VecT, NumDemos, NumPoints, DimState, DimAction],
-        *,
-        debias_weight: npDType | float,
-        sideways_attenuation_shrinkage: npDType | float,
-        speed_regularisation_influence: npDType | float,
-        temporal_smoothing_weight: npDType | float,
+        params: PseudoLabelParams,
     ) -> _Coll:
-        rho_0 = npDType(sideways_attenuation_shrinkage)
+        rho_0 = npDType(params.sideways_attenuation_shrinkage)
         assert 0 <= rho_0 <= 1
-        eta_0 = npDType(speed_regularisation_influence)
+        eta_0 = npDType(params.speed_regularisation_influence)
         assert 0 <= eta_0 <= 1
-        kappa = npDType(temporal_smoothing_weight)
+        kappa = npDType(params.temporal_smoothing_weight)
 
         pre_smooth = mode.make_collection(self.demonstrations)  # y^{(3)} for all (i, t)
         smoothed = mode.make_collection(self.demonstrations)  # y* for all (i, t)
@@ -560,14 +562,12 @@ class PseudoLabelComputer(
                     w = trust_values[j][t]
                     y3 = self._apply_correction(
                         mode.vec_from_sample(sample),
+                        params=params,
                         anchor=anchor,
                         unit_tangent=unit_tangent,
                         median_strength=median_strength,
                         trust=w,
-                        debias_weight=debias_weight,
-                        sideways_attenuation_shrinkage=rho_0,
                         apply_sideways_attenuation=apply_attenuation,
-                        speed_regularisation_influence=eta_0,
                     )
                     mode.set_item(pre_smooth, j, t, mode.wrap(y3))
 
@@ -588,29 +588,20 @@ class PseudoLabelComputer(
         action_trust_values: TrustValuesCollection[NumDemos, NumPoints],
         state_trust_values: TrustValuesCollection[NumDemos, NumPoints] | None = None,
         *,
-        debias_weight: npDType | float = 0.5,  # lambda_{debias}
-        sideways_attenuation_shrinkage: npDType | float = 0.5,  # rho_0
-        speed_regularisation_influence: npDType | float = 0.5,  # eta_0
-        temporal_smoothing_weight: npDType | float = 0.0,  # kappa
+        params: PseudoLabelParams,
     ) -> PseudoLabels[NumDemos, NumPoints, DimState, DimAction]:
         demos = self.demonstrations
-        kwargs = dict(
-            debias_weight=debias_weight,
-            sideways_attenuation_shrinkage=sideways_attenuation_shrinkage,
-            speed_regularisation_influence=speed_regularisation_influence,
-            temporal_smoothing_weight=temporal_smoothing_weight,
-        )
 
         actions = self._compute_labels(
             action_trust_values,
             action_mode(demos.action_dim, demos.__len__(), demos[0].__len__()),
-            **kwargs,
+            params,
         )
         states = (
             self._compute_labels(
                 state_trust_values,
                 state_mode(demos.state_dim, demos.__len__(), demos[0].__len__()),
-                **kwargs,
+                params,
             )
             if state_trust_values is not None
             else None

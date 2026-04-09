@@ -15,6 +15,7 @@ from pacer.base import Demonstrations
 from pacer.pacer import (
     Binner,
     PseudoLabelComputer,
+    PseudoLabelParams,
     RibbonTokenConsolidator,
     TrustValueComputer,
 )
@@ -78,10 +79,12 @@ def run_pacerbc(
     pseudo_labels = PseudoLabelComputer(demonstrations, bins).compute_pseudo_labels(
         action_trust_values,
         state_trust_values,
-        debias_weight=0.5,  # lambda_{debias}
-        sideways_attenuation_shrinkage=0.5,  # rho_0
-        speed_regularisation_influence=0.5,  # eta_0
-        temporal_smoothing_weight=0.0,  # kappa
+        params=PseudoLabelParams(
+            debias_weight=0.5,  # lambda_{debias}
+            sideways_attenuation_shrinkage=0.5,  # rho_0
+            speed_regularisation_influence=0.5,  # eta_0
+            temporal_smoothing_weight=0.0,  # kappa
+        ),
     )
 
     # Behavioral cloning
