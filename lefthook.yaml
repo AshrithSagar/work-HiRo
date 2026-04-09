@@ -1,0 +1,16 @@
+templates:
+  run: run --no-sync
+
+pre-commit:
+  parallel: true
+  jobs:
+    - name: ruff
+      glob: "*.{py,pyi}"
+      stage_fixed: true
+      group:
+        piped: true
+        jobs:
+          - name: check
+            run: uv {run} ruff check --select I --fix {staged_files}
+          - name: format
+            run: uv {run} ruff format --quiet {staged_files}
