@@ -79,11 +79,17 @@ def run_pacerbc(
     pseudo_labels = PseudoLabelComputer(demonstrations, bins).compute_pseudo_labels(
         action_trust_values,
         state_trust_values,
-        params=PseudoLabelParams(
+        action_params=PseudoLabelParams(
             debias_weight=0.5,  # lambda_{debias}
             sideways_attenuation_shrinkage=0.5,  # rho_0
             speed_regularisation_influence=0.5,  # eta_0
             temporal_smoothing_weight=0.0,  # kappa
+        ),
+        state_params=PseudoLabelParams(
+            debias_weight=0.1,  # lambda_{debias}
+            sideways_attenuation_shrinkage=0.1,  # rho_0
+            speed_regularisation_influence=0.1,  # eta_0
+            temporal_smoothing_weight=0.9,  # kappa
         ),
     )
 

@@ -578,12 +578,15 @@ class PseudoLabelComputer(
         action_trust_values: TrustValuesCollection[NumDemos, NumPoints],
         state_trust_values: TrustValuesCollection[NumDemos, NumPoints] | None = None,
         *,
-        params: PseudoLabelParams,
+        action_params: PseudoLabelParams,
+        state_params: PseudoLabelParams | None = None,
     ) -> PseudoLabels[NumDemos, NumPoints, DimState, DimAction]:
-        actions = self._compute_labels(action_trust_values, action_mode(), params)
+        actions = self._compute_labels(
+            action_trust_values, action_mode(), action_params
+        )
         states = (
-            self._compute_labels(state_trust_values, state_mode(), params)
-            if state_trust_values is not None
+            self._compute_labels(state_trust_values, state_mode(), state_params)
+            if state_trust_values is not None and state_params is not None
             else None
         )
         return PseudoLabels(actions=actions, states=states)
