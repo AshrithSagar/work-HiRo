@@ -50,23 +50,19 @@ class States(TypedList[NumPoints, State[DimState]]):
         return Vector[NumPoints](self.numpy()[:, dim])
 
     @classmethod
-    def zeros_like(
-        cls, demonstration: Demonstration[NumPoints, DimState, DimAction]
-    ) -> Self:
-        T_i = demonstration.time_indices.length
-        d_x = demonstration.state_dim
+    def zeros_like(cls, demo: Demonstration[NumPoints, DimState, DimAction]) -> Self:
+        T_i = demo.time_indices.length
+        d_x = demo.state_dim
         return cls.full(T_i, State[DimState].zeros(d_x))
 
 
 class StatesCollection(TypedList[NumDemos, States[NumPoints, DimState]]):
     @classmethod
     def zeros_like(
-        cls, demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
+        cls, demos: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     ) -> Self:
-        N = demonstrations.__len__()
-        return cls.full(
-            N, lambda i: States[NumPoints, DimState].zeros_like(demonstrations[i])
-        )
+        N = demos.count
+        return cls.full(N, lambda i: States[NumPoints, DimState].zeros_like(demos[i]))
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -89,23 +85,19 @@ class Actions(TypedList[NumPoints, Action[DimAction]]):
         return Vector[NumPoints](self.numpy()[:, dim])
 
     @classmethod
-    def zeros_like(
-        cls, demonstration: Demonstration[NumPoints, DimState, DimAction]
-    ) -> Self:
-        T_i = demonstration.time_indices.length
-        d_a = demonstration.action_dim
+    def zeros_like(cls, demo: Demonstration[NumPoints, DimState, DimAction]) -> Self:
+        T_i = demo.time_indices.length
+        d_a = demo.action_dim
         return cls.full(T_i, Action[DimAction].zeros(d_a))
 
 
 class ActionsCollection(TypedList[NumDemos, Actions[NumPoints, DimAction]]):
     @classmethod
     def zeros_like(
-        cls, demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
+        cls, demos: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     ) -> Self:
-        N = demonstrations.__len__()
-        return cls.full(
-            N, lambda i: Actions[NumPoints, DimAction].zeros_like(demonstrations[i])
-        )
+        N = demos.count
+        return cls.full(N, lambda i: Actions[NumPoints, DimAction].zeros_like(demos[i]))
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -179,7 +171,7 @@ class SamplesCollection(
     @property
     def demo_lengths(self) -> TypedList[NumDemos, NumPoints]:
         return TypedList[NumDemos, NumPoints](
-            samples.__len__() for samples in self.values()
+            samples.length for samples in self.values()
         )
 
     def samples(
@@ -244,7 +236,7 @@ class Demonstration(RuntimeGeneric[NumPoints, DimState, DimAction]):  # D_i
 
     @property
     def time_indices(self) -> TimeIndices[NumPoints]:
-        return TimeIndices[NumPoints](range(self.__len__()))
+        return TimeIndices[NumPoints](range(self.length))
 
     @property
     def state_dim(self) -> DimState:  # d_x
@@ -274,6 +266,10 @@ class Demonstrations(
 
     def __len__(self) -> NumDemos:
         return self.demos.length  # N
+
+    @property
+    def count(self) -> NumDemos:
+        return self.__len__()  # N
 
     @overload
     def __getitem__(

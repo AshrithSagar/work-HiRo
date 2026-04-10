@@ -61,21 +61,18 @@ ZScore: TypeAlias = npDType  # z_{i, t}
 
 class ZScores(TypedList[NumPoints, ZScore]):
     @classmethod
-    def zeros_like(
-        cls, demonstration: Demonstration[NumPoints, DimState, DimAction]
-    ) -> Self:
-        T_i = demonstration.time_indices.length
+    def zeros_like(cls, demo: Demonstration[NumPoints, DimState, DimAction]) -> Self:
+        T_i = demo.time_indices.length
         return cls.full(T_i, ZScore(0))
 
 
 class ZScoresCollection(TypedDict[NumDemos, DemoIndex, ZScores[NumPoints]]):
     @classmethod
     def zeros_like(
-        cls, demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
+        cls, demos: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     ) -> Self:
         return cls.full(
-            demonstrations.demo_indices,
-            lambda i: ZScores[NumPoints].zeros_like(demonstrations[i]),
+            demos.demo_indices, lambda i: ZScores[NumPoints].zeros_like(demos[i])
         )
 
 
@@ -86,21 +83,18 @@ TrustValue: TypeAlias = npDType  # w_{i, t}
 
 class TrustValues(TypedList[NumPoints, TrustValue]):
     @classmethod
-    def zeros_like(
-        cls, demonstration: Demonstration[NumPoints, DimState, DimAction]
-    ) -> Self:
-        T_i = demonstration.time_indices.length
+    def zeros_like(cls, demo: Demonstration[NumPoints, DimState, DimAction]) -> Self:
+        T_i = demo.time_indices.length
         return cls.full(T_i, TrustValue(0))
 
 
 class TrustValuesCollection(TypedDict[NumDemos, DemoIndex, TrustValues[NumPoints]]):
     @classmethod
     def zeros_like(
-        cls, demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
+        cls, demos: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     ) -> Self:
         return cls.full(
-            demonstrations.demo_indices,
-            lambda i: TrustValues[NumPoints].zeros_like(demonstrations[i]),
+            demos.demo_indices, lambda i: TrustValues[NumPoints].zeros_like(demos[i])
         )
 
 
@@ -426,7 +420,7 @@ class VectorMode(
 
 
 def action_mode(
-    _dim_action: DimAction, _num_demos: NumDemos, _num_points: NumPoints
+    _num_demos: NumDemos, _num_points: NumPoints, _dim_action: DimAction
 ) -> VectorMode[
     ActionsCollection[NumDemos, NumPoints, DimAction],
     Action[DimAction],
@@ -450,7 +444,7 @@ def action_mode(
 
 
 def state_mode(
-    _dim_state: DimState, _num_demos: NumDemos, _num_points: NumPoints
+    _num_demos: NumDemos, _num_points: NumPoints, _dim_state: DimState
 ) -> VectorMode[
     StatesCollection[NumDemos, NumPoints, DimState],
     State[DimState],
@@ -574,7 +568,7 @@ class PseudoLabelComputer(
         # Temporal smoothing
         for i in self.demonstrations.demo_indices:
             prev = None
-            for t in self.demonstrations.demos[i].time_indices:
+            for t in self.demonstrations[i].time_indices:
                 y3 = mode.get_item(pre_smooth, i, t)
                 prev = (
                     y3 if prev is None else mode.wrap((1 - kappa) * y3 + kappa * prev)
@@ -594,13 +588,13 @@ class PseudoLabelComputer(
 
         actions = self._compute_labels(
             action_trust_values,
-            action_mode(demos.action_dim, demos.__len__(), demos[0].__len__()),
+            action_mode(demos.count, demos[0].length, demos.action_dim),
             params,
         )
         states = (
             self._compute_labels(
                 state_trust_values,
-                state_mode(demos.state_dim, demos.__len__(), demos[0].__len__()),
+                state_mode(demos.count, demos[0].length, demos.state_dim),
                 params,
             )
             if state_trust_values is not None

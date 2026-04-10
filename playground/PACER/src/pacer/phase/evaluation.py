@@ -116,7 +116,7 @@ class PathConsistencyEvaluator(
             path_tau = Phases[NumPoints](lengths / (lengths[-1] + EPS)).numpy()
             taus = self.phases[demo.index].numpy()
             total += float(np.mean((taus - path_tau) ** 2))
-        N = self.demonstrations.__len__()
+        N = self.demonstrations.count
         return float(total / max(int(N), 1))
 
 

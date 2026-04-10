@@ -105,11 +105,11 @@ class DemInfScorer:
         return self.estimator.estimate(demo.states, demo.actions)
 
     def score_demonstrations(
-        self, demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
+        self, demos: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     ) -> TypedDict[NumDemos, DemoIndex, Score]:
         """Score all demonstrations in a collection."""
         scores = dict[DemoIndex, Score]()
-        for demo in demonstrations:
+        for demo in demos:
             scores[demo.index] = self.score_demonstration(demo)
         return TypedDict[NumDemos, DemoIndex, Score](scores)
 

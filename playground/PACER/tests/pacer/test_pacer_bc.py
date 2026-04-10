@@ -111,14 +111,14 @@ def run_pacerbc(
             plot_trust_values(state_trust_values)
         plot_ribbon_action_field(bins)
         plot_action_comparison(
-            demonstrations.demos[0].actions,
+            demonstrations[0].actions,
             pseudo_labels.actions[0],
             title="Demo 0: Action refinement",
         )
         if pseudo_labels.states is not None:
             plot_states(pseudo_labels.states)
             plot_state_comparison(
-                demonstrations.demos[0].states,
+                demonstrations[0].states,
                 pseudo_labels.states[0],
                 title="Demo 0: State refinement",
             )

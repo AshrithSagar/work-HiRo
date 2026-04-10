@@ -32,21 +32,18 @@ class Phases(TypedList[NumPoints, Phase]):
         return Vector[NumPoints](self)
 
     @classmethod
-    def zeros_like(
-        cls, demonstration: Demonstration[NumPoints, DimState, DimAction]
-    ) -> Self:
-        T_i = demonstration.length
+    def zeros_like(cls, demo: Demonstration[NumPoints, DimState, DimAction]) -> Self:
+        T_i = demo.length
         return cls.full(T_i, Phase(0))
 
 
 class PhasesCollection(TypedDict[NumDemos, DemoIndex, Phases[NumPoints]]):
     @classmethod
     def zeros_like(
-        cls, demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
+        cls, demos: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     ) -> Self:
         return cls.full(
-            demonstrations.demo_indices,
-            lambda i: Phases[NumPoints].zeros_like(demonstrations[i]),
+            demos.demo_indices, lambda i: Phases[NumPoints].zeros_like(demos[i])
         )
 
 

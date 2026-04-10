@@ -91,7 +91,7 @@ class BCTrainer(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
                 diffs, torch.zeros_like(diffs), reduction="sum"
             )  # (T_i, action_dim)
             loss += demo_loss
-            total_samples += demo.__len__()  # T_i
+            total_samples += demo.length  # T_i
         if total_samples > 0:
             loss /= total_samples  # Normalise over samples
         return loss

@@ -95,7 +95,7 @@ class MLPPhaseEstimator(PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]
             mask = torch.ones_like(diff).triu(diagonal=1)  # Enforces `t > t'`
             loss_matrix = F.softplus(margin - diff) * mask
             loss += loss_matrix.sum() / (mask.sum() + EPS)  # Normalise over valid pairs
-        if (n_demos := self.demonstrations.__len__()) > 0:
+        if (n_demos := self.demonstrations.count) > 0:
             loss /= n_demos  # Normalise over demonstrations
         return loss
 
