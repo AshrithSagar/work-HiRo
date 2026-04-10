@@ -12,7 +12,7 @@ https://arxiv.org/abs/2502.08623
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
 from dataclasses import dataclass
-from typing import Any, TypeAlias
+from typing import Any, Protocol, TypeAlias, override
 
 import numpy as np
 from numpy.typing import NDArray
@@ -30,11 +30,8 @@ Score: TypeAlias = float  # Sc(tau)
 # the notation S for States, and Sc for Scores hereinafter.
 
 
-@dataclass
-class DemInfEstimator:
-    """Estimates `I(S; A) = H(S) + H(A) - H(S, A)` using the KSG Estimator."""
-
-    k: int = 3
+class MutualInformationEstimator(Protocol):
+    """Interface for any mutual information estimator between states and actions."""
 
     def estimate(
         self,
@@ -42,9 +39,29 @@ class DemInfEstimator:
         actions: Actions[NumPoints, DimAction],
     ) -> Score:
         """
-        Calculates the Mutual Information score for a set of state-action pairs.
-        Higher score => Higher quality demonstration.
+        Estimate mutual information I(S; A) for the given state-action pairs.
+        Higher value indicates higher quality (more informative) data.
         """
+        ...
+
+
+@dataclass
+class KSGEstimator(MutualInformationEstimator):
+    """
+    Kraskov-Stögbauer-Grassberger (KSG) MI estimator.\\
+    This follows the classic KSG Algorithm 1 (Kraskov et al., 2004).
+    """
+
+    k: int = 3
+    jitter: float = 1e-10
+
+    @override
+    def estimate(
+        self,
+        states: States[NumPoints, DimState],
+        actions: Actions[NumPoints, DimAction],
+    ) -> Score:
+        """Calculate MI score using KSG estimator."""
 
         states_np = states.numpy()
         actions_np = actions.numpy()
@@ -52,26 +69,24 @@ class DemInfEstimator:
         # Ensure we have enough samples for k-NN
         n_samples = states.length
         if n_samples <= self.k:
-            return 0.0
-
-        # KSG Algorithm 1 Implementation
-        # Reference: Kraskov et al. "Estimating mutual information." (2004).
+            return Score(0.0)
 
         # Add small noise to prevent duplicate distances (jittering)
-        states_np += 1e-10 * np.random.randn(*states_np.shape)
-        actions_np += 1e-10 * np.random.randn(*actions_np.shape)
+        if self.jitter > 0.0:
+            states_np += 1e-10 * np.random.randn(*states_np.shape)
+            actions_np += 1e-10 * np.random.randn(*actions_np.shape)
 
-        # Combined space
-        states_actions_np = np.hstack([states_np, actions_np])
+        # Joint space for k-NN
+        joint_np = np.hstack([states_np, actions_np])
 
-        # Find distances to k-th neighbor in joint space
+        # Find distances to k-th neighbor in joint space (using Chebyshev / max-norm)
         nn_joint = NearestNeighbors(n_neighbors=self.k + 1, metric="chebyshev")
-        nn_joint.fit(states_actions_np)
-        distances, _ = nn_joint.kneighbors(states_actions_np)
+        nn_joint.fit(joint_np)
+        distances, _ = nn_joint.kneighbors(joint_np)
         eps = distances[:, self.k]  # Distance to k-th neighbor
 
         # Count points within eps in marginal spaces
-        def count_neighbors(data: Matrix[Any, Any], eps: Any) -> NDArray[Any]:
+        def count_neighbors(data: Matrix[Any, Any], eps: Any) -> NDArray[np.int64]:
             nn = NearestNeighbors(metric="chebyshev")
             nn.fit(data)
             # Find points within radius eps (strictly less than)
@@ -93,10 +108,10 @@ class DemInfEstimator:
 
 
 @dataclass
-class DemInfScorer:
+class Scorer:
     """Utility to score entire demonstrations or sub-samples."""
 
-    estimator: DemInfEstimator
+    estimator: MutualInformationEstimator
 
     def score_demonstration(
         self, demo: Demonstration[NumPoints, DimState, DimAction]
