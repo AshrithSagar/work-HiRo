@@ -61,10 +61,6 @@ reportAny = false
 reportExplicitAny = false
 reportUnusedCallResult = false
 
-[[tool.mypy.overrides]]
-module = "pylasadataset.*"
-ignore_missing_imports = true
-
 [tool.ruff.lint]
 ignore = ["F403", "F405"]
 
