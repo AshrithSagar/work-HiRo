@@ -419,9 +419,7 @@ class VectorMode(
     attenuation_requires_state_tangent: bool
 
 
-def action_mode(
-    _num_demos: NumDemos, _num_points: NumPoints, _dim_action: DimAction
-) -> VectorMode[
+def action_mode() -> VectorMode[
     ActionsCollection[NumDemos, NumPoints, DimAction],
     Action[DimAction],
     NumDemos,
@@ -443,9 +441,7 @@ def action_mode(
     )
 
 
-def state_mode(
-    _num_demos: NumDemos, _num_points: NumPoints, _dim_state: DimState
-) -> VectorMode[
+def state_mode() -> VectorMode[
     StatesCollection[NumDemos, NumPoints, DimState],
     State[DimState],
     NumDemos,
@@ -584,19 +580,9 @@ class PseudoLabelComputer(
         *,
         params: PseudoLabelParams,
     ) -> PseudoLabels[NumDemos, NumPoints, DimState, DimAction]:
-        demos = self.demonstrations
-
-        actions = self._compute_labels(
-            action_trust_values,
-            action_mode(demos.count, demos[0].length, demos.action_dim),
-            params,
-        )
+        actions = self._compute_labels(action_trust_values, action_mode(), params)
         states = (
-            self._compute_labels(
-                state_trust_values,
-                state_mode(demos.count, demos[0].length, demos.state_dim),
-                params,
-            )
+            self._compute_labels(state_trust_values, state_mode(), params)
             if state_trust_values is not None
             else None
         )
