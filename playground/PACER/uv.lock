@@ -1289,7 +1289,7 @@ wheels = [
 [[package]]
 name = "pylasahandwritingdataset"
 version = "0.2.1"
-source = { git = "https://github.com/AshrithSagar/pyLASAHandwritingDataset.git?rev=main#ffbe10e6a6987f6ea7d0b1f94342d90973fdabd4" }
+source = { git = "https://github.com/AshrithSagar/pyLASAHandwritingDataset.git?rev=main#038cdb9566ed7ec9987bf38ea2ab0fa13248dd75" }
 dependencies = [
     { name = "numpy" },
     { name = "platformdirs" },
