@@ -57,7 +57,7 @@ ResidualsCollection: TypeAlias = TypedList[NumDemos, Residuals[NumPoints]]
 # ──────────────────────────────────────────────────────────────────────────────
 
 ZScore: TypeAlias = npDType  # z_{i, t}
-"""Normalized residual (z-score)."""
+"""Normalised residual (z-score)."""
 
 
 class ZScores(TypedList[NumPoints, ZScore]):

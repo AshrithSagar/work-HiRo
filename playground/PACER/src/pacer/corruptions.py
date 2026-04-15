@@ -22,6 +22,8 @@ from pacer.utils import EPS, SEED, set_seed
 
 @dataclass
 class DemonstrationCorrupter(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
+    """Applies noise/outliers/bias/dropout to actions to simulate imperfect demonstrations."""
+
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     noise_std: float = 0.0
     outlier_fraction: float = 0.0

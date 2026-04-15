@@ -25,6 +25,7 @@ from pacer.typings import (
 ## ── Phase Alignment ──────────────────────────────────────────────────────────
 
 Phase: TypeAlias = npDType  # tau \in [0, 1]
+r"""Scalar phase `tau \in [0,1]` representing normalised progress along a trajectory."""
 
 
 class Phases(TypedList[NumPoints, Phase]):

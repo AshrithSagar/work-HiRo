@@ -70,6 +70,7 @@ def median(
 def normalise(
     vec: onp.ToArray1D, /, method: Literal["NORM", "MINMAX", "ZSCORE"]
 ) -> onp.Array1D[npDType]:
+    """Normalise a vector using norm, min-max, or z-score scaling."""
     _vec: onp.Array1D[npDType] = np.asarray(vec, dtype=npDType)
     match method:
         case "NORM":
