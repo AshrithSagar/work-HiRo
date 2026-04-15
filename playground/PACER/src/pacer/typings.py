@@ -17,15 +17,27 @@ from typingkit.numpy._typed.helpers import Array1D, Array2D, Dim1, Dim2
 ## ── Typings ──────────────────────────────────────────────────────────────────
 
 DimState = TypeVar("DimState", bound=int, default=int)  # d_x
+"""State dimension `d_x`."""
+
 DimAction = TypeVar("DimAction", bound=int, default=int)  # d_a
+"""Action dimension `d_a`."""
+
 NumPoints = TypeVar("NumPoints", bound=int, default=int)  # T_i
+"""Number of time steps `T_i` in a demonstration `i`."""
+
 NumDemos = TypeVar("NumDemos", bound=int, default=int)  # N
+"""Number of demonstrations `N`."""
+
 NumBins = TypeVar("NumBins", bound=int, default=int)  # B
+"""Number of phase bins `B`."""
 
 # ──────────────────────────────────────────────────────────────────────────────
 
 npDType: TypeAlias = np.float32
+"""The default NumPy scalar dtype."""
+
 torchDType = torch.float32
+"""The default PyTorch dtype."""
 
 Vector: TypeAlias = Array1D[Dim1, np.dtype[npDType]]
 Matrix: TypeAlias = Array2D[Dim1, Dim2, np.dtype[npDType]]

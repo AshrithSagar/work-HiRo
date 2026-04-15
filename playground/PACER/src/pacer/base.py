@@ -205,6 +205,8 @@ class SamplesCollection(
 # Behaves like Samples
 @dataclass(kw_only=True)
 class Demonstration(RuntimeGeneric[NumPoints, DimState, DimAction]):  # D_i
+    """A single trajectory of states and actions."""
+
     index: DemoIndex  # i
     states: States[NumPoints, DimState]  # [x_{i, t}]_{t = 1}^{T_i}
     actions: Actions[NumPoints, DimAction]  # [a_{i, t}]_{t = 1}^{T_i}
@@ -262,6 +264,8 @@ class Demonstration(RuntimeGeneric[NumPoints, DimState, DimAction]):  # D_i
 class Demonstrations(
     RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]
 ):  # [D_i]_{i = 1}^{N}
+    """A collection of multiple demonstrations."""
+
     demos: TypedList[NumDemos, Demonstration[NumPoints, DimState, DimAction]]
 
     def __len__(self) -> NumDemos:

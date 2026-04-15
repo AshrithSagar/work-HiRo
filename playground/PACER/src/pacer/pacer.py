@@ -57,6 +57,7 @@ ResidualsCollection: TypeAlias = TypedList[NumDemos, Residuals[NumPoints]]
 # ──────────────────────────────────────────────────────────────────────────────
 
 ZScore: TypeAlias = npDType  # z_{i, t}
+"""Normalized residual (z-score)."""
 
 
 class ZScores(TypedList[NumPoints, ZScore]):
@@ -79,6 +80,7 @@ class ZScoresCollection(TypedDict[NumDemos, DemoIndex, ZScores[NumPoints]]):
 # ──────────────────────────────────────────────────────────────────────────────
 
 TrustValue: TypeAlias = npDType  # w_{i, t}
+"""Confidence weight for a sample."""
 
 
 class TrustValues(TypedList[NumPoints, TrustValue]):
@@ -182,6 +184,8 @@ class RibbonToken(RuntimeGeneric[DimState, DimAction]):  # z_b
 
 @dataclass(kw_only=True)
 class Bin(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
+    """Container of samples assigned to a phase bin `b`."""
+
     index: BinIndex  # b
     samples_collection: SamplesCollection[NumDemos, NumPoints, DimState, DimAction] = (
         field(
@@ -211,10 +215,13 @@ class Bin(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
 
 
 Bins: TypeAlias = TypedList[NumBins, Bin[NumDemos, NumPoints, DimState, DimAction]]
+"""Ordered collection of phase bins."""
 
 
 @dataclass
 class Binner(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
+    """Assigns samples to bins based on phase."""
+
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     phases: PhasesCollection[NumDemos, NumPoints]
     n_bins: NumBins = field(default=cast(NumBins, 96), kw_only=True)  # B
@@ -253,6 +260,8 @@ class Binner(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
 class RibbonTokenConsolidator(
     RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]
 ):
+    """Computes ribbon tokens from binned samples."""
+
     bins: Bins[NumBins, NumDemos, NumPoints, DimState, DimAction]
 
     def consolidate_ribbon_tokens(
@@ -311,6 +320,8 @@ class RibbonTokenConsolidator(
 class TrustValueComputer(
     RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]
 ):
+    """Computes z-scores and trust values for samples."""
+
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     bins: Bins[NumBins, NumDemos, NumPoints, DimState, DimAction]
     choice: Literal["State", "Action"] = "Action"
@@ -390,6 +401,8 @@ class TrustValueComputer(
 
 @dataclass(kw_only=True)
 class PseudoLabels(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
+    """Container for corrected action/state labels."""
+
     actions: ActionsCollection[NumDemos, NumPoints, DimAction]
     states: StatesCollection[NumDemos, NumPoints, DimState] | None = None
 
@@ -402,6 +415,8 @@ _Coll = TypeVar("_Coll")  # StatesCollection / ActionsCollection
 class VectorMode(
     RuntimeGeneric[_Coll, _VecT, NumDemos, NumPoints, DimState, DimAction]
 ):
+    """Encapsulates operations for state or action processing."""
+
     # Field access
     vec_from_sample: Callable[[Sample[DimState, DimAction]], _VecT]
     anchor_from_stats: Callable[[RobustStatistics[DimState, DimAction]], _VecT]
@@ -427,6 +442,7 @@ def action_mode() -> VectorMode[
     DimState,
     DimAction,
 ]:
+    """`VectorMode` configuration for actions."""
     return VectorMode(
         vec_from_sample=lambda sample: sample.action,
         anchor_from_stats=lambda stats: stats.median_action,
@@ -449,6 +465,7 @@ def state_mode() -> VectorMode[
     DimState,
     DimAction,
 ]:
+    """`VectorMode` configuration for states."""
     return VectorMode(
         vec_from_sample=lambda sample: sample.state,
         anchor_from_stats=lambda stats: stats.median_state,
@@ -465,6 +482,8 @@ def state_mode() -> VectorMode[
 
 @dataclass(kw_only=True)
 class PseudoLabelParams:
+    """Hyperparameters controlling pseudo-label corrections."""
+
     debias_weight: npDType | float = 0.5  # lambda_{debias}
     sideways_attenuation_shrinkage: npDType | float = 0.5  # rho_0
     speed_regularisation_influence: npDType | float = 0.5  # eta_0
@@ -475,6 +494,8 @@ class PseudoLabelParams:
 class PseudoLabelComputer(
     RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]
 ):
+    """Generates corrected pseudo-labels using trust and bin statistics."""
+
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     bins: Bins[NumBins, NumDemos, NumPoints, DimState, DimAction]
 
@@ -581,6 +602,7 @@ class PseudoLabelComputer(
         action_params: PseudoLabelParams,
         state_params: PseudoLabelParams | None = None,
     ) -> PseudoLabels[NumDemos, NumPoints, DimState, DimAction]:
+        """Produces final pseudo-labels for actions and optionally states."""
         actions = self._compute_labels(
             action_trust_values, action_mode(), action_params
         )
