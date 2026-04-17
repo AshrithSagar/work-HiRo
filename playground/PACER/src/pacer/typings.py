@@ -5,6 +5,8 @@ Typing utils
 """
 # src/pacer/typings.py
 
+# pyright: reportPrivateImportUsage = false
+
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
 from typing import NamedTuple, TypeAlias, TypeVar

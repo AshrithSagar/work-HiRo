@@ -4,6 +4,8 @@ Utils
 """
 # src/pacer/utils.py
 
+# pyright: reportPrivateImportUsage = false
+
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
 import random

@@ -4,6 +4,8 @@ Run this once before using DemInf.
 """
 # tests/train_vaes.py
 
+# pyright: reportPrivateImportUsage = false
+
 import os
 
 import numpy as np

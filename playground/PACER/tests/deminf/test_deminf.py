@@ -3,6 +3,8 @@ Test DemInf
 """
 # tests/test_deminf.py
 
+# pyright: reportPrivateImportUsage = false
+
 import os
 from typing import Any
 

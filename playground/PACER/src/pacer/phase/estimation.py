@@ -4,6 +4,8 @@ Phase estimation
 """
 # src/pacer/phase/estimation.py
 
+# pyright: reportPrivateImportUsage = false
+
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
 from abc import ABC, abstractmethod

@@ -9,6 +9,8 @@ https://arxiv.org/abs/2502.08623
 """
 # src/pacer/deminf.py
 
+# pyright: reportPrivateImportUsage = false
+
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
 from collections.abc import Sequence

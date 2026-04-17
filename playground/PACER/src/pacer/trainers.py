@@ -4,6 +4,8 @@ Policy training
 """
 # src/pacer/trainers.py
 
+# pyright: reportPrivateImportUsage = false
+
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
 from dataclasses import InitVar, dataclass, field
