@@ -16,7 +16,7 @@ from typingkit.numpy._typed.helpers import TWO
 
 from pacer import console
 from pacer.base import Demonstrations
-from pacer.corruptions import DemonstrationCorrupter
+from pacer.corruptions import NoisyDemonstrationCorrupter
 from pacer.datasets import InteractiveDataSet, LASADataSet
 from pacer.phase.base import PhasesCollection
 from pacer.phase.estimation import (
@@ -68,7 +68,7 @@ def get_demonstrations(
             demonstrations = drawer.to_demonstrations()
 
     if use_corruptions:
-        corrupter = DemonstrationCorrupter[Any, Any, TWO, TWO](
+        corrupter = NoisyDemonstrationCorrupter[Any, Any, TWO, TWO](
             demonstrations=demonstrations,
             noise_std=0.2,
             outlier_fraction=0.2,

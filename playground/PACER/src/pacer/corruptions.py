@@ -7,7 +7,9 @@ Dataset corruptions
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
 import random
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import override
 
 import numpy as np
 import numpy.linalg as la
@@ -21,10 +23,24 @@ from pacer.utils import EPS, SEED, set_seed
 
 
 @dataclass
-class DemonstrationCorrupter(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
+class DemonstrationCorrupter(
+    RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction], ABC
+):
+    demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
+
+    @abstractmethod
+    def inject_corruptions(
+        self,
+    ) -> Demonstrations[NumDemos, NumPoints, DimState, DimAction]:
+        raise NotImplementedError
+
+
+@dataclass
+class NoisyDemonstrationCorrupter(
+    DemonstrationCorrupter[NumDemos, NumPoints, DimState, DimAction]
+):
     """Applies noise/outliers/bias/dropout to actions to simulate imperfect demonstrations."""
 
-    demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     noise_std: float = 0.0
     outlier_fraction: float = 0.0
     outlier_scale: float = 3.0
@@ -32,6 +48,7 @@ class DemonstrationCorrupter(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAc
     dropout_fraction: float = 0.0
     seed: int = SEED
 
+    @override
     def inject_corruptions(
         self,
     ) -> Demonstrations[NumDemos, NumPoints, DimState, DimAction]:
