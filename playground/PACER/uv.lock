@@ -360,6 +360,15 @@ wheels = [
 ]
 
 [[package]]
+name = "importlib-resources"
+version = "7.1.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e4/06/b56dfa750b44e86157093bc8fca0ab81dccbf5260510de4eaf1cb69b5b99/importlib_resources-7.1.0.tar.gz", hash = "sha256:0722d4c6212489c530f2a145a34c0a7a3b4721bc96a15fada5930e2a0b760708", size = 44985, upload-time = "2026-04-12T16:36:09.232Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8a/db/55a262f3606bebcae07cc14095338471ad7c0bbcaa37707e6f0ee49725b7/importlib_resources-7.1.0-py3-none-any.whl", hash = "sha256:1bd7b48b4088eddb2cd16382150bb515af0bd2c70128194392725f82ad2c96a1", size = 37232, upload-time = "2026-04-12T16:36:08.219Z" },
+]
+
+[[package]]
 name = "iniconfig"
 version = "2.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1062,6 +1071,7 @@ test = [
 typecheck = [
     { name = "basedpyright" },
     { name = "mypy", extra = ["mypyc"] },
+    { name = "pycroscope" },
     { name = "pyrefly" },
     { name = "pyright" },
     { name = "ty" },
@@ -1113,6 +1123,7 @@ test = [
 typecheck = [
     { name = "basedpyright", specifier = ">=1.39.2" },
     { name = "mypy", extras = ["mypyc"], specifier = ">=1.20.1" },
+    { name = "pycroscope", specifier = ">=0.3.0" },
     { name = "pyrefly", specifier = ">=0.61.1" },
     { name = "pyright", specifier = ">=1.1.408" },
     { name = "ty", specifier = ">=0.0.31" },
@@ -1225,6 +1236,19 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/5e/91/93632b6ba12ad69c61991e3208bde88486fdfc152be8cfdd13444e9bc650/pycairo-1.29.0-cp314-cp314-win_arm64.whl", hash = "sha256:b72200ea0e5f73ae4c788cd2028a750062221385eb0e6d8f1ecc714d0b4fdf82", size = 719537, upload-time = "2025-11-11T19:12:55.016Z" },
     { url = "https://files.pythonhosted.org/packages/93/23/37053c039f8d3b9b5017af9bc64d27b680c48a898d48b72e6d6583cf0155/pycairo-1.29.0-cp314-cp314t-win_amd64.whl", hash = "sha256:5e45fce6185f553e79e4ef1722b8e98e6cde9900dbc48cb2637a9ccba86f627a", size = 874015, upload-time = "2025-11-11T19:12:28.47Z" },
     { url = "https://files.pythonhosted.org/packages/d7/54/123f6239685f5f3f2edc123f1e38d2eefacebee18cf3c532d2f4bd51d0ef/pycairo-1.29.0-cp314-cp314t-win_arm64.whl", hash = "sha256:caba0837a4b40d47c8dfb0f24cccc12c7831e3dd450837f2a356c75f21ce5a15", size = 721404, upload-time = "2025-11-11T19:12:36.919Z" },
+]
+
+[[package]]
+name = "pycroscope"
+version = "0.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typeshed-client" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9b/49/cbcb4a4fe2de7cc3df44f846daf5a7f847a13f41264830fe0e08405f54e2/pycroscope-0.3.0.tar.gz", hash = "sha256:39930e55cd2bdcad187787b864473d45dffbbfe1768d91d4496978f341ba7ec2", size = 494623, upload-time = "2026-03-02T04:23:43.91Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c1/0c/1f16dd199d8bea601fe7953275ffc5d332216664555e2895df81f12db9db/pycroscope-0.3.0-py3-none-any.whl", hash = "sha256:07029ab574d269512d02840b5ef1b8750e8d683d63d03c52046eda6f63cb52f5", size = 539350, upload-time = "2026-03-02T04:23:42.188Z" },
 ]
 
 [[package]]
@@ -1875,6 +1899,19 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/e7/41/0045814e0f0676e3526453a4e5beb4914aae354126a7de7225c6c2d7568e/types_xlrd-2.0.0.20260408.tar.gz", hash = "sha256:f86341825dcecc82c9eb4955308a9e7ea07d9d7290aca9a8f5373d7cdf172a2c", size = 13984, upload-time = "2026-04-08T04:29:05.963Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/4c/3d/fa50879aad7e63d1b0d4fe6ea97db0e1a7141a223f6f8d8eafa9df5033a8/types_xlrd-2.0.0.20260408-py3-none-any.whl", hash = "sha256:a140966631a855d69d69aa8842526123f2aaa1f855338083e361561a266a6f5a", size = 16879, upload-time = "2026-04-08T04:29:05.143Z" },
+]
+
+[[package]]
+name = "typeshed-client"
+version = "2.10.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "importlib-resources" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/46/de/cc79c33f6268740567ea109c11809e3c799daf5c1c5aeffb9c3f3b052dbe/typeshed_client-2.10.0.tar.gz", hash = "sha256:906bf343595aed4a120ccc0a35dde2d85cae8c15d015703a768541291e38cfc3", size = 522565, upload-time = "2026-04-18T04:27:36.234Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a9/a9/c3ee9878ec14e4b6c274152767d101c690ab1c52844dc93c56e5e40925da/typeshed_client-2.10.0-py3-none-any.whl", hash = "sha256:d3dc011865f945d8124e3733d219ec6abc7cf755cf1a80cc41099915b21c036c", size = 787445, upload-time = "2026-04-18T04:27:34.585Z" },
 ]
 
 [[package]]
