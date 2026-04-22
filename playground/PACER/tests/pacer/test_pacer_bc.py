@@ -18,6 +18,7 @@ from pacer.pacer import (
     PseudoLabelParams,
     RibbonTokenConsolidator,
     TrustValueComputer,
+    TrustValueParams,
 )
 from pacer.plotting import (
     plot_action_comparison,
@@ -65,16 +66,20 @@ def run_pacerbc(
     action_trust_values = TrustValueComputer(
         demonstrations, bins, choice="Action"
     ).compute_trust_values(
-        tukey_cutoff=4.685,  # c
-        min_trust=0.02,  # w_min
+        params=TrustValueParams(
+            tukey_cutoff=4.685,  # c
+            min_trust=0.02,  # w_min
+        ),
     )
     state_trust_values = None
     if use_state_labels:
         state_trust_values = TrustValueComputer(
             demonstrations, bins, choice="State"
         ).compute_trust_values(
-            tukey_cutoff=4.685,  # c
-            min_trust=0.02,  # w_min
+            params=TrustValueParams(
+                tukey_cutoff=4.685,  # c
+                min_trust=0.02,  # w_min
+            )
         )
     pseudo_labels = PseudoLabelComputer(demonstrations, bins).compute_pseudo_labels(
         action_trust_values,

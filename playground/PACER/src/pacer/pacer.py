@@ -316,6 +316,17 @@ class RibbonTokenConsolidator(
         return self.bins
 
 
+@dataclass(kw_only=True)
+class TrustValueParams:
+    """Hyperparameters controlling trust value computations."""
+
+    tukey_cutoff: npDType | float  # c
+    min_trust: npDType | float  # w_min
+
+    def __post_init__(self) -> None:
+        assert 3 <= self.tukey_cutoff <= 5
+
+
 @dataclass
 class TrustValueComputer(
     RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]
@@ -377,24 +388,20 @@ class TrustValueComputer(
         return z_scores
 
     def compute_trust_values(
-        self,
-        *,
-        tukey_cutoff: npDType | float,  # c
-        min_trust: npDType | float,  # w_min
+        self, *, params: TrustValueParams
     ) -> TrustValuesCollection[NumDemos, NumPoints]:  # (N x T_)
-        assert 3 <= tukey_cutoff <= 5
         trust_values = TrustValuesCollection[NumDemos, NumPoints].zeros_like(
             self.demonstrations
         )  # (N x T_)
         z_scores = self.compute_z_scores()
         for i, scores in z_scores.items():
             for t, z_score in enumerate(scores):
-                if z_score <= tukey_cutoff:
-                    trust_value = (1 - (z_score / tukey_cutoff) ** 2) ** 2
+                if z_score <= params.tukey_cutoff:
+                    trust_value = (1 - (z_score / params.tukey_cutoff) ** 2) ** 2
                 else:
                     trust_value = TrustValue(0)
-                if trust_value < min_trust:
-                    trust_value = TrustValue(min_trust)
+                if trust_value < params.min_trust:
+                    trust_value = TrustValue(params.min_trust)
                 trust_values[i][t] = trust_value
         return trust_values  # [[w_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
 
