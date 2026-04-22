@@ -489,6 +489,10 @@ class PseudoLabelParams:
     speed_regularisation_influence: npDType | float = 0.5  # eta_0
     temporal_smoothing_weight: npDType | float = 0.0  # kappa
 
+    def __post_init__(self) -> None:
+        assert 0 <= self.sideways_attenuation_shrinkage <= 1
+        assert 0 <= self.speed_regularisation_influence <= 1
+
 
 @dataclass
 class PseudoLabelComputer(
@@ -538,12 +542,7 @@ class PseudoLabelComputer(
         mode: VectorMode[_Coll, _VecT, NumDemos, NumPoints, DimState, DimAction],
         params: PseudoLabelParams,
     ) -> _Coll:
-        rho_0 = npDType(params.sideways_attenuation_shrinkage)
-        assert 0 <= rho_0 <= 1
-        eta_0 = npDType(params.speed_regularisation_influence)
-        assert 0 <= eta_0 <= 1
         kappa = npDType(params.temporal_smoothing_weight)
-
         pre_smooth = mode.make_collection(self.demonstrations)  # y^{(3)} for all (i, t)
         smoothed = mode.make_collection(self.demonstrations)  # y* for all (i, t)
 
