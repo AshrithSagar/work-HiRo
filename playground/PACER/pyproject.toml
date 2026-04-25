@@ -42,7 +42,7 @@ dev = [
     "types-tqdm>=4.67.3.20260408",
     "types-xlrd>=2.0.0.20260408",
 ]
-lint = ["ruff>=0.15.11"]
+lint = ["ruff>=0.15.12"]
 test = ["pytest>=9.0.3", "pytest-memray>=1.8.0"]
 typecheck = [
     "basedpyright>=1.39.3",
