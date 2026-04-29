@@ -6,6 +6,7 @@ Test utils
 
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
+from pathlib import Path
 from typing import Any, Literal
 
 import matplotlib.pyplot as plt
@@ -17,7 +18,14 @@ from typingkit.numpy._typed.helpers import TWO
 from pacer import console
 from pacer.base import Demonstrations
 from pacer.corruptions import NoisyDemonstrationCorrupter
-from pacer.datasets import InteractiveDataSet, LASADataSet
+from pacer.datasets import InteractiveDataSet, LASADataSet, LegacyInteractiveDataSet
+from pacer.datasets.interactive.base import make_figure
+from pacer.datasets.interactive.plugins import (
+    LASALoadPlugin,
+    LoadPlugin,
+    SavePlugin,
+    default_plugins,
+)
 from pacer.phase.base import PhasesCollection
 from pacer.phase.estimation import (
     MLPPhaseEstimator,
@@ -32,7 +40,13 @@ from pacer.utils import SEED, TORCH_DEVICE
 ## ── Typings ──────────────────────────────────────────────────────────────────
 
 type DemonstrationsChoice = Literal[
-    "FROM_LASA", "CUSTOM_FROM_LOAD", "CUSTOM_FROM_LASA", "CUSTOM_DRAW"
+    "FROM_LASA",
+    "CUSTOM_FROM_LOAD",
+    "CUSTOM_FROM_LASA",
+    "CUSTOM_DRAW",
+    "LEGACY_CUSTOM_FROM_LOAD",
+    "LEGACY_CUSTOM_FROM_LASA",
+    "LEGACY_CUSTOM_DRAW",
 ]
 type PhaseEstimatorChoice = Literal["MLP", "NORMALISED_TIME_INDEX", "PATH_LENGTH"]
 
@@ -53,19 +67,50 @@ def get_demonstrations(
             demonstrations = LASADataSet(pattern).to_demonstrations()
         case "CUSTOM_FROM_LOAD":
             assert filepath is not None
-            drawer = InteractiveDataSet.load(filepath)
+            fig, (toolbar_ax, ax) = make_figure()
+            plugins = default_plugins(fig, ax, toolbar_ax)
+            plugins.append(LoadPlugin(Path(filepath)))
+            drawer = InteractiveDataSet(
+                plugins=plugins, fig=fig, ax=ax, toolbar_ax=toolbar_ax
+            )
+            drawer.show()
             demonstrations = drawer.to_demonstrations()
         case "CUSTOM_FROM_LASA":
             assert pattern is not None
-            drawer = InteractiveDataSet.from_LASA(pattern)
-            plt.show(block=True)  # pyright: ignore[reportUnknownMemberType]
+            fig, (toolbar_ax, ax) = make_figure()
+            plugins = default_plugins(fig, ax, toolbar_ax)
+            plugins.append(LASALoadPlugin(pattern))
+            drawer = InteractiveDataSet(
+                plugins=plugins, fig=fig, ax=ax, toolbar_ax=toolbar_ax
+            )
+            drawer.show()
             demonstrations = drawer.to_demonstrations()
         case "CUSTOM_DRAW":
-            drawer = InteractiveDataSet()
+            fig, (toolbar_ax, ax) = make_figure()
+            plugins = default_plugins(fig, ax, toolbar_ax)
+            if filepath is not None:
+                plugins.append(SavePlugin(Path(filepath)))
+                plugins.append(LoadPlugin(Path(filepath)))
+            drawer = InteractiveDataSet(
+                plugins=plugins, fig=fig, ax=ax, toolbar_ax=toolbar_ax
+            )
+            drawer.show()
+            demonstrations = drawer.to_demonstrations()
+        case "LEGACY_CUSTOM_FROM_LOAD":
+            assert filepath is not None
+            legacy_drawer = LegacyInteractiveDataSet.load(filepath)
+            demonstrations = legacy_drawer.to_demonstrations()
+        case "LEGACY_CUSTOM_FROM_LASA":
+            assert pattern is not None
+            legacy_drawer = LegacyInteractiveDataSet.from_LASA(pattern)
+            plt.show(block=True)  # pyright: ignore[reportUnknownMemberType]
+            demonstrations = legacy_drawer.to_demonstrations()
+        case "LEGACY_CUSTOM_DRAW":
+            legacy_drawer = LegacyInteractiveDataSet()
             plt.show(block=True)  # pyright: ignore[reportUnknownMemberType]
             if filepath is not None:
-                drawer.save(filepath)
-            demonstrations = drawer.to_demonstrations()
+                legacy_drawer.save(filepath)
+            demonstrations = legacy_drawer.to_demonstrations()
 
     if use_corruptions:
         corrupter = NoisyDemonstrationCorrupter[Any, Any, TWO, TWO](

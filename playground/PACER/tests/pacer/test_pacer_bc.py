@@ -196,21 +196,21 @@ def test_pacer_bc(
 
     for pattern in LASA_patterns:
         match demonstrations_choice:
-            case "FROM_LASA" | "CUSTOM_FROM_LASA":
+            case "FROM_LASA" | "CUSTOM_FROM_LASA" | "LEGACY_CUSTOM_FROM_LASA":
                 assert pattern is not None
                 console.rule(
                     f"[bold gold3]LASA Pattern: {pattern}[/bold gold3]",
                     characters="\u2501",
                     style="gold3",
                 )
-            case "CUSTOM_FROM_LOAD":
+            case "CUSTOM_FROM_LOAD" | "LEGACY_CUSTOM_FROM_LOAD":
                 assert filepath is not None
                 console.rule(
                     f"[bold gold3]File: {filepath}[/gold3]",
                     characters="\u2501",
                     style="bold gold3",
                 )
-            case "CUSTOM_DRAW":
+            case "CUSTOM_DRAW" | "LEGACY_CUSTOM_DRAW":
                 console.rule(
                     "[bold gold3]Custom demonstrations[/bold gold3]",
                     characters="\u2501",

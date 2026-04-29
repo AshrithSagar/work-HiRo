@@ -3,7 +3,7 @@ Interactive dataset drawing
 =======
 Draw your own custom 2D trajectories with the mouse
 """
-# src/pacer/datasets/interactive.py
+# src/pacer/datasets/interactive/legacy.py
 
 # pyright: standard
 
@@ -27,7 +27,7 @@ from pacer.typings import NumDemos, NumPoints, npDType
 ## ── Interactive Drawer ───────────────────────────────────────────────────────
 
 
-class InteractiveDataSet(Generic[NumDemos, NumPoints]):
+class LegacyInteractiveDataSet(Generic[NumDemos, NumPoints]):
     """Draw demonstrations with mouse."""
 
     def __init__(
