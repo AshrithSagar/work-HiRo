@@ -33,7 +33,7 @@ from pacer.testutils import (
     DemonstrationLoader,
     DemonstrationsChoice,
     PhaseEstimatorChoice,
-    get_phases,
+    PhasePipeline,
 )
 from pacer.trainers import BCTrainer, PACERBCTrainer
 from pacer.typings import NumDemos, NumPoints
@@ -54,9 +54,9 @@ def run_pacerbc(
     )
 
     # PACER
-    phases = get_phases(
+    phases = PhasePipeline(
         demonstrations, choice=phase_estimator_choice, evaluate_phases=evaluate_phases
-    )
+    ).run()
     bins = Binner(
         demonstrations,
         phases,

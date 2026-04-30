@@ -8,7 +8,7 @@ Test utils
 
 from dataclasses import KW_ONLY, dataclass
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Generic, Literal
 
 import matplotlib.pyplot as plt
 from pyLASAHandwritingDataset import SinglePatternMotion
@@ -128,45 +128,47 @@ class DemonstrationLoader:
         return demonstrations
 
 
-def get_phases(
-    demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction],
-    choice: PhaseEstimatorChoice = "MLP",
-    *,
-    device: DeviceLikeType = TORCH_DEVICE,
-    seed: int = SEED,
+@dataclass
+class PhasePipeline(Generic[NumDemos, NumPoints, DimState, DimAction]):
+    demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
+    choice: PhaseEstimatorChoice = "MLP"
+    _: KW_ONLY
+    device: DeviceLikeType = TORCH_DEVICE
+    seed: int = SEED
     #
-    phase_hidden_dim: int = 128,
-    phase_margin: float = 1.0,  # m
-    phase_lr: float = 1e-3,
-    phase_epochs: int = 240,
+    phase_hidden_dim: int = 128
+    phase_margin: float = 1.0  # m
+    phase_lr: float = 1e-3
+    phase_epochs: int = 240
     #
-    evaluate_phases: bool = False,
-) -> PhasesCollection[NumDemos, NumPoints]:
-    phase_estimator: PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]
-    match choice:
-        case "MLP":
-            phase_estimator = MLPPhaseEstimator(
-                demonstrations, device=device, seed=seed
-            )
-            scorer_loss = phase_estimator.train(
-                hidden_dim=phase_hidden_dim,
-                margin=phase_margin,  # m
-                lr=phase_lr,
-                epochs=phase_epochs,
-            )
-            console.print(f"Phase scorer loss: {scorer_loss}")
-        case "NORMALISED_TIME_INDEX":
-            phase_estimator = NormalisedTimeIndexPhaseEstimator(demonstrations)
-        case "PATH_LENGTH":
-            phase_estimator = PathLengthPhaseEstimator(demonstrations)
+    evaluate_phases: bool = False
 
-    phases = phase_estimator.estimate_phases()
+    def run(self) -> PhasesCollection[NumDemos, NumPoints]:
+        phase_estimator: PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]
+        match self.choice:
+            case "MLP":
+                phase_estimator = MLPPhaseEstimator(
+                    self.demonstrations, device=self.device, seed=self.seed
+                )
+                scorer_loss = phase_estimator.train(
+                    hidden_dim=self.phase_hidden_dim,
+                    margin=self.phase_margin,  # m
+                    lr=self.phase_lr,
+                    epochs=self.phase_epochs,
+                )
+                console.print(f"Phase scorer loss: {scorer_loss}")
+            case "NORMALISED_TIME_INDEX":
+                phase_estimator = NormalisedTimeIndexPhaseEstimator(self.demonstrations)
+            case "PATH_LENGTH":
+                phase_estimator = PathLengthPhaseEstimator(self.demonstrations)
 
-    if evaluate_phases:
-        report = PhaseEvaluationReport.evaluate(demonstrations, phases)
-        console.print(Pretty(report, expand_all=True))
+        phases = phase_estimator.estimate_phases()
 
-    return phases
+        if self.evaluate_phases:
+            report = PhaseEvaluationReport.evaluate(self.demonstrations, phases)
+            console.print(Pretty(report, expand_all=True))
+
+        return phases
 
 
 ## ─────────────────────────────────────────────────────────────────────────────
