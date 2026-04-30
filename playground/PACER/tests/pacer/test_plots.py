@@ -6,13 +6,13 @@ import matplotlib.pyplot as plt
 from typingkit.core import RuntimeOptions, set_global_default_runtime_options
 
 from pacer.plotting import plot_states_and_actions
-from pacer.testutils import get_demonstrations
+from pacer.testutils import DemonstrationLoader
 
 set_global_default_runtime_options(RuntimeOptions(validate=True))
 
 
 if __name__ == "__main__":
-    demonstrations = get_demonstrations(choice="FROM_LASA", pattern="GShape")
+    demonstrations = DemonstrationLoader(choice="FROM_LASA", pattern="GShape").load()
     plot_states_and_actions(
         demonstrations,
         demo_indices=None,

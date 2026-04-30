@@ -30,9 +30,9 @@ from pacer.plotting import (
     plot_trust_values,
 )
 from pacer.testutils import (
+    DemonstrationLoader,
     DemonstrationsChoice,
     PhaseEstimatorChoice,
-    get_demonstrations,
     get_phases,
 )
 from pacer.trainers import BCTrainer, PACERBCTrainer
@@ -217,12 +217,12 @@ def test_pacer_bc(
                     style="gold3",
                 )
 
-        demonstrations = get_demonstrations(
+        demonstrations = DemonstrationLoader(
             choice=demonstrations_choice,
             pattern=pattern,
             filepath=filepath,
             use_corruptions=use_corruptions,
-        )
+        ).load()
 
         run_bc(demonstrations)
         for phase_estimator_choice in phase_estimator_choices:

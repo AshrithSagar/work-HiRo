@@ -6,6 +6,7 @@ Test utils
 
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
+from dataclasses import KW_ONLY, dataclass
 from pathlib import Path
 from typing import Any, Literal
 
@@ -53,76 +54,78 @@ type PhaseEstimatorChoice = Literal["MLP", "NORMALISED_TIME_INDEX", "PATH_LENGTH
 ## ── Test Utils ───────────────────────────────────────────────────────────────
 
 
-def get_demonstrations(
-    choice: DemonstrationsChoice = "FROM_LASA",
-    *,
-    pattern: SinglePatternMotion | None = None,
-    filepath: str | None = None,
-    use_corruptions: bool = False,
-) -> Demonstrations[Any, Any, TWO, TWO]:
-    demonstrations: Demonstrations[Any, Any, TWO, TWO]
-    match choice:
-        case "FROM_LASA":
-            assert pattern is not None
-            demonstrations = LASADataSet(pattern).to_demonstrations()
-        case "CUSTOM_FROM_LOAD":
-            assert filepath is not None
-            fig, (toolbar_ax, ax) = make_figure()
-            plugins = default_plugins(fig, ax, toolbar_ax)
-            plugins.append(LoadPlugin(Path(filepath)))
-            drawer = InteractiveDataSet(
-                plugins=plugins, fig=fig, ax=ax, toolbar_ax=toolbar_ax
-            )
-            drawer.show()
-            demonstrations = drawer.to_demonstrations()
-        case "CUSTOM_FROM_LASA":
-            assert pattern is not None
-            fig, (toolbar_ax, ax) = make_figure()
-            plugins = default_plugins(fig, ax, toolbar_ax)
-            plugins.append(LASALoadPlugin(pattern))
-            drawer = InteractiveDataSet(
-                plugins=plugins, fig=fig, ax=ax, toolbar_ax=toolbar_ax
-            )
-            drawer.show()
-            demonstrations = drawer.to_demonstrations()
-        case "CUSTOM_DRAW":
-            fig, (toolbar_ax, ax) = make_figure()
-            plugins = default_plugins(fig, ax, toolbar_ax)
-            if filepath is not None:
-                plugins.append(SavePlugin(Path(filepath)))
-                plugins.append(LoadPlugin(Path(filepath)))
-            drawer = InteractiveDataSet(
-                plugins=plugins, fig=fig, ax=ax, toolbar_ax=toolbar_ax
-            )
-            drawer.show()
-            demonstrations = drawer.to_demonstrations()
-        case "LEGACY_CUSTOM_FROM_LOAD":
-            assert filepath is not None
-            legacy_drawer = LegacyInteractiveDataSet.load(filepath)
-            demonstrations = legacy_drawer.to_demonstrations()
-        case "LEGACY_CUSTOM_FROM_LASA":
-            assert pattern is not None
-            legacy_drawer = LegacyInteractiveDataSet.from_LASA(pattern)
-            plt.show(block=True)  # pyright: ignore[reportUnknownMemberType]
-            demonstrations = legacy_drawer.to_demonstrations()
-        case "LEGACY_CUSTOM_DRAW":
-            legacy_drawer = LegacyInteractiveDataSet()
-            plt.show(block=True)  # pyright: ignore[reportUnknownMemberType]
-            if filepath is not None:
-                legacy_drawer.save(filepath)
-            demonstrations = legacy_drawer.to_demonstrations()
+@dataclass
+class DemonstrationLoader:
+    choice: DemonstrationsChoice = "FROM_LASA"
+    _: KW_ONLY
+    pattern: SinglePatternMotion | None = None
+    filepath: str | None = None
+    use_corruptions: bool = False
 
-    if use_corruptions:
-        corrupter = NoisyDemonstrationCorrupter[Any, Any, TWO, TWO](
-            demonstrations=demonstrations,
-            noise_std=0.2,
-            outlier_fraction=0.2,
-            outlier_scale=5.0,
-            bias_strength=0.2,
-        )
-        demonstrations = corrupter.inject_corruptions()
+    def load(self) -> Demonstrations[Any, Any, TWO, TWO]:
+        demonstrations: Demonstrations[Any, Any, TWO, TWO]
+        match self.choice:
+            case "FROM_LASA":
+                assert self.pattern is not None
+                demonstrations = LASADataSet(self.pattern).to_demonstrations()
+            case "CUSTOM_FROM_LOAD":
+                assert self.filepath is not None
+                fig, (toolbar_ax, ax) = make_figure()
+                plugins = default_plugins(fig, ax, toolbar_ax)
+                plugins.append(LoadPlugin(Path(self.filepath)))
+                drawer = InteractiveDataSet(
+                    plugins=plugins, fig=fig, ax=ax, toolbar_ax=toolbar_ax
+                )
+                drawer.show()
+                demonstrations = drawer.to_demonstrations()
+            case "CUSTOM_FROM_LASA":
+                assert self.pattern is not None
+                fig, (toolbar_ax, ax) = make_figure()
+                plugins = default_plugins(fig, ax, toolbar_ax)
+                plugins.append(LASALoadPlugin(self.pattern))
+                drawer = InteractiveDataSet(
+                    plugins=plugins, fig=fig, ax=ax, toolbar_ax=toolbar_ax
+                )
+                drawer.show()
+                demonstrations = drawer.to_demonstrations()
+            case "CUSTOM_DRAW":
+                fig, (toolbar_ax, ax) = make_figure()
+                plugins = default_plugins(fig, ax, toolbar_ax)
+                if self.filepath is not None:
+                    plugins.append(SavePlugin(Path(self.filepath)))
+                    plugins.append(LoadPlugin(Path(self.filepath)))
+                drawer = InteractiveDataSet(
+                    plugins=plugins, fig=fig, ax=ax, toolbar_ax=toolbar_ax
+                )
+                drawer.show()
+                demonstrations = drawer.to_demonstrations()
+            case "LEGACY_CUSTOM_FROM_LOAD":
+                assert self.filepath is not None
+                legacy_drawer = LegacyInteractiveDataSet.load(self.filepath)
+                demonstrations = legacy_drawer.to_demonstrations()
+            case "LEGACY_CUSTOM_FROM_LASA":
+                assert self.pattern is not None
+                legacy_drawer = LegacyInteractiveDataSet.from_LASA(self.pattern)
+                plt.show(block=True)  # pyright: ignore[reportUnknownMemberType]
+                demonstrations = legacy_drawer.to_demonstrations()
+            case "LEGACY_CUSTOM_DRAW":
+                legacy_drawer = LegacyInteractiveDataSet()
+                plt.show(block=True)  # pyright: ignore[reportUnknownMemberType]
+                if self.filepath is not None:
+                    legacy_drawer.save(self.filepath)
+                demonstrations = legacy_drawer.to_demonstrations()
 
-    return demonstrations
+        if self.use_corruptions:
+            corrupter = NoisyDemonstrationCorrupter[Any, Any, TWO, TWO](
+                demonstrations=demonstrations,
+                noise_std=0.2,
+                outlier_fraction=0.2,
+                outlier_scale=5.0,
+                bias_strength=0.2,
+            )
+            demonstrations = corrupter.inject_corruptions()
+
+        return demonstrations
 
 
 def get_phases(
