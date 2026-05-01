@@ -4,7 +4,7 @@ Plotting utils
 """
 # src/pacer/plotting.py
 
-# pyright: standard
+# pyright: reportUnknownMemberType = false
 
 import matplotlib.pyplot as plt
 from typingkit.numpy._typed.helpers import TWO

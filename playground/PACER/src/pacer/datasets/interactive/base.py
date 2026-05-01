@@ -3,7 +3,8 @@ Interactive Base
 """
 # src/pacer/datasets/interactive/base.py
 
-# pyright: standard
+# pyright: reportUnknownMemberType = false
+# pyright: reportUnusedParameter = false
 
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
@@ -191,7 +192,11 @@ class InteractiveDataSet:
         canvas_size: tuple[float, float] = (1.0, 1.0),
         min_points_to_accept: int = 5,
     ) -> None:
+        self.fig: Figure
+        self.ax: Axes
+        self.toolbar_ax: Axes
         self.fig, self.ax, self.toolbar_ax = ifig.fig, ifig.ax, ifig.toolbar_ax
+
         self.ax.set_xlim(0.0, canvas_size[0])
         self.ax.set_ylim(0.0, canvas_size[1])
         self.ax.set_aspect("equal")

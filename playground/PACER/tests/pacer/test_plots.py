@@ -1,7 +1,5 @@
 # tests/test_plots.py
 
-# pyright: standard
-
 import matplotlib.pyplot as plt
 from typingkit.core import RuntimeOptions, set_global_default_runtime_options
 
@@ -19,4 +17,4 @@ if __name__ == "__main__":
         action_scale=0.5,
         action_step=50,
     )
-    plt.show()
+    plt.show()  # pyright: ignore[reportUnknownMemberType]

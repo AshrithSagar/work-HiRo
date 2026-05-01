@@ -5,7 +5,8 @@ Draw your own custom 2D trajectories with the mouse
 """
 # src/pacer/datasets/interactive/legacy.py
 
-# pyright: standard
+# pyright: reportUnknownMemberType = false
+# pyright: reportUnusedParameter = false
 
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
@@ -13,7 +14,9 @@ from typing import Any, Generic, Self
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.axes import Axes
 from matplotlib.backend_bases import KeyEvent, MouseEvent
+from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 from pyLASAHandwritingDataset import SinglePatternMotion
 from typingkit.core import TypedList
@@ -36,9 +39,11 @@ class LegacyInteractiveDataSet(Generic[NumDemos, NumPoints]):
         min_points_to_accept: int = 5,
         _suppress_welcome: bool = False,
     ) -> None:
-        self.canvas_size = canvas_size
-        self.min_points_to_accept = min_points_to_accept
+        self.canvas_size: tuple[float, float] = canvas_size
+        self.min_points_to_accept: int = min_points_to_accept
 
+        self.fig: Figure
+        self.ax: Axes
         self.fig, self.ax = plt.subplots(figsize=(12, 7))
         self.ax.set_xlim(0, canvas_size[0])
         self.ax.set_ylim(0, canvas_size[1])
@@ -47,13 +52,13 @@ class LegacyInteractiveDataSet(Generic[NumDemos, NumPoints]):
         if not _suppress_welcome:
             console.print(
                 "PACER – Draw your own demonstrations\n"
-                "------------------------------------\n"
-                "Left-click + drag     = draw a trajectory (one demonstration)\n"
-                "Release mouse         = finish current demonstration\n"
-                "n                     = commit current stroke (optional)\n"
-                "u                     = undo (remove last completed demonstration)\n"
-                "r                     = reset everything\n"
-                "q or close window     = finish and return dataset\n"
+                + "------------------------------------\n"
+                + "Left-click + drag     = draw a trajectory (one demonstration)\n"
+                + "Release mouse         = finish current demonstration\n"
+                + "n                     = commit current stroke (optional)\n"
+                + "u                     = undo (remove last completed demonstration)\n"
+                + "r                     = reset everything\n"
+                + "q or close window     = finish and return dataset\n"
             )
         self.ax.set_title("Draw your demonstrations here")
         self.ax.set_xlabel("x")
@@ -63,9 +68,9 @@ class LegacyInteractiveDataSet(Generic[NumDemos, NumPoints]):
         self.demo_lines: list[Line2D] = []
         self.current_stroke: list[tuple[float, float]] = []
         self.current_artist: Line2D | None = None
-        self.colors = plt.cm.tab10(np.linspace(0, 1, 10))  # type: ignore[attr-defined]  # pyright: ignore[reportAttributeAccessIssue]
+        self.colors: Any = plt.cm.tab10(np.linspace(0, 1, 10))  # type: ignore[attr-defined]  # pyright: ignore[reportAttributeAccessIssue]
 
-        self.finished = False
+        self.finished: bool = False
 
         # Event connections
         self.fig.canvas.mpl_connect("button_press_event", self._on_press)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
