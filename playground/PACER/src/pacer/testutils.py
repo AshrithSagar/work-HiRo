@@ -20,7 +20,7 @@ from pacer import console
 from pacer.base import Demonstrations
 from pacer.corruptions import NoisyDemonstrationCorrupter
 from pacer.datasets import InteractiveDataSet, LASADataSet, LegacyInteractiveDataSet
-from pacer.datasets.interactive.base import make_figure
+from pacer.datasets.interactive.base import InteractiveFigure
 from pacer.datasets.interactive.plugins import (
     LASALoadPlugin,
     LoadPlugin,
@@ -70,33 +70,27 @@ class DemonstrationLoader:
                 demonstrations = LASADataSet(self.pattern).to_demonstrations()
             case "CUSTOM_FROM_LOAD":
                 assert self.filepath is not None
-                fig, (toolbar_ax, ax) = make_figure()
-                plugins = default_plugins(fig, ax, toolbar_ax)
+                ifig = InteractiveFigure.create()
+                plugins = default_plugins(ifig)
                 plugins.append(LoadPlugin(Path(self.filepath)))
-                drawer = InteractiveDataSet(
-                    plugins=plugins, fig=fig, ax=ax, toolbar_ax=toolbar_ax
-                )
+                drawer = InteractiveDataSet(ifig, plugins=plugins)
                 drawer.show()
                 demonstrations = drawer.to_demonstrations()
             case "CUSTOM_FROM_LASA":
                 assert self.pattern is not None
-                fig, (toolbar_ax, ax) = make_figure()
-                plugins = default_plugins(fig, ax, toolbar_ax)
+                ifig = InteractiveFigure.create()
+                plugins = default_plugins(ifig)
                 plugins.append(LASALoadPlugin(self.pattern))
-                drawer = InteractiveDataSet(
-                    plugins=plugins, fig=fig, ax=ax, toolbar_ax=toolbar_ax
-                )
+                drawer = InteractiveDataSet(ifig, plugins=plugins)
                 drawer.show()
                 demonstrations = drawer.to_demonstrations()
             case "CUSTOM_DRAW":
-                fig, (toolbar_ax, ax) = make_figure()
-                plugins = default_plugins(fig, ax, toolbar_ax)
+                ifig = InteractiveFigure.create()
+                plugins = default_plugins(ifig)
                 if self.filepath is not None:
                     plugins.append(SavePlugin(Path(self.filepath)))
                     plugins.append(LoadPlugin(Path(self.filepath)))
-                drawer = InteractiveDataSet(
-                    plugins=plugins, fig=fig, ax=ax, toolbar_ax=toolbar_ax
-                )
+                drawer = InteractiveDataSet(ifig, plugins=plugins)
                 drawer.show()
                 demonstrations = drawer.to_demonstrations()
             case "LEGACY_CUSTOM_FROM_LOAD":

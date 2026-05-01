@@ -50,6 +50,20 @@ class DemoStore:
         self.demos.clear()
 
 
+@dataclass
+class InteractiveFigure:
+    fig: Figure
+    ax: Axes
+    toolbar_ax: Axes
+
+    @classmethod
+    def create(cls) -> Self:
+        fig, (toolbar_ax, ax) = plt.subplots(
+            2, 1, gridspec_kw={"height_ratios": [1, 12], "hspace": 0.05}
+        )
+        return cls(fig=fig, ax=ax, toolbar_ax=toolbar_ax)
+
+
 class MatplotlibRenderer:
     def __init__(self, ax: Axes) -> None:
         self.ax: Axes = ax
@@ -168,32 +182,16 @@ class InteractiveController:
             p.on_reset(self)
 
 
-def make_figure() -> tuple[Figure, tuple[Axes, Axes]]:
-    fig, (toolbar_ax, ax) = plt.subplots(
-        2, 1, gridspec_kw={"height_ratios": [1, 12], "hspace": 0.05}
-    )
-    return fig, (toolbar_ax, ax)
-
-
 class InteractiveDataSet:
     def __init__(
         self,
+        ifig: InteractiveFigure,
         *,
         plugins: list[Plugin],
-        fig: Figure | None = None,
-        ax: Axes | None = None,
-        toolbar_ax: Axes | None = None,
         canvas_size: tuple[float, float] = (1.0, 1.0),
         min_points_to_accept: int = 5,
     ) -> None:
-        self.fig: Figure
-        self.ax: Axes
-        self.toolbar_ax: Axes
-        if fig is None or ax is None or toolbar_ax is None:
-            self.fig, (self.toolbar_ax, self.ax) = make_figure()
-        else:
-            self.fig, self.ax, self.toolbar_ax = fig, ax, toolbar_ax
-
+        self.fig, self.ax, self.toolbar_ax = ifig.fig, ifig.ax, ifig.toolbar_ax
         self.ax.set_xlim(0.0, canvas_size[0])
         self.ax.set_ylim(0.0, canvas_size[1])
         self.ax.set_aspect("equal")
@@ -247,8 +245,8 @@ class InteractiveDataSet:
     def draw(cls, **kwargs: Any) -> Self:
         from pacer.datasets.interactive.plugins import default_plugins
 
-        fig, ax = plt.subplots()
-        plugins = default_plugins(fig, ax)
+        ifig = InteractiveFigure.create()
+        plugins = default_plugins(ifig)
         drawer = cls(plugins=plugins, **kwargs)
         drawer.show()
         return drawer

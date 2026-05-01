@@ -22,6 +22,7 @@ from pyLASAHandwritingDataset import SinglePatternMotion
 
 from pacer.datasets.interactive.base import (
     InteractiveController,
+    InteractiveFigure,
     MatplotlibRenderer,
     Mode,
     Plugin,
@@ -34,20 +35,17 @@ from pacer.typings import npDType
 ## ── Plugins ──────────────────────────────────────────────────────────────────
 
 
-def default_plugins(
-    fig: Figure, ax: Axes, toolbar_ax: Axes | None = None
-) -> list[Plugin]:
-    renderer = MatplotlibRenderer(ax)
+def default_plugins(ifig: InteractiveFigure) -> list[Plugin]:
+    renderer = MatplotlibRenderer(ifig.ax)
     plugins: list[Plugin] = [
         SelectionPlugin(),
         DrawingPlugin(),
         DragStrokePlugin(),
         RedrawPlugin(renderer),
-        AutoscalePlugin(ax),
-        KeyboardPlugin(fig),
+        AutoscalePlugin(ifig.ax),
+        ToolbarPlugin(ifig.toolbar_ax),
+        KeyboardPlugin(ifig.fig),
     ]
-    if toolbar_ax is not None:
-        plugins.append(ToolbarPlugin(toolbar_ax))
     return plugins
 
 
