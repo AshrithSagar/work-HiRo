@@ -1109,7 +1109,7 @@ dev = [
     { name = "types-networkx", specifier = ">=3.6.1.20260408" },
     { name = "types-openpyxl", specifier = ">=3.1.5.20260408" },
     { name = "types-pexpect", specifier = ">=4.9.0.20260408" },
-    { name = "types-protobuf", specifier = ">=7.34.1.20260408" },
+    { name = "types-protobuf", specifier = ">=7.34.1.20260503" },
     { name = "types-pygments", specifier = ">=2.20.0.20260408" },
     { name = "types-python-dateutil", specifier = ">=2.9.0.20260408" },
     { name = "types-pywin32", specifier = ">=311.0.0.20260408" },
@@ -1127,7 +1127,7 @@ test = [
 typecheck = [
     { name = "basedpyright", specifier = ">=1.39.3" },
     { name = "mypy", extras = ["mypyc"], specifier = ">=1.20.2" },
-    { name = "pycroscope", specifier = ">=0.3.0" },
+    { name = "pycroscope", specifier = ">=0.4.0" },
     { name = "pyrefly", specifier = ">=0.63.1" },
     { name = "pyright", specifier = ">=1.1.409" },
     { name = "ty", specifier = ">=0.0.34" },
@@ -1244,15 +1244,15 @@ wheels = [
 
 [[package]]
 name = "pycroscope"
-version = "0.3.0"
+version = "0.4.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "typeshed-client" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/9b/49/cbcb4a4fe2de7cc3df44f846daf5a7f847a13f41264830fe0e08405f54e2/pycroscope-0.3.0.tar.gz", hash = "sha256:39930e55cd2bdcad187787b864473d45dffbbfe1768d91d4496978f341ba7ec2", size = 494623, upload-time = "2026-03-02T04:23:43.91Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7c/8e/284fdc4027bf9a7c92f8256ff07006a50456ccd2ce5506d040e6ed2f2f1b/pycroscope-0.4.0.tar.gz", hash = "sha256:14b40e36f6186dd2eff712c8da91d02eb89a263a257472b49f4c59153ff380fb", size = 662901, upload-time = "2026-05-02T14:00:43.775Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c1/0c/1f16dd199d8bea601fe7953275ffc5d332216664555e2895df81f12db9db/pycroscope-0.3.0-py3-none-any.whl", hash = "sha256:07029ab574d269512d02840b5ef1b8750e8d683d63d03c52046eda6f63cb52f5", size = 539350, upload-time = "2026-03-02T04:23:42.188Z" },
+    { url = "https://files.pythonhosted.org/packages/50/5f/c172c08b69e29d4094e1466b63260d8daf61a3ed3c689de7936f952f1663/pycroscope-0.4.0-py3-none-any.whl", hash = "sha256:cb7440b44ed16ed927995c33867cab22503f4bff7efe504964b81fb967183223", size = 714256, upload-time = "2026-05-02T14:00:41.891Z" },
 ]
 
 [[package]]
@@ -1319,7 +1319,7 @@ wheels = [
 [[package]]
 name = "pylasahandwritingdataset"
 version = "0.2.1"
-source = { git = "https://github.com/AshrithSagar/pyLASAHandwritingDataset.git?rev=main#b72db07d831268f3ce5a0b1a51ab5cfbe3c8ea6f" }
+source = { git = "https://github.com/AshrithSagar/pyLASAHandwritingDataset.git?rev=main#55276792dd3714540f0b034f3a967221b2506be8" }
 dependencies = [
     { name = "numpy" },
     { name = "platformdirs" },
@@ -1808,11 +1808,11 @@ wheels = [
 
 [[package]]
 name = "types-protobuf"
-version = "7.34.1.20260408"
+version = "7.34.1.20260503"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/5b/b1/4521e68c2cc17703d80eb42796751345376dd4c706f84007ef5e7c707774/types_protobuf-7.34.1.20260408.tar.gz", hash = "sha256:e2c0a0430e08c75b52671a6f0035abfdcc791aad12af16274282de1b721758ab", size = 68835, upload-time = "2026-04-08T04:26:43.613Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a0/31/87969cb3e62287bde7598b78b3c098d2873d54f5fb5a7cfbcaa73b8c965e/types_protobuf-7.34.1.20260503.tar.gz", hash = "sha256:effbc819aa17e02448dde99f089c6794662d66f4b2797e922f185ffe0b24e766", size = 68830, upload-time = "2026-05-03T05:19:50.739Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ef/b5/0bc9874d89c58fb0ce851e150055ce732d254dbb10b06becbc7635d0d635/types_protobuf-7.34.1.20260408-py3-none-any.whl", hash = "sha256:ebbcd4e27b145aef6a59bc0cb6c013b3528151c1ba5e7f7337aeee355d276a5e", size = 86012, upload-time = "2026-04-08T04:26:42.566Z" },
+    { url = "https://files.pythonhosted.org/packages/f9/67/a33fb18090a927794a5ee4b1a30730b528ace0dad6b18932540d21258184/types_protobuf-7.34.1.20260503-py3-none-any.whl", hash = "sha256:75fd66121d56785c91828b8bf7b511f39ba847f11e682573e41847f01e9cd1de", size = 86019, upload-time = "2026-05-03T05:19:49.486Z" },
 ]
 
 [[package]]
@@ -1856,14 +1856,14 @@ wheels = [
 
 [[package]]
 name = "types-requests"
-version = "2.33.0.20260408"
+version = "2.33.0.20260503"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "urllib3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/69/6a/749dc53a54a3f35842c1f8197b3ca6b54af6d7458a1bfc75f6629b6da666/types_requests-2.33.0.20260408.tar.gz", hash = "sha256:95b9a86376807a216b2fb412b47617b202091c3ea7c078f47cc358d5528ccb7b", size = 23882, upload-time = "2026-04-08T04:34:49.33Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a1/b8/57e94268c0d82ac3eaa2fc35aa8ca7bbc2542f726b67dcf90b0b00a3b14d/types_requests-2.33.0.20260503.tar.gz", hash = "sha256:9721b2d9dbee7131f2fb39f20f0ebb1999c18cef4b512c9a7932f3722de7c5f4", size = 23931, upload-time = "2026-05-03T05:20:08.882Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/90/b8/78fd6c037de4788c040fdd323b3369804400351b7827473920f6c1d03c10/types_requests-2.33.0.20260408-py3-none-any.whl", hash = "sha256:81f31d5ea4acb39f03be7bc8bed569ba6d5a9c5d97e89f45ac43d819b68ca50f", size = 20739, upload-time = "2026-04-08T04:34:48.325Z" },
+    { url = "https://files.pythonhosted.org/packages/c3/82/959113a6351f3ca046cd0a8cd2cee071d7ea47473560557a01eeae9a6fe2/types_requests-2.33.0.20260503-py3-none-any.whl", hash = "sha256:02aaa7e3577a13471715bb1bddb693cc985ea514f754b503bf033e6a09a3e528", size = 20736, upload-time = "2026-05-03T05:20:07.858Z" },
 ]
 
 [[package]]
@@ -1930,7 +1930,7 @@ wheels = [
 [[package]]
 name = "typingkit"
 version = "0.2.8"
-source = { git = "https://github.com/AshrithSagar/typingkit.git?rev=main#b03b291c7be904dbd2b8a8a48aba9cb42294bce3" }
+source = { git = "https://github.com/AshrithSagar/typingkit.git?rev=main#5fb9bdb5a2d8b54bd4151cd4e3ab7319b31528df" }
 dependencies = [
     { name = "numpy" },
 ]
