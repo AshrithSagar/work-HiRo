@@ -22,7 +22,7 @@ from pacer.typings import (
     npDType,
 )
 
-## ── Phase Alignment ──────────────────────────────────────────────────────────
+## ── Phase ────────────────────────────────────────────────────────────────────
 
 Phase: TypeAlias = npDType  # tau \in [0, 1]
 r"""Scalar phase `tau \in [0,1]` representing normalised progress along a trajectory."""

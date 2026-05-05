@@ -20,7 +20,7 @@ from matplotlib.backend_bases import KeyEvent, MouseEvent
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 
-## ── InteractiveDataSet ───────────────────────────────────────────────────────
+## ── Base ─────────────────────────────────────────────────────────────────────
 
 type Point = tuple[float, float]
 type Stroke = list[Point]

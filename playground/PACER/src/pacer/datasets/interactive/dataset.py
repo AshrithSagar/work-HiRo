@@ -1,5 +1,5 @@
 """
-Interactive DataSet
+Interactive Dataset
 """
 # src/pacer/datasets/interactive/dataset.py
 
@@ -27,7 +27,7 @@ from pacer.datasets.interactive.base import (
 from pacer.datasets.interactive.plugins import default_plugins
 from pacer.typings import NumDemos, NumPoints, npDType
 
-## ── InteractiveDataSet ───────────────────────────────────────────────────────
+## ── Interactive Dataset ──────────────────────────────────────────────────────
 
 
 class InteractiveDataSet:

@@ -316,6 +316,9 @@ class RibbonTokenConsolidator(
         return self.bins
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+
+
 @dataclass(kw_only=True)
 class TrustValueParams:
     """Hyperparameters controlling trust value computations."""
@@ -404,6 +407,9 @@ class TrustValueComputer(
                     trust_value = TrustValue(params.min_trust)
                 trust_values[i][t] = trust_value
         return trust_values  # [[w_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 
 
 @dataclass(kw_only=True)
