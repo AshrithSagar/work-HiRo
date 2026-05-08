@@ -629,12 +629,22 @@ class LoadPlugin(Plugin):
 class LASALoadPlugin(Plugin):
     pattern: SinglePatternMotion
     auto: bool = True
+    ##
+    reference_mean_speed: float = field(init=False, default=1.0)
 
     def _load(self, ctrl: InteractiveController) -> None:
-        ds = LASADataSet(self.pattern)
         ctrl.store.reset()
-        for demo in ds.positions:
-            ctrl.add_stroke([(float(x), float(y)) for x, y in demo])
+
+        ds = LASADataSet(self.pattern)
+        speeds: list[float] = []
+        for positions, velocities in zip(ds.positions, ds.velocities):
+            stroke = [(float(x), float(y)) for x, y in positions]
+            vel_stroke = [(float(vx), float(vy)) for vx, vy in velocities]
+            ctrl.store.add(stroke, min_points=0, velocity=vel_stroke)
+            speeds.append(np.hypot(velocities[:, 0], velocities[:, 1]).mean())
+        self.reference_mean_speed = float(np.mean(speeds))
+        ctrl.store.reference_mean_speed = self.reference_mean_speed
+
         for p in ctrl.plugins:
             p.on_reset(ctrl)
 

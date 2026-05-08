@@ -67,20 +67,27 @@ class InteractiveDataSet:
 
         for idx, stroke in enumerate(demos):
             arr: NDArray[np.float32] = np.asarray(stroke, dtype=npDType)
-
             states = [State[TWO](p) for p in arr]
 
-            if len(arr) >= 2:
-                # Finite differences, but normalised so velocity is per-unit-arc
-                # rather than per raw index step (which varies with draw speed)
-                diffs = np.diff(arr, axis=0)  # (T-1, 2)
-                dt = np.hypot(diffs[:, 0], diffs[:, 1])  # arc length of each step
-                dt = np.where(dt < 1e-8, 1e-8, dt)  # avoid div/0 for stationary pts
-                # Unit tangent direction * mean speed normalised to 1
-                vel = diffs / dt[:, None]  # unit tangent at each step
-                vel = np.vstack(
-                    [vel, vel[[-1]]]
-                )  # repeat last for same length as states
+            stored_vel = (
+                self.controller.store.velocities[idx]
+                if idx < len(self.controller.store.velocities)
+                else []
+            )
+            if stored_vel and len(stored_vel) == len(arr):
+                # Use preserved velocities (e.g. from LASA load)
+                vel = np.asarray(stored_vel, dtype=npDType)
+            elif len(arr) >= 2:
+                diffs = np.diff(arr, axis=0)
+                arc_lengths = np.hypot(diffs[:, 0], diffs[:, 1])
+                arc_lengths = np.where(arc_lengths < 1e-8, 1e-8, arc_lengths)
+
+                unit_tangents = diffs / arc_lengths[:, None]  # direction only
+                unit_tangents = np.vstack([unit_tangents, unit_tangents[[-1]]])
+
+                # Scale to match LASA's characteristic speed
+                ref_speed = self.controller.store.reference_mean_speed
+                vel = np.asarray(unit_tangents * ref_speed, dtype=npDType)
             else:
                 vel = np.zeros((len(arr), 2), dtype=npDType)
 

@@ -10,7 +10,7 @@ Interactive Base
 
 from collections.abc import Iterable
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import Self
 
@@ -36,19 +36,27 @@ class Segment:
 @dataclass
 class DemoStore:
     demos: list[Stroke]
+    velocities: list[Stroke] = field(default_factory=list)
+    reference_mean_speed: float = 1.0  # set by LASALoadPlugin if available
 
-    def add(self, stroke: Stroke, *, min_points: int) -> bool:
+    def add(
+        self, stroke: Stroke, *, min_points: int, velocity: Stroke | None = None
+    ) -> bool:
         if len(stroke) < min_points:
             return False
         self.demos.append(stroke)
+        self.velocities.append(velocity or [])
         return True
 
     def undo(self) -> None:
         if self.demos:
             self.demos.pop()
+            if self.velocities:
+                self.velocities.pop()
 
     def reset(self) -> None:
         self.demos.clear()
+        self.velocities.clear()
 
 
 @dataclass
