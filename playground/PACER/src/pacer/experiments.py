@@ -38,7 +38,7 @@ from pacer.testutils import (
     PhaseEstimatorChoice,
     PhasePipeline,
 )
-from pacer.trainers import BCTrainer, PACERBCTrainer
+from pacer.trainers import BCTrainer, WeightedBCTrainer
 from pacer.typings import NumDemos, NumPoints
 
 ## ── Experiments ──────────────────────────────────────────────────────────────
@@ -130,12 +130,10 @@ class PACERBCExperiment(Generic[NumDemos, NumPoints]):
         )
 
         # Behavioral cloning
-        trainer = PACERBCTrainer(
-            self.demonstrations,
-            bins,
-            action_trust_values,
-            pseudo_labels.actions,
-            pseudo_labels.states,
+        trainer = WeightedBCTrainer(
+            states=pseudo_labels.states or self.demonstrations.states,
+            targets=pseudo_labels.actions,
+            weights=action_trust_values,
             device="cpu",
         )
         policy_loss = trainer.train(

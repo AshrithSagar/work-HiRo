@@ -37,12 +37,20 @@ class State(Vector[DimState]):  # x_{i, t} \in R^{d_x}
     def __new__(cls, object: onp.ToArrayStrict1D) -> Self:
         return cast(Self, super().__new__(cls, object, dtype=npDType))
 
+    @property
+    def dim(self) -> DimState:
+        return self.shape[0]
+
     @classmethod
     def zeros(cls, state_dim: DimState) -> Self:
         return cls(np.zeros((state_dim,)))
 
 
 class States(TypedList[NumPoints, State[DimState]]):
+    @property
+    def dim(self) -> DimState:
+        return self[0].dim
+
     def numpy(self) -> Matrix[NumPoints, DimState]:
         return Matrix[NumPoints, DimState](self)
 
@@ -57,6 +65,10 @@ class States(TypedList[NumPoints, State[DimState]]):
 
 
 class StatesCollection(TypedList[NumDemos, States[NumPoints, DimState]]):
+    @property
+    def dim(self) -> DimState:
+        return self[0].dim
+
     @classmethod
     def zeros_like(
         cls, demos: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
@@ -72,12 +84,20 @@ class Action(Vector[DimAction]):  # a_{i, t} \in R^{d_a}
     def __new__(cls, object: onp.ToArrayStrict1D) -> Self:
         return cast(Self, super().__new__(cls, object, dtype=npDType))
 
+    @property
+    def dim(self) -> DimAction:
+        return self.shape[0]
+
     @classmethod
     def zeros(cls, action_dim: DimAction) -> Self:
         return cls(np.zeros((action_dim,)))
 
 
 class Actions(TypedList[NumPoints, Action[DimAction]]):
+    @property
+    def dim(self) -> DimAction:
+        return self[0].dim
+
     def numpy(self) -> Matrix[NumPoints, DimAction]:
         return Matrix[NumPoints, DimAction](self)
 
@@ -92,6 +112,10 @@ class Actions(TypedList[NumPoints, Action[DimAction]]):
 
 
 class ActionsCollection(TypedList[NumDemos, Actions[NumPoints, DimAction]]):
+    @property
+    def dim(self) -> DimAction:
+        return self[0].dim
+
     @classmethod
     def zeros_like(
         cls, demos: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
@@ -242,7 +266,7 @@ class Demonstration(RuntimeGeneric[NumPoints, DimState, DimAction]):  # D_i
 
     @property
     def state_dim(self) -> DimState:  # d_x
-        return self.states[0].shape[0]
+        return self.states[0].dim
 
     @property
     def action_dim(self) -> DimAction:  # d_a
@@ -311,6 +335,18 @@ class Demonstrations(
     @property
     def action_dim(self) -> DimAction:  # d_a
         return self.demos[0].action_dim
+
+    @property
+    def states(self) -> StatesCollection[NumDemos, NumPoints, DimState]:
+        return StatesCollection[NumDemos, NumPoints, DimState](
+            demo.states for demo in self.demos
+        )
+
+    @property
+    def actions(self) -> ActionsCollection[NumDemos, NumPoints, DimAction]:
+        return ActionsCollection[NumDemos, NumPoints, DimAction](
+            demo.actions for demo in self.demos
+        )
 
 
 ## ─────────────────────────────────────────────────────────────────────────────

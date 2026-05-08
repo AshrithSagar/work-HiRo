@@ -8,7 +8,7 @@ Policy training
 
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
-from dataclasses import InitVar, dataclass, field
+from dataclasses import KW_ONLY, InitVar, dataclass, field
 from typing import cast, override
 
 import numpy as np
@@ -18,7 +18,7 @@ import torch.nn.functional as F
 from rich.progress import track
 from torch import Tensor
 from torch._prims_common import DeviceLikeType
-from typingkit.core import RuntimeGeneric
+from typingkit.core import RuntimeGeneric, TypedList, TypedMapping
 
 from pacer.base import (
     Action,
@@ -28,8 +28,15 @@ from pacer.base import (
     States,
     StatesCollection,
 )
-from pacer.pacer import Bins, TrustValuesCollection
-from pacer.typings import DimAction, DimState, NumBins, NumDemos, NumPoints, torchDType
+from pacer.typings import (
+    DemoIndex,
+    DimAction,
+    DimState,
+    NumDemos,
+    NumPoints,
+    npDType,
+    torchDType,
+)
 from pacer.utils import SEED, TORCH_DEVICE, get_torch_device, set_seed
 
 ## ── Policies ─────────────────────────────────────────────────────────────────
@@ -66,8 +73,9 @@ class BCTrainer(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
     """Behavioral cloning policy trainer."""
 
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
-    device: InitVar[DeviceLikeType] = field(default=TORCH_DEVICE, kw_only=True)
-    seed: int = field(default=SEED, kw_only=True)
+    _: KW_ONLY
+    device: InitVar[DeviceLikeType] = TORCH_DEVICE
+    seed: int = SEED
     ##
     device_: torch.device = field(init=False)
     policy: BCPolicy[DimState, DimAction] = field(init=False)
@@ -142,43 +150,38 @@ class BCTrainer(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
 
 
 @dataclass
-class PACERBCTrainer(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
-    """PACER + Behavioral cloning policy trainer."""
+class WeightedBCTrainer(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
+    """Weighted behavioral cloning policy trainer."""
 
-    demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
-    bins: Bins[NumBins, NumDemos, NumPoints, DimState, DimAction]
-    trust_values: TrustValuesCollection[NumDemos, NumPoints]
-    pseudo_labels: ActionsCollection[NumDemos, NumPoints, DimAction]
-    state_labels: StatesCollection[NumDemos, NumPoints, DimState] | None = None
-    device: InitVar[DeviceLikeType] = field(default=TORCH_DEVICE, kw_only=True)
-    seed: int = field(default=SEED, kw_only=True)
+    states: StatesCollection[NumDemos, NumPoints, DimState]
+    targets: ActionsCollection[NumDemos, NumPoints, DimAction]
+    weights: TypedMapping[NumDemos, DemoIndex, TypedList[NumPoints, npDType]]
+    _: KW_ONLY
+    device: InitVar[DeviceLikeType] = TORCH_DEVICE
+    seed: int = SEED
     ##
+    n_demos: NumDemos = field(init=False)
     device_: torch.device = field(init=False)
     policy: BCPolicy[DimState, DimAction] = field(init=False)
     optimiser: torch.optim.Optimizer = field(init=False)
 
     def __post_init__(self, device: DeviceLikeType) -> None:
         self.device_ = get_torch_device(device)
+        assert self.states.length == self.targets.length == self.weights.length
+        self.n_demos = self.states.length
 
     def compute_huber_loss(self) -> Tensor:  # L
         loss = torch.tensor(0.0, dtype=torchDType, device=self.device_)
         total_weight = torch.tensor(0.0, dtype=torchDType, device=self.device_)
-        for i, demo in enumerate(self.demonstrations):
-            if self.state_labels is not None:
-                states = torch.tensor(
-                    self.state_labels[i].numpy(), dtype=torchDType, device=self.device_
-                )  # (T_i, state_dim)
-            else:
-                states = torch.tensor(
-                    demo.states.numpy(), dtype=torchDType, device=self.device_
-                )  # (T_i, state_dim)
+        for i in range(self.n_demos):
+            states = torch.tensor(
+                self.states[i].numpy(), dtype=torchDType, device=self.device_
+            )  # (T_i, state_dim)
             targets = torch.tensor(
-                self.pseudo_labels[i].numpy(),
-                dtype=torchDType,
-                device=self.device_,
+                self.targets[i].numpy(), dtype=torchDType, device=self.device_
             )  # (T_i, action_dim)
             weights = torch.tensor(
-                np.array(self.trust_values[i]),
+                np.array(self.weights[i]),
                 dtype=torchDType,
                 device=self.device_,
             )  # (T_i,)
@@ -205,11 +208,11 @@ class PACERBCTrainer(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimA
         policy_lr: float = 1e-3,
         policy_epochs: int = 240,
     ) -> Tensor:
-        """Train PACER policy using weighted Huber loss with pseudo-labels."""
+        """Train BC policy using weighted Huber loss."""
         set_seed(self.seed)
         policy = BCPolicy(
-            state_dim=self.demonstrations.state_dim,
-            action_dim=self.demonstrations.action_dim,
+            state_dim=self.states.dim,
+            action_dim=self.targets.dim,
             hidden_dim=policy_hidden_dim,
         )
         self.policy = policy.to(self.device_)
