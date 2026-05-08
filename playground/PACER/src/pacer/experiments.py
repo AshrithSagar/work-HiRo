@@ -54,7 +54,11 @@ class BCExperiment(Generic[NumDemos, NumPoints]):
         console.rule("[blue]BC policy[/blue]", style="blue")
 
         # Behavioral cloning
-        trainer = BCTrainer(self.demonstrations, device="cpu")
+        trainer = BCTrainer(
+            states=self.demonstrations.states,
+            targets=self.demonstrations.actions,
+            device="cpu",
+        )
         policy_loss = trainer.train(
             policy_hidden_dim=128,
             policy_lr=1e-3,

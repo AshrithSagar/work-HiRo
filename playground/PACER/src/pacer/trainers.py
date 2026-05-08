@@ -20,14 +20,7 @@ from torch import Tensor
 from torch._prims_common import DeviceLikeType
 from typingkit.core import RuntimeGeneric, TypedList, TypedMapping
 
-from pacer.base import (
-    Action,
-    Actions,
-    ActionsCollection,
-    Demonstrations,
-    States,
-    StatesCollection,
-)
+from pacer.base import Action, Actions, ActionsCollection, States, StatesCollection
 from pacer.typings import (
     DemoIndex,
     DimAction,
@@ -72,27 +65,31 @@ class BCPolicy(nn.Module, RuntimeGeneric[DimState, DimAction]):
 class BCTrainer(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
     """Behavioral cloning policy trainer."""
 
-    demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
+    states: StatesCollection[NumDemos, NumPoints, DimState]
+    targets: ActionsCollection[NumDemos, NumPoints, DimAction]
     _: KW_ONLY
     device: InitVar[DeviceLikeType] = TORCH_DEVICE
     seed: int = SEED
     ##
+    n_demos: NumDemos = field(init=False)
     device_: torch.device = field(init=False)
     policy: BCPolicy[DimState, DimAction] = field(init=False)
     optimiser: torch.optim.Optimizer = field(init=False)
 
     def __post_init__(self, device: DeviceLikeType) -> None:
         self.device_ = get_torch_device(device)
+        assert self.states.length == self.targets.length
+        self.n_demos = self.states.length
 
     def compute_huber_loss(self) -> Tensor:  # L
         loss = torch.tensor(0.0, dtype=torchDType, device=self.device_)
         total_samples: int = 0
-        for demo in self.demonstrations:
+        for i in range(self.n_demos):
             states = torch.tensor(
-                demo.states.numpy(), dtype=torchDType, device=self.device_
+                self.states[i].numpy(), dtype=torchDType, device=self.device_
             )  # (T_i, state_dim)
             targets = torch.tensor(
-                demo.actions.numpy(), dtype=torchDType, device=self.device_
+                self.targets[i].numpy(), dtype=torchDType, device=self.device_
             )  # (T_i, action_dim)
             preds = cast(Tensor, self.policy(states))  # (T_i, action_dim)
 
@@ -101,7 +98,7 @@ class BCTrainer(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
                 diffs, torch.zeros_like(diffs), reduction="sum"
             )  # (T_i, action_dim)
             loss += demo_loss
-            total_samples += demo.length  # T_i
+            total_samples += self.states[i].length  # T_i
         if total_samples > 0:
             loss /= total_samples  # Normalise over samples
         return loss
@@ -116,8 +113,8 @@ class BCTrainer(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
         """Train BC policy using weighted Huber loss."""
         set_seed(self.seed)
         policy = BCPolicy(
-            state_dim=self.demonstrations.state_dim,
-            action_dim=self.demonstrations.action_dim,
+            state_dim=self.states.dim,
+            action_dim=self.targets.dim,
             hidden_dim=policy_hidden_dim,
         )
         self.policy = policy.to(self.device_)
