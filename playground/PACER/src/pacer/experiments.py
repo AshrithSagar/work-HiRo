@@ -228,7 +228,7 @@ class BCvsPACERBCExperiment:
                 case "CUSTOM_FROM_LOAD" | "LEGACY_CUSTOM_FROM_LOAD":
                     assert self.filepath is not None
                     console.rule(
-                        f"[bold gold3]File: {self.filepath}[/gold3]",
+                        f"[bold gold3]File: {self.filepath}[/bold gold3]",
                         characters="\u2501",
                         style="bold gold3",
                     )

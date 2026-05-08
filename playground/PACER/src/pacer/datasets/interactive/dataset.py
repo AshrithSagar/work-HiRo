@@ -114,5 +114,28 @@ class InteractiveDataSet:
         drawer.show()
         return drawer
 
+    def save(self, filepath: str) -> None:
+        demos = self.controller.store.demos
+        if not demos:
+            print("Nothing drawn — nothing saved.")
+            return
+
+        velocities = self.controller.store.velocities
+        demos_array = np.array(
+            [np.asarray(d, dtype=npDType) for d in demos], dtype=object
+        )
+        velocities_array = np.array(
+            [np.asarray(v, dtype=npDType) for v in velocities], dtype=object
+        )
+
+        np.savez_compressed(
+            filepath,
+            demos=demos_array,
+            velocities=velocities_array,
+            reference_mean_speed=self.controller.store.reference_mean_speed,
+        )
+        filepath = f"{filepath}.npz" if not filepath.endswith(".npz") else filepath
+        print(f"Saved {len(demos)} demos to {filepath}")
+
 
 ## ─────────────────────────────────────────────────────────────────────────────
