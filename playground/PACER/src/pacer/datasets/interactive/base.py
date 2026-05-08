@@ -27,6 +27,13 @@ type Stroke = list[Point]
 
 
 @dataclass
+class Segment:
+    points: Stroke
+    trajectory_id: int
+    segment_id: int
+
+
+@dataclass
 class DemoStore:
     demos: list[Stroke]
 
@@ -48,14 +55,22 @@ class DemoStore:
 class InteractiveFigure:
     fig: Figure
     ax: Axes
-    toolbar_ax: Axes
+    toolbar_ax: Axes  # First row for controls: draw, select, reset, undo.
+    toolbar2_ax: Axes  # Second row for bin controls
+    status_ax: Axes  # bottom status bar
 
     @classmethod
     def create(cls) -> Self:
-        fig, (toolbar_ax, ax) = plt.subplots(
-            2, 1, gridspec_kw={"height_ratios": [1, 12], "hspace": 0.05}
+        fig, (toolbar_ax, toolbar2_ax, status_ax, ax) = plt.subplots(
+            4, 1, gridspec_kw={"height_ratios": [1, 0.6, 0.5, 11], "hspace": 0.05}
         )
-        return cls(fig=fig, ax=ax, toolbar_ax=toolbar_ax)
+        return cls(
+            fig=fig,
+            ax=ax,
+            toolbar_ax=toolbar_ax,
+            toolbar2_ax=toolbar2_ax,
+            status_ax=status_ax,
+        )
 
 
 class MatplotlibRenderer:
@@ -63,30 +78,22 @@ class MatplotlibRenderer:
         self.ax: Axes = ax
         self.lines: list[Line2D] = []
 
-    def draw(self, points: Iterable[Point], *, color: str) -> None:
-        x, y = zip(*points)
-        (line,) = self.ax.plot(x, y, lw=2.2, color=color)
+    def draw(
+        self,
+        points: Iterable[Point],
+        *,
+        color: str,
+        lw: float = 2.2,
+        alpha: float = 1.0,
+    ) -> None:
+        if not points:
+            return
+        pts = list(points)
+        if len(pts) < 2:
+            return
+        x, y = zip(*pts)
+        (line,) = self.ax.plot(x, y, lw=lw, color=color, alpha=alpha)
         self.lines.append(line)
-
-    def redraw(self, strokes: list[Stroke], selected: int | None) -> None:
-        self.reset()
-        for i, stroke in enumerate(strokes):
-            if not stroke:
-                continue
-            x, y = zip(*stroke)
-            if i == selected:
-                (halo,) = self.ax.plot(x, y, lw=6.0, color="gold", alpha=0.5, zorder=2)
-                self.lines.append(halo)
-                (line,) = self.ax.plot(x, y, lw=2.2, color="red", zorder=3)
-            else:
-                (line,) = self.ax.plot(x, y, lw=2.2, color=f"C{i % 10}", zorder=2)
-            self.lines.append(line)
-        self.ax.figure.canvas.draw_idle()
-
-    def undo(self) -> None:
-        if self.lines:
-            line = self.lines.pop()
-            line.remove()
 
     def reset(self) -> None:
         for line in self.lines:
@@ -99,6 +106,7 @@ class Plugin:
     def on_reset(self, ctrl: InteractiveController) -> None: ...
     def on_undo(self, ctrl: InteractiveController) -> None: ...
     def on_finish(self, ctrl: InteractiveController) -> None: ...
+    def on_cancel(self, ctrl: InteractiveController) -> None: ...
     def on_press(self, ctrl: InteractiveController, event: MouseEvent) -> None: ...
     def on_motion(self, ctrl: InteractiveController, event: MouseEvent) -> None: ...
     def on_release(self, ctrl: InteractiveController, event: MouseEvent) -> None: ...
@@ -109,6 +117,12 @@ class Plugin:
 class Mode(Enum):
     DRAW = auto()
     SELECT = auto()
+    REPLACE = auto()
+
+
+class DrawMode(Enum):
+    FREEHAND = auto()
+    POLYLINE = auto()
 
 
 class InteractiveController:
@@ -124,6 +138,9 @@ class InteractiveController:
         self.mode: Mode = Mode.DRAW
         self.selected_stroke: int | None = None
         self.current_stroke: Stroke | None = None
+        self.segment_start_idx: int | None = None  # Point index within trajectory
+        self.segment_end_idx: int | None = None
+        self.segments: list[Segment] = []
         self.history: list[list[Stroke]] = []
 
     # ── Event dispatch  ───────────────────────────────────────────────────────
@@ -174,6 +191,14 @@ class InteractiveController:
         self.store.reset()
         for p in self.plugins:
             p.on_reset(self)
+
+    def cancel(self) -> None:
+        self.selected_stroke = None
+        self.current_stroke = None
+        self.segment_start_idx = None
+        self.segment_end_idx = None
+        for p in self.plugins:
+            p.on_cancel(self)
 
 
 ## ─────────────────────────────────────────────────────────────────────────────

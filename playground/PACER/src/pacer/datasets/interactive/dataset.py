@@ -44,8 +44,6 @@ class InteractiveDataSet:
         self.toolbar_ax: Axes
         self.fig, self.ax, self.toolbar_ax = ifig.fig, ifig.ax, ifig.toolbar_ax
 
-        self.ax.set_xlim(0.0, canvas_size[0])
-        self.ax.set_ylim(0.0, canvas_size[1])
         self.ax.set_aspect("equal")
 
         self.controller: InteractiveController = InteractiveController(
@@ -73,8 +71,16 @@ class InteractiveDataSet:
             states = [State[TWO](p) for p in arr]
 
             if len(arr) >= 2:
-                vel = np.diff(arr, axis=0)
-                vel = np.vstack([vel, np.zeros((1, 2), dtype=npDType)])
+                # Finite differences, but normalised so velocity is per-unit-arc
+                # rather than per raw index step (which varies with draw speed)
+                diffs = np.diff(arr, axis=0)  # (T-1, 2)
+                dt = np.hypot(diffs[:, 0], diffs[:, 1])  # arc length of each step
+                dt = np.where(dt < 1e-8, 1e-8, dt)  # avoid div/0 for stationary pts
+                # Unit tangent direction * mean speed normalised to 1
+                vel = diffs / dt[:, None]  # unit tangent at each step
+                vel = np.vstack(
+                    [vel, vel[[-1]]]
+                )  # repeat last for same length as states
             else:
                 vel = np.zeros((len(arr), 2), dtype=npDType)
 
