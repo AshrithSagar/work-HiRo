@@ -1358,7 +1358,7 @@ wheels = [
 [[package]]
 name = "pylasahandwritingdataset"
 version = "0.2.1"
-source = { git = "https://github.com/AshrithSagar/pyLASAHandwritingDataset.git?rev=main#bdad0fe28baace3f56430b12b09e151e89b133d8" }
+source = { git = "https://github.com/AshrithSagar/pyLASAHandwritingDataset.git?rev=main#c8f50690a3b8c4fc46a1d1f27db704fe4a464862" }
 dependencies = [
     { name = "numpy" },
     { name = "platformdirs" },
@@ -1969,7 +1969,7 @@ wheels = [
 [[package]]
 name = "typingkit"
 version = "0.2.8"
-source = { git = "https://github.com/AshrithSagar/typingkit.git?rev=main#b128eea1579118fdc7763f985716771f35361b2f" }
+source = { git = "https://github.com/AshrithSagar/typingkit.git?rev=main#49690d6b195a495f12b15d42a722a609f9829245" }
 dependencies = [
     { name = "numpy" },
 ]
