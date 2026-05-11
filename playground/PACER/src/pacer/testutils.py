@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import Any, Generic, Literal
 
 import matplotlib.pyplot as plt
+import numpy as np
+import numpy.linalg as la
 from pyLASAHandwritingDataset import SinglePatternMotion
 from rich.pretty import Pretty
 from torch._prims_common import DeviceLikeType
@@ -18,7 +20,12 @@ from typingkit.numpy._typed.helpers import TWO
 
 from pacer import console
 from pacer.base import Demonstrations
-from pacer.corruptions import NoisyDemonstrationCorrupter
+from pacer.corruptions import (
+    DemonstrationCorrupter,
+    NoisyDemonstrationCorrupter,
+    PerPhaseBinCorruptionPlanner,
+    SegmentGaussianCorrupter,
+)
 from pacer.datasets import InteractiveDataSet, LASADataSet, LegacyInteractiveDataSet
 from pacer.datasets.interactive.base import InteractiveFigure
 from pacer.datasets.interactive.plugins import (
@@ -35,8 +42,8 @@ from pacer.phase.estimation import (
     PhaseEstimator,
 )
 from pacer.phase.evaluation import PhaseEvaluationReport
-from pacer.typings import DimAction, DimState, NumDemos, NumPoints
-from pacer.utils import SEED, TORCH_DEVICE
+from pacer.typings import DimAction, DimState, NumDemos, NumPoints, Vector, npDType
+from pacer.utils import EPS, SEED, TORCH_DEVICE, set_seed
 
 ## ── Typings ──────────────────────────────────────────────────────────────────
 
@@ -50,6 +57,7 @@ type DemonstrationsChoice = Literal[
     "LEGACY_CUSTOM_DRAW",
 ]
 type PhaseEstimatorChoice = Literal["MLP", "NORMALISED_TIME_INDEX", "PATH_LENGTH"]
+type CorruptionsChoice = Literal["NOISY", "SEGMENT_GAUSSIAN"]
 
 ## ── Test Utils ───────────────────────────────────────────────────────────────
 
@@ -60,7 +68,7 @@ class DemonstrationLoader:
     _: KW_ONLY
     pattern: SinglePatternMotion | None = None
     filepath: str | None = None
-    use_corruptions: bool = False
+    corruptions_choice: CorruptionsChoice | None = None
 
     def load(self) -> Demonstrations[Any, Any, TWO, TWO]:
         demonstrations: Demonstrations[Any, Any, TWO, TWO]
@@ -109,15 +117,37 @@ class DemonstrationLoader:
                     legacy_drawer.save(self.filepath)
                 demonstrations = legacy_drawer.to_demonstrations()
 
-        if self.use_corruptions:
-            corrupter = NoisyDemonstrationCorrupter[Any, Any, TWO, TWO](
-                demonstrations=demonstrations,
-                noise_std=0.2,
-                outlier_fraction=0.2,
-                outlier_scale=5.0,
-                bias_strength=0.2,
-            )
-            demonstrations = corrupter.inject_corruptions()
+        corrupter: DemonstrationCorrupter[Any, Any, TWO, TWO]
+        match self.corruptions_choice:
+            case "NOISY":
+                corrupter = NoisyDemonstrationCorrupter(
+                    demonstrations,
+                    noise_std=0.2,
+                    outlier_fraction=0.2,
+                    outlier_scale=5.0,
+                    bias_strength=0.2,
+                )
+                demonstrations = corrupter.inject_corruptions()
+            case "SEGMENT_GAUSSIAN":
+                set_seed(SEED)
+                directions = list[Vector[int]]()
+                for demo in demonstrations:
+                    direction = np.random.randn(demo.action_dim)
+                    direction /= la.norm(direction) + EPS
+                    directions.append(Vector[int](direction, dtype=npDType))
+                planner = PerPhaseBinCorruptionPlanner(
+                    demonstrations,
+                    n_bins=7,
+                    amplitude=5,
+                    sigma_fraction=0.25,
+                    directions=directions,
+                    target="STATE",
+                )
+                corruptions = planner.plan()
+                corrupter = SegmentGaussianCorrupter(demonstrations, corruptions)
+                demonstrations = corrupter.inject_corruptions()
+            case None:
+                pass
 
         return demonstrations
 

@@ -17,7 +17,7 @@ if __name__ == "__main__":
         LASA_pattern="GShape",
         phase_estimator_choice="MLP",
         evaluate_phases=False,
-        use_corruptions=False,
+        corruptions_choice=None,
         use_state_labels=False,
         filepath=None,
     ).run()

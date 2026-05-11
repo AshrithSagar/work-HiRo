@@ -33,6 +33,7 @@ from pacer.plotting import (
     plot_trust_values,
 )
 from pacer.testutils import (
+    CorruptionsChoice,
     DemonstrationLoader,
     DemonstrationsChoice,
     PhaseEstimatorChoice,
@@ -181,7 +182,7 @@ class BCvsPACERBCExperiment:
         list[PhaseEstimatorChoice] | PhaseEstimatorChoice | Literal["ALL"]
     ) = "MLP"
     evaluate_phases: bool = False
-    use_corruptions: bool = False
+    corruptions_choice: CorruptionsChoice | None = None
     use_state_labels: bool = False
     filepath: str | None = None
 
@@ -243,7 +244,7 @@ class BCvsPACERBCExperiment:
                 choice=self.demonstrations_choice,
                 pattern=pattern,
                 filepath=self.filepath,
-                use_corruptions=self.use_corruptions,
+                corruptions_choice=self.corruptions_choice,
             ).load()
 
             BCExperiment(demonstrations).run()
