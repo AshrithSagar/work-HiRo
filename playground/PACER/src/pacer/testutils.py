@@ -11,8 +11,6 @@ from pathlib import Path
 from typing import Any, Generic, Literal
 
 import matplotlib.pyplot as plt
-import numpy as np
-import numpy.linalg as la
 from pyLASAHandwritingDataset import SinglePatternMotion
 from rich.pretty import Pretty
 from torch._prims_common import DeviceLikeType
@@ -42,8 +40,8 @@ from pacer.phase.estimation import (
     PhaseEstimator,
 )
 from pacer.phase.evaluation import PhaseEvaluationReport
-from pacer.typings import DimAction, DimState, NumDemos, NumPoints, Vector, npDType
-from pacer.utils import EPS, SEED, TORCH_DEVICE, set_seed
+from pacer.typings import DimAction, DimState, NumDemos, NumPoints
+from pacer.utils import SEED, TORCH_DEVICE, set_seed
 
 ## ── Typings ──────────────────────────────────────────────────────────────────
 
@@ -57,7 +55,9 @@ type DemonstrationsChoice = Literal[
     "LEGACY_CUSTOM_DRAW",
 ]
 type PhaseEstimatorChoice = Literal["MLP", "NORMALISED_TIME_INDEX", "PATH_LENGTH"]
-type CorruptionsChoice = Literal["NOISY", "SEGMENT_GAUSSIAN"]
+type CorruptionsChoice = Literal[
+    "NOISY_ACTIONS", "SEGMENT_GAUSSIAN_ACTIONS", "SEGMENT_GAUSSIAN_STATES"
+]
 
 ## ── Test Utils ───────────────────────────────────────────────────────────────
 
@@ -119,7 +119,7 @@ class DemonstrationLoader:
 
         corrupter: DemonstrationCorrupter[Any, Any, TWO, TWO]
         match self.corruptions_choice:
-            case "NOISY":
+            case "NOISY_ACTIONS":
                 corrupter = NoisyDemonstrationCorrupter(
                     demonstrations,
                     noise_std=0.2,
@@ -128,20 +128,21 @@ class DemonstrationLoader:
                     bias_strength=0.2,
                 )
                 demonstrations = corrupter.inject_corruptions()
-            case "SEGMENT_GAUSSIAN":
+            case "SEGMENT_GAUSSIAN_ACTIONS" | "SEGMENT_GAUSSIAN_STATES":
                 set_seed(SEED)
-                directions = list[Vector[int]]()
-                for demo in demonstrations:
-                    direction = np.random.randn(demo.action_dim)
-                    direction /= la.norm(direction) + EPS
-                    directions.append(Vector[int](direction, dtype=npDType))
+                target: Literal["STATE", "ACTION"]
+                match self.corruptions_choice:
+                    case "SEGMENT_GAUSSIAN_ACTIONS":
+                        target = "ACTION"
+                    case "SEGMENT_GAUSSIAN_STATES":
+                        target = "STATE"
                 planner = PerPhaseBinCorruptionPlanner(
                     demonstrations,
                     n_bins=7,
                     amplitude=5,
                     sigma_fraction=0.25,
-                    directions=directions,
-                    target="STATE",
+                    normal_orientation="AWAY_FROM_CENTRE",
+                    target=target,
                 )
                 corruptions = planner.plan()
                 corrupter = SegmentGaussianCorrupter(demonstrations, corruptions)

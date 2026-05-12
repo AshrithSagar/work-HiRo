@@ -111,6 +111,9 @@ class NoisyDemonstrationCorrupter(
         return Demonstrations(demos=corrupted_demos)
 
 
+type NormalOrientation = Literal["LEFT", "RIGHT", "AWAY_FROM_CENTRE", "TOWARDS_CENTRE"]
+
+
 @dataclass(frozen=True)
 class SegmentGaussianCorruption(RuntimeGeneric[DimState, DimAction]):
     """
@@ -120,23 +123,14 @@ class SegmentGaussianCorruption(RuntimeGeneric[DimState, DimAction]):
     over the interval `[start, end)`.
     """
 
+    _: KW_ONLY
     demo_index: DemoIndex
-
     start: TimeIndex
     end: TimeIndex
-
-    direction: Vector[int]
-    """
-    Explicit corruption direction.
-
-    Caller is expected to provide a unit-normalized direction.
-    """
-
-    _: KW_ONLY
-
-    amplitude: float
-    sigma: float
-
+    direction: Vector[int] | None = None
+    normal_orientation: NormalOrientation = "AWAY_FROM_CENTRE"
+    amplitude: float = 1.0
+    sigma: float = 0.25
     target: Literal["ACTION", "STATE"] = "ACTION"
 
     @property
@@ -149,23 +143,60 @@ class SegmentGaussianCorruption(RuntimeGeneric[DimState, DimAction]):
     def contains(self, t: TimeIndex) -> bool:
         return self.start <= t < self.end
 
+    def infer_perpendicular_direction(
+        self,
+        demo: Demonstration[NumPoints, DimState, DimAction],
+        *,
+        centre: Vector[int] | None = None,
+    ) -> Vector[int]:
+        p0 = demo.states[self.start]
+        p1 = demo.states[self.end - 1]
+        tangent = p1 - p0
+        tangent /= la.norm(tangent) + EPS
+        if tangent.shape[0] != 2:
+            raise ValueError("Only 2D states supported currently.")
+        left = np.array([-tangent[1], tangent[0]])
+        right = -left
+        match self.normal_orientation:
+            case "LEFT":
+                normal = left
+            case "RIGHT":
+                normal = right
+            case "AWAY_FROM_CENTRE":
+                assert centre is not None
+                midpoint = 0.5 * (p0 + p1)
+                outward = midpoint - centre
+                normal = left if np.dot(left, outward) >= 0 else right
+            case "TOWARDS_CENTRE":
+                assert centre is not None
+                midpoint = 0.5 * (p0 + p1)
+                inward = centre - midpoint
+                normal = left if np.dot(left, inward) >= 0 else right
+        normal /= la.norm(normal) + EPS
+        return Vector[int](normal)
+
 
 @dataclass
 class SegmentGaussianCorrupter(
     DemonstrationCorrupter[NumDemos, NumPoints, DimState, DimAction]
 ):
-    """
-    Applies deterministic segment-localized Gaussian corruptions.
-
-    No randomness is used internally.
-    """
+    """Applies deterministic segment-localized Gaussian corruptions."""
 
     corruptions: Iterable[SegmentGaussianCorruption[DimState, DimAction]]
+
+    def get_demonstrations_centre(self) -> Vector[int]:
+        points: list[State[DimState]] = []
+        for demo in self.demonstrations:
+            for state in demo.states:
+                points.append(state)
+        centre = np.mean(np.asarray(points), axis=0)
+        return Vector[int](centre)
 
     @override
     def inject_corruptions(
         self,
     ) -> Demonstrations[NumDemos, NumPoints, DimState, DimAction]:
+        centre = self.get_demonstrations_centre()
         corrupted_demos = TypedList[
             NumDemos, Demonstration[NumPoints, DimState, DimAction]
         ]()
@@ -184,7 +215,14 @@ class SegmentGaussianCorrupter(
                 for corruption in demo_corruptions:
                     if not corruption.contains(t):
                         continue
-                    perturbation = corruption.envelope(t) * corruption.direction
+                    direction = (
+                        corruption.direction
+                        if corruption.direction is not None
+                        else corruption.infer_perpendicular_direction(
+                            demo, centre=centre
+                        )
+                    )
+                    perturbation = corruption.envelope(t) * direction
                     match corruption.target:
                         case "ACTION":
                             action += perturbation
@@ -218,28 +256,16 @@ class PerPhaseBinCorruptionPlanner(
     """
 
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
-
     _: KW_ONLY
-
     n_bins: int
-
     amplitude: float
     sigma_fraction: float
-
-    directions: list[Vector[int]]
-    """
-    Explicit direction for each demo/bin corruption.
-
-    Length must equal number of demonstrations.
-    """
-
+    normal_orientation: NormalOrientation = "AWAY_FROM_CENTRE"
     target: Literal["ACTION", "STATE"] = "ACTION"
 
-    def plan(self) -> TypedList[int, SegmentGaussianCorruption[DimState, DimAction]]:
-        assert self.demonstrations.count == len(self.directions)
-        corruptions = TypedList[int, SegmentGaussianCorruption[DimState, DimAction]]()
-
-        for demo, direction in zip(self.demonstrations, self.directions, strict=True):
+    def plan(self) -> list[SegmentGaussianCorruption[DimState, DimAction]]:
+        corruptions = list[SegmentGaussianCorruption[DimState, DimAction]]()
+        for demo in self.demonstrations:
             T = demo.length
             bin_length = max(1, T // self.n_bins)
 
@@ -260,13 +286,13 @@ class PerPhaseBinCorruptionPlanner(
                     demo_index=demo.index,
                     start=start,
                     end=end,
-                    direction=direction,
+                    direction=None,
+                    normal_orientation=self.normal_orientation,
                     amplitude=self.amplitude,
                     sigma=sigma,
                     target=self.target,
                 )
             )
-
         return corruptions
 
 
