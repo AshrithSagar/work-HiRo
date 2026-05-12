@@ -70,6 +70,14 @@ class MLPPhaseScorer(nn.Module, RuntimeGeneric[DimState]):
 
 
 @dataclass
+class MLPPhaseEstimatorConfig:
+    hidden_dim: int = 128
+    margin: float = 1.0  # m
+    lr: float = 1e-3
+    epochs: int = 240
+
+
+@dataclass
 class MLPPhaseEstimator(PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]):
     r"""
     MLPPhaseScorer + Ranking loss.
@@ -101,25 +109,20 @@ class MLPPhaseEstimator(PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]
             loss /= n_demos  # Normalise over demonstrations
         return loss
 
-    def train(
-        self,
-        *,
-        hidden_dim: int = 128,
-        margin: float = 1.0,
-        lr: float = 1e-3,
-        epochs: int = 240,
-    ) -> Tensor:
+    def train(self, config: MLPPhaseEstimatorConfig) -> Tensor:
         set_seed(self.seed)
         state_dim = self.demonstrations.state_dim
-        scorer = MLPPhaseScorer(state_dim=state_dim, hidden_dim=hidden_dim)
+        scorer = MLPPhaseScorer(state_dim=state_dim, hidden_dim=config.hidden_dim)
         self.scorer = scorer.to(self.device_)
-        self.optimiser = torch.optim.Adam(self.scorer.parameters(), lr=lr)
+        self.optimiser = torch.optim.Adam(self.scorer.parameters(), lr=config.lr)
 
         self.scorer.train()
-        loss = self.compute_ranking_loss(margin=margin)
-        for _epoch in track(range(epochs), description="[bold]Phase training[/]"):
+        loss = self.compute_ranking_loss(margin=config.margin)
+        for _epoch in track(
+            range(config.epochs), description="[bold]Phase training[/]"
+        ):
             self.optimiser.zero_grad()
-            loss = self.compute_ranking_loss(margin=margin)
+            loss = self.compute_ranking_loss(margin=config.margin)
             loss.backward()  # type: ignore[no-untyped-call]  # pyright: ignore[reportUnknownMemberType]
             torch.nn.utils.clip_grad_norm_(self.scorer.parameters(), 1.0)
             self.optimiser.step()  # pyright: ignore[reportUnknownMemberType]

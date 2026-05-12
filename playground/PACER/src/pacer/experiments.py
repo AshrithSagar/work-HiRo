@@ -6,7 +6,7 @@ Experiment runs
 
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
-from dataclasses import KW_ONLY, dataclass
+from dataclasses import KW_ONLY, dataclass, field
 from typing import Generic, Literal
 
 import matplotlib.pyplot as plt
@@ -23,6 +23,7 @@ from pacer.pacer import (
     TrustValueComputer,
     TrustValueParams,
 )
+from pacer.phase.estimation import MLPPhaseEstimatorConfig
 from pacer.plotting import (
     plot_action_comparison,
     plot_phases,
@@ -39,7 +40,7 @@ from pacer.testutils import (
     PhaseEstimatorChoice,
     PhasePipeline,
 )
-from pacer.trainers import BCTrainer, WeightedBCTrainer
+from pacer.trainers import BCTrainConfig, BCTrainer, WeightedBCTrainer
 from pacer.typings import NumDemos, NumPoints
 
 ## ── Experiments ──────────────────────────────────────────────────────────────
@@ -50,6 +51,7 @@ class BCExperiment(Generic[NumDemos, NumPoints]):
     """BC Policy."""
 
     demonstrations: Demonstrations[NumDemos, NumPoints, TWO, TWO]
+    bc_train_config: BCTrainConfig = field(default_factory=BCTrainConfig)
 
     def run(self) -> None:
         console.rule("[blue]BC policy[/blue]", style="blue")
@@ -60,11 +62,7 @@ class BCExperiment(Generic[NumDemos, NumPoints]):
             targets=self.demonstrations.actions,
             device="cpu",
         )
-        policy_loss = trainer.train(
-            policy_hidden_dim=128,
-            policy_lr=1e-3,
-            policy_epochs=240,
-        )
+        policy_loss = trainer.train(self.bc_train_config)
         console.print(f"Policy loss: {policy_loss}")
 
 
@@ -75,8 +73,12 @@ class PACERBCExperiment(Generic[NumDemos, NumPoints]):
     demonstrations: Demonstrations[NumDemos, NumPoints, TWO, TWO]
     _: KW_ONLY
     phase_estimator_choice: PhaseEstimatorChoice = "MLP"
+    mlp_phase_estimator_config: MLPPhaseEstimatorConfig = field(
+        default_factory=MLPPhaseEstimatorConfig
+    )
     evaluate_phases: bool = False
     use_state_labels: bool = False
+    bc_train_config: BCTrainConfig = field(default_factory=BCTrainConfig)
     show_plots: bool = True
 
     def run(self) -> None:
@@ -89,6 +91,7 @@ class PACERBCExperiment(Generic[NumDemos, NumPoints]):
         phases = PhasePipeline(
             self.demonstrations,
             choice=self.phase_estimator_choice,
+            mlp_phase_estimator_config=self.mlp_phase_estimator_config,
             evaluate_phases=self.evaluate_phases,
         ).run()
         bins = Binner(
@@ -141,11 +144,7 @@ class PACERBCExperiment(Generic[NumDemos, NumPoints]):
             weights=action_trust_values,
             device="cpu",
         )
-        policy_loss = trainer.train(
-            policy_hidden_dim=128,
-            policy_lr=1e-3,
-            policy_epochs=240,
-        )
+        policy_loss = trainer.train(self.bc_train_config)
         console.print(f"Policy loss: {policy_loss}")
 
         if self.show_plots:
@@ -181,9 +180,13 @@ class BCvsPACERBCExperiment:
     phase_estimator_choice: (
         list[PhaseEstimatorChoice] | PhaseEstimatorChoice | Literal["ALL"]
     ) = "MLP"
+    mlp_phase_estimator_config: MLPPhaseEstimatorConfig = field(
+        default_factory=MLPPhaseEstimatorConfig
+    )
     evaluate_phases: bool = False
     corruptions_choice: CorruptionsChoice | None = None
     use_state_labels: bool = False
+    bc_train_config: BCTrainConfig = field(default_factory=BCTrainConfig)
     filepath: str | None = None
 
     def run(self) -> None:
@@ -247,13 +250,15 @@ class BCvsPACERBCExperiment:
                 corruptions_choice=self.corruptions_choice,
             ).load()
 
-            BCExperiment(demonstrations).run()
+            BCExperiment(demonstrations, bc_train_config=self.bc_train_config).run()
             for phase_estimator_choice in phase_estimator_choices:
                 PACERBCExperiment(
                     demonstrations,
                     phase_estimator_choice=phase_estimator_choice,
+                    mlp_phase_estimator_config=self.mlp_phase_estimator_config,
                     evaluate_phases=self.evaluate_phases,
                     use_state_labels=self.use_state_labels,
+                    bc_train_config=self.bc_train_config,
                     show_plots=self.show_plots,
                 ).run()
                 if self.show_plots:

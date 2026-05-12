@@ -6,7 +6,7 @@ Test utils
 
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
-from dataclasses import KW_ONLY, dataclass
+from dataclasses import KW_ONLY, dataclass, field
 from pathlib import Path
 from typing import Any, Generic, Literal
 
@@ -35,6 +35,7 @@ from pacer.datasets.interactive.plugins import (
 from pacer.phase.base import PhasesCollection
 from pacer.phase.estimation import (
     MLPPhaseEstimator,
+    MLPPhaseEstimatorConfig,
     NormalisedTimeIndexPhaseEstimator,
     PathLengthPhaseEstimator,
     PhaseEstimator,
@@ -160,12 +161,9 @@ class PhasePipeline(Generic[NumDemos, NumPoints, DimState, DimAction]):
     _: KW_ONLY
     device: DeviceLikeType = TORCH_DEVICE
     seed: int = SEED
-    #
-    phase_hidden_dim: int = 128
-    phase_margin: float = 1.0  # m
-    phase_lr: float = 1e-3
-    phase_epochs: int = 240
-    #
+    mlp_phase_estimator_config: MLPPhaseEstimatorConfig = field(
+        default_factory=MLPPhaseEstimatorConfig
+    )
     evaluate_phases: bool = False
 
     def run(self) -> PhasesCollection[NumDemos, NumPoints]:
@@ -175,12 +173,7 @@ class PhasePipeline(Generic[NumDemos, NumPoints, DimState, DimAction]):
                 phase_estimator = MLPPhaseEstimator(
                     self.demonstrations, device=self.device, seed=self.seed
                 )
-                scorer_loss = phase_estimator.train(
-                    hidden_dim=self.phase_hidden_dim,
-                    margin=self.phase_margin,  # m
-                    lr=self.phase_lr,
-                    epochs=self.phase_epochs,
-                )
+                scorer_loss = phase_estimator.train(self.mlp_phase_estimator_config)
                 console.print(f"Phase scorer loss: {scorer_loss}")
             case "NORMALISED_TIME_INDEX":
                 phase_estimator = NormalisedTimeIndexPhaseEstimator(self.demonstrations)

@@ -62,6 +62,13 @@ class BCPolicy(nn.Module, RuntimeGeneric[DimState, DimAction]):
 
 
 @dataclass
+class BCTrainConfig:
+    hidden_dim: int = 128
+    lr: float = 1e-3
+    epochs: int = 240
+
+
+@dataclass
 class BCTrainer(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
     """Behavioral cloning policy trainer."""
 
@@ -103,27 +110,21 @@ class BCTrainer(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
             loss /= total_samples  # Normalise over samples
         return loss
 
-    def train(
-        self,
-        *,
-        policy_hidden_dim: int = 128,
-        policy_lr: float = 1e-3,
-        policy_epochs: int = 240,
-    ) -> Tensor:
+    def train(self, config: BCTrainConfig) -> Tensor:
         """Train BC policy using weighted Huber loss."""
         set_seed(self.seed)
         policy = BCPolicy(
             state_dim=self.states.dim,
             action_dim=self.targets.dim,
-            hidden_dim=policy_hidden_dim,
+            hidden_dim=config.hidden_dim,
         )
         self.policy = policy.to(self.device_)
-        self.optimiser = torch.optim.Adam(self.policy.parameters(), lr=policy_lr)
+        self.optimiser = torch.optim.Adam(self.policy.parameters(), lr=config.lr)
 
         self.policy.train()
         loss = self.compute_huber_loss()
         for _epoch in track(
-            range(policy_epochs), description="[bold]Policy training[/]"
+            range(config.epochs), description="[bold]Policy training[/]"
         ):
             self.optimiser.zero_grad()
             loss = self.compute_huber_loss()
@@ -198,27 +199,21 @@ class WeightedBCTrainer(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]
             loss /= total_weight
         return loss
 
-    def train(
-        self,
-        *,
-        policy_hidden_dim: int = 128,
-        policy_lr: float = 1e-3,
-        policy_epochs: int = 240,
-    ) -> Tensor:
+    def train(self, config: BCTrainConfig) -> Tensor:
         """Train BC policy using weighted Huber loss."""
         set_seed(self.seed)
         policy = BCPolicy(
             state_dim=self.states.dim,
             action_dim=self.targets.dim,
-            hidden_dim=policy_hidden_dim,
+            hidden_dim=config.hidden_dim,
         )
         self.policy = policy.to(self.device_)
-        self.optimiser = torch.optim.Adam(self.policy.parameters(), lr=policy_lr)
+        self.optimiser = torch.optim.Adam(self.policy.parameters(), lr=config.lr)
 
         self.policy.train()
         loss = self.compute_huber_loss()
         for _epoch in track(
-            range(policy_epochs), description="[bold]Policy training[/]"
+            range(config.epochs), description="[bold]Policy training[/]"
         ):
             self.optimiser.zero_grad()
             loss = self.compute_huber_loss()
