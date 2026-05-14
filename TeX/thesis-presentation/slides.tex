@@ -1,0 +1,47 @@
+\documentclass[handout]{beamer}
+\usetheme{Boadilla}
+\usecolortheme{default}
+
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{tabularx, booktabs, multirow}
+\usepackage[ruled,vlined]{algorithm2e}
+\usepackage{cite, graphicx, latexcolors}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{ragged2e, microtype, tikz}
+\usepackage{url, parskip, hyperref}
+\usepackage{outlines}
+
+\hypersetup{colorlinks=true, linkcolor=blue,}
+\setbeamercolor{title}{fg=internationalkleinblue}
+
+\input{sections/titlepage.tex}
+
+\begin{document}
+
+\section*{Titlepage}
+\begin{frame}\titlepage
+\end{frame}
+
+\section*{Outline}
+\begin{frame}[allowframebreaks]
+    \frametitle{\textbf{Outline}}
+    \tableofcontents[sections={3,4}]
+    \framebreak
+    \tableofcontents[sections={5,6,7,8}]
+\end{frame}
+
+\input{sections/introduction.tex}
+\input{sections/review.tex}
+\input{sections/methodology.tex}
+\input{sections/results.tex}
+\input{sections/conclusion.tex}
+
+\section{References}
+\begin{frame}[allowframebreaks]
+    \frametitle{\textbf{References}}
+    \scriptsize
+    \bibliographystyle{plain}
+    \bibliography{../common/bibliography/references.bib}
+\end{frame}
+
+\end{document}
