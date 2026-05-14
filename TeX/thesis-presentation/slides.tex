@@ -1,4 +1,4 @@
-\documentclass[handout]{beamer}
+\documentclass{beamer}
 \usetheme{Boadilla}
 \usecolortheme{default}
 
@@ -19,14 +19,15 @@
 \begin{document}
 
 \section*{Titlepage}
-\begin{frame}\titlepage
+\begin{frame}
+    \titlepage{}
 \end{frame}
 
 \section*{Outline}
 \begin{frame}[allowframebreaks]
     \frametitle{\textbf{Outline}}
     \tableofcontents[sections={3,4}]
-    \framebreak
+    \framebreak{}
     \tableofcontents[sections={5,6,7,8}]
 \end{frame}
 
