@@ -20,6 +20,7 @@ from pacer import console
 from pacer.base import Demonstrations
 from pacer.corruptions import (
     DemonstrationCorrupter,
+    NoisyCorruptionConfig,
     NoisyDemonstrationCorrupter,
     PerPhaseBinCorruptionPlanner,
     SegmentGaussianCorrupter,
@@ -123,10 +124,12 @@ class DemonstrationLoader:
             case "NOISY_ACTIONS":
                 corrupter = NoisyDemonstrationCorrupter(
                     demonstrations,
-                    noise_std=0.2,
-                    outlier_fraction=0.2,
-                    outlier_scale=5.0,
-                    bias_strength=0.2,
+                    config=NoisyCorruptionConfig(
+                        noise_std=0.2,
+                        outlier_fraction=0.2,
+                        outlier_scale=5.0,
+                        bias_strength=0.2,
+                    ),
                 )
                 demonstrations = corrupter.inject_corruptions()
             case "SEGMENT_GAUSSIAN_ACTIONS" | "SEGMENT_GAUSSIAN_STATES":

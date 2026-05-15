@@ -9,7 +9,7 @@ Dataset corruptions
 import random
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
-from dataclasses import KW_ONLY, dataclass
+from dataclasses import KW_ONLY, dataclass, field
 from typing import Literal, override
 
 import numpy as np
@@ -51,6 +51,18 @@ class DemonstrationCorrupter(
         raise NotImplementedError
 
 
+# ── Noisy Demonstration Corrupter ─────────────────────────────────────────────
+
+
+@dataclass(kw_only=True)
+class NoisyCorruptionConfig:
+    noise_std: float = 0.0
+    outlier_fraction: float = 0.0
+    outlier_scale: float = 3.0
+    bias_strength: float = 0.0
+    dropout_fraction: float = 0.0
+
+
 @dataclass
 class NoisyDemonstrationCorrupter(
     DemonstrationCorrupter[NumDemos, NumPoints, DimState, DimAction]
@@ -58,11 +70,7 @@ class NoisyDemonstrationCorrupter(
     """Applies i.i.d. corruption processes to actions."""
 
     _: KW_ONLY
-    noise_std: float = 0.0
-    outlier_fraction: float = 0.0
-    outlier_scale: float = 3.0
-    bias_strength: float = 0.0
-    dropout_fraction: float = 0.0
+    config: NoisyCorruptionConfig = field(default_factory=NoisyCorruptionConfig)
     seed: int = SEED
 
     @override
@@ -81,24 +89,24 @@ class NoisyDemonstrationCorrupter(
                 a = action.copy()
 
                 # Gaussian noise
-                if self.noise_std > 0:
-                    a += np.random.normal(0, self.noise_std, size=a.shape)
+                if self.config.noise_std > 0:
+                    a += np.random.normal(0, self.config.noise_std, size=a.shape)
 
                 # Outliers
                 if (
-                    self.outlier_fraction > 0
-                    and random.random() < self.outlier_fraction
+                    self.config.outlier_fraction > 0
+                    and random.random() < self.config.outlier_fraction
                 ):
-                    a += self.outlier_scale * np.random.randn(*a.shape)
+                    a += self.config.outlier_scale * np.random.randn(*a.shape)
 
                 # Systematic bias
-                if self.bias_strength > 0:
-                    a += self.bias_strength * bias_vector
+                if self.config.bias_strength > 0:
+                    a += self.config.bias_strength * bias_vector
 
                 # Dropout
                 if (
-                    self.dropout_fraction > 0
-                    and random.random() < self.dropout_fraction
+                    self.config.dropout_fraction > 0
+                    and random.random() < self.config.dropout_fraction
                 ):
                     a = np.zeros_like(a)
 
@@ -110,6 +118,8 @@ class NoisyDemonstrationCorrupter(
             )
         return Demonstrations(demos=corrupted_demos)
 
+
+# ── Segment Gaussian Corrupter ────────────────────────────────────────────────
 
 type NormalOrientation = Literal["LEFT", "RIGHT", "AWAY_FROM_CENTRE", "TOWARDS_CENTRE"]
 
