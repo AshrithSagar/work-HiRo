@@ -39,6 +39,7 @@ from pacer.testutils import (
     DemonstrationsChoice,
     PhaseEstimatorChoice,
     PhasePipeline,
+    PhasePipelineConfig,
 )
 from pacer.trainers import BCTrainConfig, BCTrainer, WeightedBCTrainer
 from pacer.typings import NumDemos, NumPoints
@@ -72,27 +73,22 @@ class PACERBCExperiment(Generic[NumDemos, NumPoints]):
 
     demonstrations: Demonstrations[NumDemos, NumPoints, TWO, TWO]
     _: KW_ONLY
-    phase_estimator_choice: PhaseEstimatorChoice = "MLP"
-    mlp_phase_estimator_config: MLPPhaseEstimatorConfig = field(
-        default_factory=MLPPhaseEstimatorConfig
+    phase_pipeline_config: PhasePipelineConfig = field(
+        default_factory=PhasePipelineConfig
     )
-    evaluate_phases: bool = False
     use_state_labels: bool = False
     bc_train_config: BCTrainConfig = field(default_factory=BCTrainConfig)
     show_plots: bool = True
 
     def run(self) -> None:
         console.rule(
-            f"[blue]PACER[{self.phase_estimator_choice}_PHASE_ESTIMATION] + BC policy[/blue]",
+            f"[blue]PACER[{self.phase_pipeline_config.phase_estimator_choice}_PHASE_ESTIMATION] + BC policy[/blue]",
             style="blue",
         )
 
         # PACER
         phases = PhasePipeline(
-            self.demonstrations,
-            choice=self.phase_estimator_choice,
-            mlp_phase_estimator_config=self.mlp_phase_estimator_config,
-            evaluate_phases=self.evaluate_phases,
+            self.demonstrations, config=self.phase_pipeline_config
         ).run()
         bins = Binner(
             self.demonstrations,
@@ -254,9 +250,11 @@ class BCvsPACERBCExperiment:
             for phase_estimator_choice in phase_estimator_choices:
                 PACERBCExperiment(
                     demonstrations,
-                    phase_estimator_choice=phase_estimator_choice,
-                    mlp_phase_estimator_config=self.mlp_phase_estimator_config,
-                    evaluate_phases=self.evaluate_phases,
+                    phase_pipeline_config=PhasePipelineConfig(
+                        phase_estimator_choice=phase_estimator_choice,
+                        mlp_phase_estimator_config=self.mlp_phase_estimator_config,
+                        evaluate_phases=self.evaluate_phases,
+                    ),
                     use_state_labels=self.use_state_labels,
                     bc_train_config=self.bc_train_config,
                     show_plots=self.show_plots,

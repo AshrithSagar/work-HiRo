@@ -323,8 +323,8 @@ class RibbonTokenConsolidator(
 class TrustValueParams:
     """Hyperparameters controlling trust value computations."""
 
-    tukey_cutoff: npDType | float  # c
-    min_trust: npDType | float  # w_min
+    tukey_cutoff: npDType | float = 4.685  # c
+    min_trust: npDType | float = 0.02  # w_min
 
     def __post_init__(self) -> None:
         assert 3 <= self.tukey_cutoff <= 5

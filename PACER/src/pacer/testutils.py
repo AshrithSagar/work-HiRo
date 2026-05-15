@@ -158,25 +158,35 @@ class DemonstrationLoader:
 
 
 @dataclass
-class PhasePipeline(Generic[NumDemos, NumPoints, DimState, DimAction]):
-    demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
-    choice: PhaseEstimatorChoice = "MLP"
+class PhasePipelineConfig:
     _: KW_ONLY
     device: DeviceLikeType = TORCH_DEVICE
     seed: int = SEED
+    phase_estimator_choice: PhaseEstimatorChoice = "MLP"
     mlp_phase_estimator_config: MLPPhaseEstimatorConfig = field(
         default_factory=MLPPhaseEstimatorConfig
     )
     evaluate_phases: bool = False
 
+
+@dataclass
+class PhasePipeline(Generic[NumDemos, NumPoints, DimState, DimAction]):
+    demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
+    _: KW_ONLY
+    config: PhasePipelineConfig = field(default_factory=PhasePipelineConfig)
+
     def run(self) -> PhasesCollection[NumDemos, NumPoints]:
         phase_estimator: PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]
-        match self.choice:
+        match self.config.phase_estimator_choice:
             case "MLP":
                 phase_estimator = MLPPhaseEstimator(
-                    self.demonstrations, device=self.device, seed=self.seed
+                    self.demonstrations,
+                    device=self.config.device,
+                    seed=self.config.seed,
                 )
-                scorer_loss = phase_estimator.train(self.mlp_phase_estimator_config)
+                scorer_loss = phase_estimator.train(
+                    self.config.mlp_phase_estimator_config
+                )
                 console.print(f"Phase scorer loss: {scorer_loss}")
             case "NORMALISED_TIME_INDEX":
                 phase_estimator = NormalisedTimeIndexPhaseEstimator(self.demonstrations)
@@ -185,7 +195,7 @@ class PhasePipeline(Generic[NumDemos, NumPoints, DimState, DimAction]):
 
         phases = phase_estimator.estimate_phases()
 
-        if self.evaluate_phases:
+        if self.config.evaluate_phases:
             report = PhaseEvaluationReport.evaluate(self.demonstrations, phases)
             console.print(Pretty(report, expand_all=True))
 
