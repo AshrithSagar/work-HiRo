@@ -8,6 +8,7 @@ Experiment runs
 
 from dataclasses import KW_ONLY, dataclass, field
 from typing import Generic, Literal, cast
+from warnings import deprecated
 
 import matplotlib.pyplot as plt
 from pyLASAHandwritingDataset import ALL_SINGLE_PATTERN_MOTIONS, SinglePatternMotion
@@ -110,8 +111,11 @@ class PACERBCExperiment(Generic[NumBins, NumDemos, NumPoints]):
                 )
 
 
+@deprecated(
+    "Use BCvsPACERBCExperiment instead, till an improved sweep variation refactor is done."
+)
 @dataclass(kw_only=True)
-class BCvsPACERBCExperiment(Generic[NumBins]):
+class BCvsPACERBCExperimentLegacy(Generic[NumBins]):
     """BC Policy vs. PACER + BC Policy."""
 
     show_plots: bool = True
@@ -232,6 +236,33 @@ class BCvsPACERBCExperiment(Generic[NumBins]):
                 break
 
         console.rule(characters="\u2501", style="gold3")
+
+
+@dataclass(kw_only=True)
+class BCvsPACERBCExperiment(Generic[NumBins]):
+    """BC Policy vs. PACER + BC Policy."""
+
+    show_plots: bool = True
+    demonstration_loader_config: DemonstrationLoaderConfig = field(
+        default_factory=DemonstrationLoaderConfig
+    )
+    pacer_config: PACERConfig[NumBins] = field(default_factory=PACERConfig[NumBins])
+    bc_train_config: BCTrainConfig = field(default_factory=BCTrainConfig)
+
+    def run(self) -> None:
+        demonstrations = DemonstrationLoader(
+            config=self.demonstration_loader_config
+        ).load()
+
+        BCExperiment(demonstrations, bc_train_config=self.bc_train_config).run()
+        PACERBCExperiment(
+            demonstrations,
+            pacer_config=self.pacer_config,
+            bc_train_config=self.bc_train_config,
+            show_plots=self.show_plots,
+        ).run()
+        if self.show_plots:
+            plt.show()  # pyright: ignore[reportUnknownMemberType]
 
 
 ## ─────────────────────────────────────────────────────────────────────────────
