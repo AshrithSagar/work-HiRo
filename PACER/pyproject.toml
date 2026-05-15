@@ -23,12 +23,15 @@ manim = ["manim>=0.20.1"]
 
 [dependency-groups]
 dev = [
+    "lxml-stubs>=0.5.1",
     "microsoft-python-type-stubs",
     "pandas-stubs>=3.0.0.260204",
     "scipy-stubs>=1.17.1.4",
     "types-colorama>=0.4.15.20260508",
+    "types-decorator>=5.2.0.20260508",
     "types-defusedxml>=0.7.0.20260504",
     "types-deprecated>=1.3.1.20260508",
+    "types-html5lib>=1.1.11.20260508",
     "types-networkx>=3.6.1.20260513",
     "types-openpyxl>=3.1.5.20260508",
     "types-pexpect>=4.9.0.20260508",
@@ -40,6 +43,7 @@ dev = [
     "types-setuptools>=82.0.0.20260508",
     "types-tabulate>=0.10.0.20260508",
     "types-tqdm>=4.67.3.20260508",
+    "types-webencodings>=0.5.0.20260408",
     "types-xlrd>=2.0.0.20260408",
 ]
 lint = ["ruff>=0.15.13"]
