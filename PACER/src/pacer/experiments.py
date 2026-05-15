@@ -15,14 +15,7 @@ from typingkit.numpy._typed.helpers import TWO
 
 from pacer import console
 from pacer.base import Demonstrations
-from pacer.pacer import (
-    Binner,
-    PseudoLabelComputer,
-    PseudoLabelParams,
-    RibbonTokenConsolidator,
-    TrustValueComputer,
-    TrustValueParams,
-)
+from pacer.pacer import PACER, PACERConfig, PseudoLabelParams, TrustValueParams
 from pacer.phase.estimation import MLPPhaseEstimatorConfig
 from pacer.plotting import (
     plot_action_comparison,
@@ -38,7 +31,6 @@ from pacer.testutils import (
     DemonstrationLoader,
     DemonstrationsChoice,
     PhaseEstimatorChoice,
-    PhasePipeline,
     PhasePipelineConfig,
 )
 from pacer.trainers import BCTrainConfig, BCTrainer, WeightedBCTrainer
@@ -73,58 +65,24 @@ class PACERBCExperiment(Generic[NumBins, NumDemos, NumPoints]):
 
     demonstrations: Demonstrations[NumDemos, NumPoints, TWO, TWO]
     _: KW_ONLY
-    phase_pipeline_config: PhasePipelineConfig = field(
-        default_factory=PhasePipelineConfig
-    )
-    n_bins: NumBins = cast(NumBins, 96)  # B
-    action_trust_value_params: TrustValueParams = field(
-        default_factory=TrustValueParams
-    )
-    action_pseudo_label_params: PseudoLabelParams = field(
-        default_factory=PseudoLabelParams
-    )
-    use_state_labels: bool = False
-    state_trust_value_params: TrustValueParams = field(default_factory=TrustValueParams)
-    state_pseudo_label_params: PseudoLabelParams = field(
-        default_factory=PseudoLabelParams
-    )
+    pacer_config: PACERConfig[NumBins] = field(default_factory=PACERConfig[NumBins])
     bc_train_config: BCTrainConfig = field(default_factory=BCTrainConfig)
     show_plots: bool = True
 
     def run(self) -> None:
         console.rule(
-            f"[blue]PACER[{self.phase_pipeline_config.phase_estimator_choice}_PHASE_ESTIMATION] + BC policy[/blue]",
+            f"[blue]PACER[{self.pacer_config.phase_pipeline_config.phase_estimator_choice}_PHASE_ESTIMATION] + BC policy[/blue]",
             style="blue",
         )
 
         # PACER
-        phases = PhasePipeline(
-            self.demonstrations, config=self.phase_pipeline_config
-        ).run()
-        bins = Binner(self.demonstrations, phases, n_bins=self.n_bins).make_bins()
-        bins = RibbonTokenConsolidator(bins).consolidate_ribbon_tokens()
-        action_trust_values = TrustValueComputer(
-            self.demonstrations, bins, choice="Action"
-        ).compute_trust_values(params=self.action_trust_value_params)
-        state_trust_values = None
-        if self.use_state_labels:
-            state_trust_values = TrustValueComputer(
-                self.demonstrations, bins, choice="State"
-            ).compute_trust_values(params=self.state_trust_value_params)
-        pseudo_labels = PseudoLabelComputer(
-            self.demonstrations, bins
-        ).compute_pseudo_labels(
-            action_trust_values,
-            state_trust_values,
-            action_params=self.action_pseudo_label_params,
-            state_params=self.state_pseudo_label_params,
-        )
+        pacer_result = PACER(self.demonstrations, config=self.pacer_config).run()
 
         # Behavioral cloning
         trainer = WeightedBCTrainer(
-            states=pseudo_labels.states or self.demonstrations.states,
-            targets=pseudo_labels.actions,
-            weights=action_trust_values,
+            states=pacer_result.pseudo_labels.states or self.demonstrations.states,
+            targets=pacer_result.pseudo_labels.actions,
+            weights=pacer_result.action_trust_values,
             device="cpu",
         )
         policy_loss = trainer.train(self.bc_train_config)
@@ -132,21 +90,21 @@ class PACERBCExperiment(Generic[NumBins, NumDemos, NumPoints]):
 
         if self.show_plots:
             plot_trajectories(self.demonstrations)
-            plot_phases(phases)
-            plot_trust_values(action_trust_values)
-            if state_trust_values is not None:
-                plot_trust_values(state_trust_values)
-            plot_ribbon_action_field(bins)
+            plot_phases(pacer_result.phases)
+            plot_trust_values(pacer_result.action_trust_values)
+            if pacer_result.state_trust_values is not None:
+                plot_trust_values(pacer_result.state_trust_values)
+            plot_ribbon_action_field(pacer_result.bins)
             plot_action_comparison(
                 self.demonstrations[0].actions,
-                pseudo_labels.actions[0],
+                pacer_result.pseudo_labels.actions[0],
                 title="Demo 0: Action refinement",
             )
-            if pseudo_labels.states is not None:
-                plot_states(pseudo_labels.states)
+            if pacer_result.pseudo_labels.states is not None:
+                plot_states(pacer_result.pseudo_labels.states)
                 plot_state_comparison(
                     self.demonstrations[0].states,
-                    pseudo_labels.states[0],
+                    pacer_result.pseudo_labels.states[0],
                     title="Demo 0: State refinement",
                 )
 
@@ -248,17 +206,19 @@ class BCvsPACERBCExperiment(Generic[NumBins]):
             for phase_estimator_choice in phase_estimator_choices:
                 PACERBCExperiment(
                     demonstrations,
-                    phase_pipeline_config=PhasePipelineConfig(
-                        phase_estimator_choice=phase_estimator_choice,
-                        mlp_phase_estimator_config=self.mlp_phase_estimator_config,
-                        evaluate_phases=self.evaluate_phases,
+                    pacer_config=PACERConfig(
+                        phase_pipeline_config=PhasePipelineConfig(
+                            phase_estimator_choice=phase_estimator_choice,
+                            mlp_phase_estimator_config=self.mlp_phase_estimator_config,
+                            evaluate_phases=self.evaluate_phases,
+                        ),
+                        n_bins=self.n_bins,
+                        action_trust_value_params=self.action_trust_value_params,
+                        action_pseudo_label_params=self.action_pseudo_label_params,
+                        use_state_labels=self.use_state_labels,
+                        state_trust_value_params=self.state_trust_value_params,
+                        state_pseudo_label_params=self.state_pseudo_label_params,
                     ),
-                    n_bins=self.n_bins,
-                    action_trust_value_params=self.action_trust_value_params,
-                    action_pseudo_label_params=self.action_pseudo_label_params,
-                    use_state_labels=self.use_state_labels,
-                    state_trust_value_params=self.state_trust_value_params,
-                    state_pseudo_label_params=self.state_pseudo_label_params,
                     bc_train_config=self.bc_train_config,
                     show_plots=self.show_plots,
                 ).run()
