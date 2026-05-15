@@ -29,6 +29,7 @@ from pacer.plotting import (
 from pacer.testutils import (
     CorruptionsChoice,
     DemonstrationLoader,
+    DemonstrationLoaderConfig,
     DemonstrationsChoice,
     PhaseEstimatorChoice,
     PhasePipelineConfig,
@@ -118,6 +119,8 @@ class BCvsPACERBCExperiment(Generic[NumBins]):
     LASA_pattern: (
         list[SinglePatternMotion] | SinglePatternMotion | Literal["ALL"] | None
     ) = None
+    filepath: str | None = None
+    corruptions_choice: CorruptionsChoice | None = None
     phase_estimator_choice: (
         list[PhaseEstimatorChoice] | PhaseEstimatorChoice | Literal["ALL"]
     ) = "MLP"
@@ -125,7 +128,6 @@ class BCvsPACERBCExperiment(Generic[NumBins]):
         default_factory=MLPPhaseEstimatorConfig
     )
     evaluate_phases: bool = False
-    corruptions_choice: CorruptionsChoice | None = None
     n_bins: NumBins = cast(NumBins, 96)  # B
     action_trust_value_params: TrustValueParams = field(
         default_factory=TrustValueParams
@@ -139,7 +141,6 @@ class BCvsPACERBCExperiment(Generic[NumBins]):
         default_factory=PseudoLabelParams
     )
     bc_train_config: BCTrainConfig = field(default_factory=BCTrainConfig)
-    filepath: str | None = None
 
     def run(self) -> None:
         # Resolve LASA patterns
@@ -172,12 +173,12 @@ class BCvsPACERBCExperiment(Generic[NumBins]):
                     case _:
                         phase_estimator_choices = [self.phase_estimator_choice]
 
-        for pattern in LASA_patterns:
+        for LASA_pattern in LASA_patterns:
             match self.demonstrations_choice:
                 case "FROM_LASA" | "CUSTOM_FROM_LASA" | "LEGACY_CUSTOM_FROM_LASA":
-                    assert pattern is not None
+                    assert LASA_pattern is not None
                     console.rule(
-                        f"[bold gold3]LASA Pattern: {pattern}[/bold gold3]",
+                        f"[bold gold3]LASA Pattern: {LASA_pattern}[/bold gold3]",
                         characters="\u2501",
                         style="gold3",
                     )
@@ -196,10 +197,12 @@ class BCvsPACERBCExperiment(Generic[NumBins]):
                     )
 
             demonstrations = DemonstrationLoader(
-                choice=self.demonstrations_choice,
-                pattern=pattern,
-                filepath=self.filepath,
-                corruptions_choice=self.corruptions_choice,
+                config=DemonstrationLoaderConfig(
+                    choice=self.demonstrations_choice,
+                    LASA_pattern=LASA_pattern,
+                    filepath=self.filepath,
+                    corruptions_choice=self.corruptions_choice,
+                )
             ).load()
 
             BCExperiment(demonstrations, bc_train_config=self.bc_train_config).run()

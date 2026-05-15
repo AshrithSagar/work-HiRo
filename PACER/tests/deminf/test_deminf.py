@@ -21,7 +21,7 @@ from deminf.deminf import (
 )
 from pacer import console
 from pacer.base import Demonstrations
-from pacer.testutils import DemonstrationLoader
+from pacer.testutils import DemonstrationLoader, DemonstrationLoaderConfig
 
 set_global_default_runtime_options(RuntimeOptions(validate=True))
 
@@ -67,7 +67,9 @@ def test_deminf(demonstrations: Demonstrations[Any, Any, Any, Any]) -> None:
 
 
 if __name__ == "__main__":
-    demonstrations = DemonstrationLoader(choice="FROM_LASA", pattern="GShape").load()
+    demonstrations = DemonstrationLoader(
+        config=DemonstrationLoaderConfig(choice="FROM_LASA", LASA_pattern="GShape")
+    ).load()
     test_ksg(demonstrations)
     console.rule()
     test_deminf(demonstrations)

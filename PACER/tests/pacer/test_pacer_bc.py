@@ -18,6 +18,8 @@ if __name__ == "__main__":
         show_plots=True,
         demonstrations_choice="FROM_LASA",
         LASA_pattern="GShape",
+        filepath=None,
+        corruptions_choice=None,
         phase_estimator_choice="MLP",
         mlp_phase_estimator_config=MLPPhaseEstimatorConfig(
             hidden_dim=128,
@@ -26,7 +28,6 @@ if __name__ == "__main__":
             epochs=240,
         ),
         evaluate_phases=False,
-        corruptions_choice=None,
         n_bins=96,
         action_trust_value_params=TrustValueParams(
             tukey_cutoff=4.685,  # c
@@ -54,5 +55,4 @@ if __name__ == "__main__":
             lr=1e-3,
             epochs=240,
         ),
-        filepath=None,
     ).run()

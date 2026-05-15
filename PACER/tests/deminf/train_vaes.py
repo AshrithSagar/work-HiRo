@@ -13,7 +13,7 @@ import torch
 from torch.utils.data import DataLoader, TensorDataset
 
 from deminf.deminf import BetaVAE
-from pacer.testutils import DemonstrationLoader
+from pacer.testutils import DemonstrationLoader, DemonstrationLoaderConfig
 from pacer.typings import npDType
 
 
@@ -56,7 +56,9 @@ def train_vae(
 
 
 if __name__ == "__main__":
-    demos = DemonstrationLoader(choice="FROM_LASA", pattern="GShape").load()
+    demos = DemonstrationLoader(
+        config=DemonstrationLoaderConfig(choice="FROM_LASA", LASA_pattern="GShape")
+    ).load()
 
     # Collect all states and actions
     all_states = np.concatenate([demo.states.numpy() for demo in demos], axis=0)
