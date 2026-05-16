@@ -16,6 +16,7 @@ from typingkit.numpy._typed.helpers import TWO
 
 from pacer import console
 from pacer.base import Demonstrations
+from pacer.bc import BCTrainConfig, BCTrainer, WeightedBCTrainer
 from pacer.pacer import PACER, PACERConfig, PseudoLabelParams, TrustValueParams
 from pacer.phase.estimation import MLPPhaseEstimatorConfig
 from pacer.plotting import (
@@ -35,7 +36,6 @@ from pacer.testutils import (
     PhaseEstimatorChoice,
     PhasePipelineConfig,
 )
-from pacer.trainers import BCTrainConfig, BCTrainer, WeightedBCTrainer
 from pacer.typings import NumBins, NumDemos, NumPoints
 
 ## ── Experiments ──────────────────────────────────────────────────────────────

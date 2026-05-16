@@ -5,11 +5,11 @@ Test BC Policy vs. PACER + BC Policy.
 
 from typingkit.core import RuntimeOptions, set_global_default_runtime_options
 
+from pacer.bc import BCTrainConfig
 from pacer.experiments import BCvsPACERBCExperiment
 from pacer.pacer import PACERConfig, PseudoLabelParams, TrustValueParams
 from pacer.phase.estimation import MLPPhaseEstimatorConfig
 from pacer.testutils import DemonstrationLoaderConfig, PhasePipelineConfig
-from pacer.trainers import BCTrainConfig
 
 set_global_default_runtime_options(RuntimeOptions(validate=True))
 

@@ -1,8 +1,8 @@
 """
-Policy training
+Behavioural cloning
 =======
 """
-# src/pacer/trainers.py
+# src/pacer/bc.py
 
 # pyright: reportPrivateImportUsage = false
 
@@ -32,7 +32,7 @@ from pacer.typings import (
 )
 from pacer.utils import SEED, TORCH_DEVICE, get_torch_device, set_seed
 
-## ── Policies ─────────────────────────────────────────────────────────────────
+## ── Policy ───────────────────────────────────────────────────────────────────
 
 
 class BCPolicy(nn.Module, RuntimeGeneric[DimState, DimAction]):
