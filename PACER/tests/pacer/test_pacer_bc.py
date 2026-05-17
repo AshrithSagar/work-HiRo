@@ -81,8 +81,10 @@ if __name__ == "__main__":
             trajectories=True,
             phases=True,
             trust_values=True,
+            states_before_after=True,
             action_comparison=True,
             state_comparison=True,
             ribbon_action_field=True,
+            action_correction_magnitude=True,
         ),
     ).render()

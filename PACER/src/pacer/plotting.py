@@ -9,9 +9,16 @@ Plotting utils
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
 import matplotlib.pyplot as plt
+import numpy as np
 from typingkit.numpy._typed.helpers import TWO
 
-from pacer.base import Actions, Demonstrations, States, StatesCollection
+from pacer.base import (
+    Actions,
+    ActionsCollection,
+    Demonstrations,
+    States,
+    StatesCollection,
+)
 from pacer.pacer import Bins, TrustValuesCollection
 from pacer.phase.base import PhasesCollection
 from pacer.typings import DemoIndex, DimAction, DimState, NumBins, NumDemos, NumPoints
@@ -120,6 +127,26 @@ def plot_states(
     plt.tight_layout()
 
 
+def plot_states_before_after(
+    original: StatesCollection[NumDemos, NumPoints, TWO],
+    pseudo: StatesCollection[NumDemos, NumPoints, TWO],
+    *,
+    title: str = "States comparision",
+) -> None:
+    """Overlay original and refined trajectories."""
+    plt.figure(figsize=(7, 7))
+    for i, (orig, new) in enumerate(zip(original, pseudo)):
+        plt.plot(orig.coord(0), orig.coord(1), "--", alpha=0.5, label=f"Original {i}")
+        plt.plot(new.coord(0), new.coord(1), label=f"Refined {i}")
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title(title)
+    plt.legend()
+    plt.axis("equal")
+    plt.margins(0.05)
+    plt.tight_layout()
+
+
 def plot_phases(
     phases: PhasesCollection[NumDemos, NumPoints],
     *,
@@ -199,6 +226,24 @@ def plot_state_comparison(
 
     axes[-1].set_xlabel("Time index t")
     fig.suptitle(title)
+    plt.tight_layout()
+
+
+def plot_action_correction_magnitude(
+    original: ActionsCollection[NumDemos, NumPoints, TWO],
+    pseudo: ActionsCollection[NumDemos, NumPoints, TWO],
+    *,
+    title: str = "Action Correction Magnitude",
+) -> None:
+    """Plot ||a_pseudo - a_original|| over time."""
+    plt.figure(figsize=(8, 4))
+    for i, (orig, new) in enumerate(zip(original, pseudo)):
+        delta = np.linalg.norm(new.numpy() - orig.numpy(), axis=1)
+        plt.plot(delta, label=f"Demo {i}")
+    plt.xlabel("Time index")
+    plt.ylabel("Correction magnitude")
+    plt.title(title)
+    plt.legend()
     plt.tight_layout()
 
 

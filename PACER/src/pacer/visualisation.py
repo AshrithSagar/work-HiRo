@@ -20,9 +20,11 @@ from pacer.base import Demonstrations
 from pacer.pacer import PACERResult
 from pacer.plotting import (
     plot_action_comparison,
+    plot_action_correction_magnitude,
     plot_phases,
     plot_ribbon_action_field,
     plot_state_comparison,
+    plot_states_before_after,
     plot_trajectories,
     plot_trust_values,
 )
@@ -40,10 +42,12 @@ class PACERVisualisationConfig:
     phases: bool = True
     trust_values: bool = True
 
+    states_before_after: bool = True
     action_comparison: bool = True
     state_comparison: bool = True
 
     ribbon_action_field: bool = True
+    action_correction_magnitude: bool = True
 
 
 @dataclass
@@ -82,6 +86,13 @@ class PACERVisualiser(Generic[NumBins, NumDemos, NumPoints]):
                 title="Demo 0: Action refinement",
             )
 
+        if self.config.states_before_after:
+            if self.pacer_result.pseudo_labels.states is not None:
+                plot_states_before_after(
+                    self.demonstrations.states,
+                    self.pacer_result.pseudo_labels.states,
+                )
+
         if self.config.state_comparison:
             if self.pacer_result.pseudo_labels.states is not None:
                 plot_state_comparison(
@@ -89,6 +100,12 @@ class PACERVisualiser(Generic[NumBins, NumDemos, NumPoints]):
                     self.pacer_result.pseudo_labels.states[0],
                     title="Demo 0: State refinement",
                 )
+
+        if self.config.action_correction_magnitude:
+            plot_action_correction_magnitude(
+                self.demonstrations.actions,
+                self.pacer_result.pseudo_labels.actions,
+            )
 
         if self.config.save_dir is not None:
             save_dir = Path(self.config.save_dir)
