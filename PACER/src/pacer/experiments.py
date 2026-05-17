@@ -25,6 +25,7 @@ from pacer.pacer import (
     TrustValueParams,
 )
 from pacer.phase.estimation import MLPPhaseEstimatorConfig
+from pacer.plotting import PACERVisualisationConfig, PACERVisualiser
 from pacer.testutils import (
     CorruptionsChoice,
     DemonstrationLoader,
@@ -34,7 +35,6 @@ from pacer.testutils import (
     PhasePipelineConfig,
 )
 from pacer.typings import DimAction, DimState, NumBins, NumDemos, NumPoints
-from pacer.visualisation import PACERVisualisationConfig, PACERVisualiser
 
 ## ── Experiments ──────────────────────────────────────────────────────────────
 

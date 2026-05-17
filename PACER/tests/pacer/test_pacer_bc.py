@@ -9,12 +9,12 @@ from pacer.bc import BCTrainConfig
 from pacer.experiments import BCvsPACERBCExperiment
 from pacer.pacer import PACERConfig, PseudoLabelParams, TrustValueParams
 from pacer.phase.estimation import MLPPhaseEstimatorConfig
+from pacer.plotting import PACERVisualisationConfig, PACERVisualiser
 from pacer.testutils import (
     DemonstrationLoader,
     DemonstrationLoaderConfig,
     PhasePipelineConfig,
 )
-from pacer.visualisation import PACERVisualisationConfig, PACERVisualiser
 
 set_global_default_runtime_options(RuntimeOptions(validate=True))
 
