@@ -7,27 +7,24 @@ Experiment runs
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
 from dataclasses import KW_ONLY, dataclass, field
-from typing import Generic, Literal, cast
+from typing import Any, Generic, Literal, cast
 from warnings import deprecated
 
 import matplotlib.pyplot as plt
 from pyLASAHandwritingDataset import ALL_SINGLE_PATTERN_MOTIONS, SinglePatternMotion
-from typingkit.numpy._typed.helpers import TWO
+from torch import Tensor
 
 from pacer import console
 from pacer.base import Demonstrations
 from pacer.bc import BCTrainConfig, BCTrainer, WeightedBCTrainer
-from pacer.pacer import PACER, PACERConfig, PseudoLabelParams, TrustValueParams
-from pacer.phase.estimation import MLPPhaseEstimatorConfig
-from pacer.plotting import (
-    plot_action_comparison,
-    plot_phases,
-    plot_ribbon_action_field,
-    plot_state_comparison,
-    plot_states,
-    plot_trajectories,
-    plot_trust_values,
+from pacer.pacer import (
+    PACER,
+    PACERConfig,
+    PACERResult,
+    PseudoLabelParams,
+    TrustValueParams,
 )
+from pacer.phase.estimation import MLPPhaseEstimatorConfig
 from pacer.testutils import (
     CorruptionsChoice,
     DemonstrationLoader,
@@ -36,19 +33,27 @@ from pacer.testutils import (
     PhaseEstimatorChoice,
     PhasePipelineConfig,
 )
-from pacer.typings import NumBins, NumDemos, NumPoints
+from pacer.typings import DimAction, DimState, NumBins, NumDemos, NumPoints
+from pacer.visualisation import PACERVisualisationConfig, PACERVisualiser
 
 ## ── Experiments ──────────────────────────────────────────────────────────────
 
 
+@dataclass(kw_only=True)
+class BCExperimentResult(Generic[NumDemos, NumPoints, DimState, DimAction]):
+    demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
+    bc_policy_loss: Tensor
+
+
 @dataclass
-class BCExperiment(Generic[NumDemos, NumPoints]):
+class BCExperiment(Generic[NumDemos, NumPoints, DimState, DimAction]):
     """BC Policy."""
 
-    demonstrations: Demonstrations[NumDemos, NumPoints, TWO, TWO]
+    demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
+    _: KW_ONLY
     bc_train_config: BCTrainConfig = field(default_factory=BCTrainConfig)
 
-    def run(self) -> None:
+    def run(self) -> BCExperimentResult[NumDemos, NumPoints, DimState, DimAction]:
         console.rule("[blue]BC policy[/blue]", style="blue")
 
         # Behavioral cloning
@@ -60,18 +65,36 @@ class BCExperiment(Generic[NumDemos, NumPoints]):
         policy_loss = trainer.train(self.bc_train_config)
         console.print(f"Policy loss: {policy_loss}")
 
+        return BCExperimentResult(
+            demonstrations=self.demonstrations,
+            bc_policy_loss=policy_loss,
+        )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+@dataclass(kw_only=True)
+class PACERBCExperimentResult(
+    Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]
+):
+    demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
+    pacer_result: PACERResult[NumBins, NumDemos, NumPoints, DimState, DimAction]
+    bc_policy_loss: Tensor
+
 
 @dataclass
-class PACERBCExperiment(Generic[NumBins, NumDemos, NumPoints]):
+class PACERBCExperiment(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
     """PACER + BC Policy."""
 
-    demonstrations: Demonstrations[NumDemos, NumPoints, TWO, TWO]
+    demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     _: KW_ONLY
     pacer_config: PACERConfig[NumBins] = field(default_factory=PACERConfig[NumBins])
     bc_train_config: BCTrainConfig = field(default_factory=BCTrainConfig)
-    show_plots: bool = True
 
-    def run(self) -> None:
+    def run(
+        self,
+    ) -> PACERBCExperimentResult[NumBins, NumDemos, NumPoints, DimState, DimAction]:
         console.rule(
             f"[blue]PACER[{self.pacer_config.phase_pipeline_config.phase_estimator_choice}_PHASE_ESTIMATION] + BC policy[/blue]",
             style="blue",
@@ -90,25 +113,14 @@ class PACERBCExperiment(Generic[NumBins, NumDemos, NumPoints]):
         policy_loss = trainer.train(self.bc_train_config)
         console.print(f"Policy loss: {policy_loss}")
 
-        if self.show_plots:
-            plot_trajectories(self.demonstrations)
-            plot_phases(pacer_result.phases)
-            plot_trust_values(pacer_result.action_trust_values)
-            if pacer_result.state_trust_values is not None:
-                plot_trust_values(pacer_result.state_trust_values)
-            plot_ribbon_action_field(pacer_result.bins)
-            plot_action_comparison(
-                self.demonstrations[0].actions,
-                pacer_result.pseudo_labels.actions[0],
-                title="Demo 0: Action refinement",
-            )
-            if pacer_result.pseudo_labels.states is not None:
-                plot_states(pacer_result.pseudo_labels.states)
-                plot_state_comparison(
-                    self.demonstrations[0].states,
-                    pacer_result.pseudo_labels.states[0],
-                    title="Demo 0: State refinement",
-                )
+        return PACERBCExperimentResult(
+            demonstrations=self.demonstrations,
+            pacer_result=pacer_result,
+            bc_policy_loss=policy_loss,
+        )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 
 
 @deprecated(
@@ -145,6 +157,9 @@ class BCvsPACERBCExperimentLegacy(Generic[NumBins]):
         default_factory=PseudoLabelParams
     )
     bc_train_config: BCTrainConfig = field(default_factory=BCTrainConfig)
+    pacer_visualisation_config: PACERVisualisationConfig = field(
+        default_factory=PACERVisualisationConfig
+    )
 
     def run(self) -> None:
         # Resolve LASA patterns
@@ -211,7 +226,7 @@ class BCvsPACERBCExperimentLegacy(Generic[NumBins]):
 
             BCExperiment(demonstrations, bc_train_config=self.bc_train_config).run()
             for phase_estimator_choice in phase_estimator_choices:
-                PACERBCExperiment(
+                pacer_bc_result = PACERBCExperiment(
                     demonstrations,
                     pacer_config=PACERConfig(
                         phase_pipeline_config=PhasePipelineConfig(
@@ -227,9 +242,13 @@ class BCvsPACERBCExperimentLegacy(Generic[NumBins]):
                         state_pseudo_label_params=self.state_pseudo_label_params,
                     ),
                     bc_train_config=self.bc_train_config,
-                    show_plots=self.show_plots,
                 ).run()
                 if self.show_plots:
+                    PACERVisualiser(
+                        demonstrations,
+                        pacer_result=pacer_bc_result.pacer_result,
+                        config=self.pacer_visualisation_config,
+                    ).render()
                     plt.show()  # pyright: ignore[reportUnknownMemberType]
 
             if self.demonstrations_choice in {"CUSTOM_FROM_LOAD", "CUSTOM_DRAW"}:
@@ -238,31 +257,56 @@ class BCvsPACERBCExperimentLegacy(Generic[NumBins]):
         console.rule(characters="\u2501", style="gold3")
 
 
-@dataclass(kw_only=True)
-class BCvsPACERBCExperiment(Generic[NumBins]):
-    """BC Policy vs. PACER + BC Policy."""
+# ──────────────────────────────────────────────────────────────────────────────
 
-    show_plots: bool = True
-    demonstration_loader_config: DemonstrationLoaderConfig = field(
-        default_factory=DemonstrationLoaderConfig
-    )
+
+@dataclass(kw_only=True)
+class BCvsPACERBCExperimentResult(
+    Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]
+):
+    demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
+    bc_result: BCExperimentResult[NumDemos, NumPoints, DimState, DimAction]
+    pacer_bc_result: PACERBCExperimentResult[
+        NumBins, NumDemos, NumPoints, DimState, DimAction
+    ]
+
+    @property
+    def pacer_result(
+        self,
+    ) -> PACERResult[NumBins, NumDemos, NumPoints, DimState, DimAction]:
+        return self.pacer_bc_result.pacer_result
+
+
+@dataclass
+class BCvsPACERBCExperiment(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
+    """
+    BC Policy vs. PACER + BC Policy.\\
+    Uses same `BCTrainConfig` for both `BCExperiment` and `PACERBCExperiment`.
+    """
+
+    demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
+    _: KW_ONLY
     pacer_config: PACERConfig[NumBins] = field(default_factory=PACERConfig[NumBins])
     bc_train_config: BCTrainConfig = field(default_factory=BCTrainConfig)
 
-    def run(self) -> None:
-        demonstrations = DemonstrationLoader(
-            config=self.demonstration_loader_config
-        ).load()
-
-        BCExperiment(demonstrations, bc_train_config=self.bc_train_config).run()
-        PACERBCExperiment(
-            demonstrations,
+    def run(
+        self,
+    ) -> BCvsPACERBCExperimentResult[NumBins, Any, Any, DimState, DimAction]:
+        bc_result = BCExperiment(
+            self.demonstrations,
+            bc_train_config=self.bc_train_config,
+        ).run()
+        pacer_bc_result = PACERBCExperiment(
+            self.demonstrations,
             pacer_config=self.pacer_config,
             bc_train_config=self.bc_train_config,
-            show_plots=self.show_plots,
         ).run()
-        if self.show_plots:
-            plt.show()  # pyright: ignore[reportUnknownMemberType]
+
+        return BCvsPACERBCExperimentResult(
+            demonstrations=self.demonstrations,
+            bc_result=bc_result,
+            pacer_bc_result=pacer_bc_result,
+        )
 
 
 ## ─────────────────────────────────────────────────────────────────────────────

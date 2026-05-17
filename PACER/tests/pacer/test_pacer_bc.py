@@ -9,20 +9,28 @@ from pacer.bc import BCTrainConfig
 from pacer.experiments import BCvsPACERBCExperiment
 from pacer.pacer import PACERConfig, PseudoLabelParams, TrustValueParams
 from pacer.phase.estimation import MLPPhaseEstimatorConfig
-from pacer.testutils import DemonstrationLoaderConfig, PhasePipelineConfig
+from pacer.testutils import (
+    DemonstrationLoader,
+    DemonstrationLoaderConfig,
+    PhasePipelineConfig,
+)
+from pacer.visualisation import PACERVisualisationConfig, PACERVisualiser
 
 set_global_default_runtime_options(RuntimeOptions(validate=True))
 
 
 if __name__ == "__main__":
-    BCvsPACERBCExperiment(
-        show_plots=True,
-        demonstration_loader_config=DemonstrationLoaderConfig(
+    demonstrations = DemonstrationLoader(
+        config=DemonstrationLoaderConfig(
             choice="FROM_LASA",
             LASA_pattern="GShape",
             filepath=None,
             corruptions_choice=None,
         ),
+    ).load()
+
+    result = BCvsPACERBCExperiment(
+        demonstrations,
         pacer_config=PACERConfig(
             phase_pipeline_config=PhasePipelineConfig(
                 phase_estimator_choice="MLP",
@@ -63,3 +71,18 @@ if __name__ == "__main__":
             epochs=240,
         ),
     ).run()
+
+    PACERVisualiser(
+        demonstrations,
+        pacer_result=result.pacer_result,
+        config=PACERVisualisationConfig(
+            show=True,
+            save_dir=None,
+            trajectories=True,
+            phases=True,
+            trust_values=True,
+            action_comparison=True,
+            state_comparison=True,
+            ribbon_action_field=True,
+        ),
+    ).render()

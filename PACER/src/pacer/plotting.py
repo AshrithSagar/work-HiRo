@@ -6,6 +6,8 @@ Plotting utils
 
 # pyright: reportUnknownMemberType = false
 
+## ── Imports ──────────────────────────────────────────────────────────────────
+
 import matplotlib.pyplot as plt
 from typingkit.numpy._typed.helpers import TWO
 
@@ -13,6 +15,8 @@ from pacer.base import Actions, Demonstrations, States, StatesCollection
 from pacer.pacer import Bins, TrustValuesCollection
 from pacer.phase.base import PhasesCollection
 from pacer.typings import DemoIndex, DimAction, DimState, NumBins, NumDemos, NumPoints
+
+## ── Plotting ─────────────────────────────────────────────────────────────────
 
 
 def plot_trajectories(
@@ -230,3 +234,6 @@ def plot_ribbon_action_field(
     plt.title(title)
     plt.axis("equal")
     plt.tight_layout()
+
+
+## ─────────────────────────────────────────────────────────────────────────────
