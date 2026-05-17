@@ -17,6 +17,14 @@ import numpy as np
 from typingkit.numpy._typed.helpers import TWO
 
 from pacer import console
+from pacer.analysis import (
+    CorrectionMagnitudeAnalyser,
+    CorrectionMagnitudeAnalysis,
+    MetricValue,
+    ResidualAnalyser,
+    SmoothnessAnalyser,
+    SmoothnessAnalysis,
+)
 from pacer.base import (
     Actions,
     ActionsCollection,
@@ -24,9 +32,24 @@ from pacer.base import (
     States,
     StatesCollection,
 )
-from pacer.pacer import Bins, PACERResult, TrustValuesCollection
+from pacer.pacer import (
+    Bins,
+    PACERResult,
+    Residual,
+    ResidualsCollection,
+    TrustValue,
+    TrustValuesCollection,
+)
 from pacer.phase.base import PhasesCollection
-from pacer.typings import DemoIndex, DimAction, DimState, NumBins, NumDemos, NumPoints
+from pacer.typings import (
+    DemoIndex,
+    DimAction,
+    DimState,
+    NumBins,
+    NumDemos,
+    NumPoints,
+    npDType,
+)
 
 ## ── Plotting ─────────────────────────────────────────────────────────────────
 
@@ -286,6 +309,137 @@ def plot_ribbon_action_field(
     plt.tight_layout()
 
 
+def plot_residual_distribution(
+    residuals_collection: ResidualsCollection[NumDemos, NumPoints],
+    *,
+    title: str = "Residual distribution",
+    bins: int = 32,
+) -> None:
+    """Plot histogram of correction residuals."""
+    plt.figure(figsize=(7, 4))
+    flat = [residual for residuals in residuals_collection for residual in residuals]
+    plt.hist(flat, bins=bins)
+    plt.xlabel("Residual magnitude")
+    plt.ylabel("Frequency")
+    plt.title(title)
+    plt.tight_layout()
+
+
+def plot_trust_heatmap(
+    trust_values: TrustValuesCollection[NumDemos, NumPoints],
+    *,
+    title: str = "Trust value heatmap",
+) -> None:
+    """Visualize trust values across demonstrations and time."""
+    plt.figure(figsize=(10, 4))
+    matrix = np.asarray(
+        [np.asarray(values, dtype=npDType) for values in trust_values.values()]
+    )
+    plt.imshow(matrix, aspect="auto")
+    plt.colorbar(label="Trust")
+    plt.xlabel("Time index")
+    plt.ylabel("Demo index")
+    plt.title(title)
+    plt.tight_layout()
+
+
+def plot_bin_occupancy(
+    bins: Bins[NumBins, NumDemos, NumPoints, TWO, TWO],
+    *,
+    title: str = "Phase bin occupancy",
+) -> None:
+    """Plot number of samples assigned to each phase bin."""
+    plt.figure(figsize=(8, 4))
+    occupancies: list[int] = []
+    for bin in bins:
+        count = sum(len(samples) for samples in bin.samples_collection.values())
+        occupancies.append(count)
+    plt.plot(occupancies)
+    plt.xlabel("Bin index")
+    plt.ylabel("Sample count")
+    plt.title(title)
+    plt.tight_layout()
+
+
+def plot_trust_vs_correction(
+    trust_values: TrustValuesCollection[NumDemos, NumPoints],
+    correction_analysis: CorrectionMagnitudeAnalysis[NumDemos, NumPoints, TWO, TWO],
+    *,
+    title: str = "Trust vs correction magnitude",
+) -> None:
+    """Scatter plot comparing trust and correction size."""
+    plt.figure(figsize=(6, 6))
+    xs: list[TrustValue] = []
+    ys: list[MetricValue] = []
+    for demo_idx, trust_series in trust_values.items():
+        magnitudes = correction_analysis.magnitudes[demo_idx]
+        for trust, magnitude in zip(trust_series, magnitudes):
+            xs.append(trust)
+            ys.append(magnitude)
+    plt.scatter(xs, ys, alpha=0.5)
+    plt.xlabel("Trust value")
+    plt.ylabel("Correction magnitude")
+    plt.title(title)
+    plt.tight_layout()
+
+
+def plot_ribbon_statistics(
+    bins: Bins[NumBins, NumDemos, NumPoints, TWO, TWO],
+    *,
+    title: str = "Ribbon statistics",
+) -> None:
+    """Plot robust ribbon statistics over phase bins."""
+    plt.figure(figsize=(10, 5))
+    strengths: list[npDType] = []
+    variability: list[Residual] = []
+    for bin in bins:
+        token = bin.ribbon_token
+        strengths.append(token.median_action_strength)
+        variability.append(token.MAD_action_residual)
+    plt.plot(strengths, label="Median action strength")
+    plt.plot(variability, label="MAD residual")
+    plt.xlabel("Bin index")
+    plt.ylabel("Magnitude")
+    plt.title(title)
+    plt.legend()
+    plt.tight_layout()
+
+
+def plot_phase_velocity(
+    phases: PhasesCollection[NumDemos, NumPoints],
+    *,
+    title: str = "Phase velocity",
+) -> None:
+    """Plot d(tau)/dt for demonstrations."""
+    plt.figure(figsize=(8, 4))
+    for i, phase in phases.items():
+        velocity = np.diff(phase)
+        plt.plot(velocity, label=f"Demo {i}")
+    plt.xlabel("Time index")
+    plt.ylabel("Phase velocity")
+    plt.title(title)
+    plt.legend()
+    plt.tight_layout()
+
+
+def plot_smoothness_comparison(
+    original: SmoothnessAnalysis[NumDemos, NumPoints],
+    pseudo: SmoothnessAnalysis[NumDemos, NumPoints],
+    *,
+    title: str = "Trajectory smoothness comparison",
+) -> None:
+    """Compare smoothness before and after PACER."""
+    plt.figure(figsize=(7, 4))
+    xs = np.arange(len(original.smoothness_scores))
+    plt.plot(xs, original.smoothness_scores, label="Original")
+    plt.plot(xs, pseudo.smoothness_scores, label="Pseudo")
+    plt.xlabel("Demo index")
+    plt.ylabel("Jerk energy")
+    plt.title(title)
+    plt.legend()
+    plt.tight_layout()
+
+
 ## ── PACER Visualisation ──────────────────────────────────────────────────────
 
 
@@ -304,6 +458,14 @@ class PACERVisualisationConfig:
 
     ribbon_action_field: bool = True
     action_correction_magnitude: bool = True
+
+    residual_distribution: bool = True
+    trust_heatmap: bool = True
+    bin_occupancy: bool = True
+    trust_vs_correction: bool = True
+    ribbon_statistics: bool = True
+    phase_velocity: bool = True
+    smoothness_comparison: bool = True
 
 
 @dataclass
@@ -345,8 +507,7 @@ class PACERVisualiser(Generic[NumBins, NumDemos, NumPoints]):
         if self.config.states_before_after:
             if self.pacer_result.pseudo_labels.states is not None:
                 plot_states_before_after(
-                    self.demonstrations.states,
-                    self.pacer_result.pseudo_labels.states,
+                    self.demonstrations.states, self.pacer_result.pseudo_labels.states
                 )
 
         if self.config.state_comparison:
@@ -359,9 +520,44 @@ class PACERVisualiser(Generic[NumBins, NumDemos, NumPoints]):
 
         if self.config.action_correction_magnitude:
             plot_action_correction_magnitude(
-                self.demonstrations.actions,
-                self.pacer_result.pseudo_labels.actions,
+                self.demonstrations.actions, self.pacer_result.pseudo_labels.actions
             )
+
+        correction_analysis = CorrectionMagnitudeAnalyser(
+            self.demonstrations, self.pacer_result
+        ).analyse_actions()
+
+        if self.config.residual_distribution:
+            residual_analysis = ResidualAnalyser(
+                self.demonstrations, pacer_result=self.pacer_result
+            ).compute_action_residuals()
+            plot_residual_distribution(residual_analysis.residuals)
+
+        if self.config.trust_heatmap:
+            plot_trust_heatmap(self.pacer_result.action_trust_values)
+
+        if self.config.bin_occupancy:
+            plot_bin_occupancy(self.pacer_result.bins)
+
+        if self.config.trust_vs_correction:
+            plot_trust_vs_correction(
+                self.pacer_result.action_trust_values, correction_analysis
+            )
+
+        if self.config.ribbon_statistics:
+            plot_ribbon_statistics(self.pacer_result.bins)
+
+        if self.config.phase_velocity:
+            plot_phase_velocity(self.pacer_result.phases)
+
+        if self.config.smoothness_comparison:
+            original_smoothness = SmoothnessAnalyser(
+                self.demonstrations.actions
+            ).analyse()
+            pseudo_smoothness = SmoothnessAnalyser(
+                self.pacer_result.pseudo_labels.actions
+            ).analyse()
+            plot_smoothness_comparison(original_smoothness, pseudo_smoothness)
 
         if self.config.save_dir is not None:
             save_dir = Path(self.config.save_dir)

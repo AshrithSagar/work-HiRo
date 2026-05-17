@@ -86,5 +86,12 @@ if __name__ == "__main__":
             state_comparison=True,
             ribbon_action_field=True,
             action_correction_magnitude=True,
+            residual_distribution=True,
+            trust_heatmap=True,
+            bin_occupancy=True,
+            trust_vs_correction=True,
+            ribbon_statistics=True,
+            phase_velocity=True,
+            smoothness_comparison=True,
         ),
     ).render()
