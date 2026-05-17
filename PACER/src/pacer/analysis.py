@@ -8,7 +8,7 @@ Diagnostics and analysis utilities.
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
 from dataclasses import KW_ONLY, dataclass
-from typing import Generic, TypeAlias
+from typing import Generic
 
 import numpy as np
 import numpy.linalg as la
@@ -16,19 +16,26 @@ from typingkit.core import TypedList
 
 from pacer.base import ActionsCollection, Demonstrations
 from pacer.pacer import (
+    MetricCollection,
+    MetricSeries,
+    MetricValue,
     PACERResult,
     Residual,
     Residuals,
     ResidualsCollection,
     TrustValuesCollection,
 )
-from pacer.typings import DimAction, DimState, NumBins, NumDemos, NumPoints, npDType
+from pacer.typings import (
+    DimAction,
+    DimState,
+    NumBins,
+    NumDemos,
+    NumPoints,
+    Vector,
+    npDType,
+)
 
 ## ── Analysis ─────────────────────────────────────────────────────────────────
-
-MetricValue: TypeAlias = np.float32
-MetricSeries: TypeAlias = TypedList[NumPoints, MetricValue]
-MetricCollection: TypeAlias = TypedList[NumDemos, MetricSeries[NumPoints]]
 
 # ── Residual Analysis ─────────────────────────────────────────────────────────
 
@@ -111,9 +118,8 @@ class TrustValueAnalysis(Generic[NumDemos, NumPoints]):
     def low_trust_fraction(self, threshold: float = 0.25) -> MetricValue:
         flat = np.asarray(
             [value for demo in self.trust_values.values() for value in demo],
-            dtype=np.float32,
+            dtype=npDType,
         )
-
         return MetricValue(np.mean(flat < threshold))
 
 
@@ -125,14 +131,16 @@ class CorrectionMagnitudeAnalysis(Generic[NumDemos, NumPoints, DimState, DimActi
     magnitudes: MetricCollection[NumDemos, NumPoints]
 
     @property
+    def _flattened_magnitudes(self) -> list[Residual]:
+        return [magnitude for magnitudes in self.magnitudes for magnitude in magnitudes]
+
+    @property
     def mean_magnitude(self) -> MetricValue:
-        flat = [m for demo in self.magnitudes for m in demo]
-        return MetricValue(np.mean(flat))
+        return MetricValue(np.mean(self._flattened_magnitudes))
 
     @property
     def max_magnitude(self) -> MetricValue:
-        flat = [m for demo in self.magnitudes for m in demo]
-        return MetricValue(np.max(flat))
+        return MetricValue(np.max(self._flattened_magnitudes))
 
 
 @dataclass(slots=True)
@@ -140,36 +148,20 @@ class CorrectionMagnitudeAnalyser(
     Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]
 ):
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
-    pacer_result: PACERResult[
-        NumBins,
-        NumDemos,
-        NumPoints,
-        DimState,
-        DimAction,
-    ]
+    pacer_result: PACERResult[NumBins, NumDemos, NumPoints, DimState, DimAction]
 
     def analyse_actions(
         self,
-    ) -> CorrectionMagnitudeAnalysis[
-        NumDemos,
-        NumPoints,
-        DimState,
-        DimAction,
-    ]:
+    ) -> CorrectionMagnitudeAnalysis[NumDemos, NumPoints, DimState, DimAction]:
         magnitudes = MetricCollection[NumDemos, NumPoints]()
-
         pseudo_actions = self.pacer_result.pseudo_labels.actions
-
         for i, demo in enumerate(self.demonstrations):
             series = MetricSeries[NumPoints]()
-
             for t in demo.time_indices:
                 delta = pseudo_actions[i][t] - demo.actions[t]
                 magnitude = MetricValue(la.norm(delta))
                 series.append(magnitude)
-
             magnitudes.append(series)
-
         return CorrectionMagnitudeAnalysis(magnitudes=magnitudes)
 
 
@@ -190,21 +182,16 @@ class SmoothnessAnalyser(Generic[NumBins, NumDemos, NumPoints, DimState, DimActi
     actions: ActionsCollection[NumDemos, NumPoints, DimAction]
 
     def analyse(self) -> SmoothnessAnalysis[NumDemos, NumPoints]:
-        scores = TypedList[NumDemos, MetricValue]()
-
+        scores: list[MetricValue] = []
         for actions in self.actions:
             arr = actions.numpy()
-
             if arr.shape[0] < 3:
                 scores.append(MetricValue(0))
                 continue
-
             acceleration = np.diff(arr, n=2, axis=0)
-            jerk_energy = np.mean(np.sum(acceleration**2, axis=1))
-
-            scores.append(MetricValue(jerk_energy))
-
-        return SmoothnessAnalysis(smoothness_scores=scores)
+            jerk_energy: Vector = np.sum(acceleration**2, axis=1)
+            scores.append(MetricValue(np.mean(jerk_energy)))
+        return SmoothnessAnalysis(TypedList[NumDemos, MetricValue](scores))
 
 
 ## ─────────────────────────────────────────────────────────────────────────────

@@ -20,7 +20,6 @@ from pacer import console
 from pacer.analysis import (
     CorrectionMagnitudeAnalyser,
     CorrectionMagnitudeAnalysis,
-    MetricValue,
     ResidualAnalyser,
     SmoothnessAnalyser,
     SmoothnessAnalysis,
@@ -34,6 +33,7 @@ from pacer.base import (
 )
 from pacer.pacer import (
     Bins,
+    MetricValue,
     PACERResult,
     Residual,
     ResidualsCollection,

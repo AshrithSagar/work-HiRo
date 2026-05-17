@@ -55,6 +55,10 @@ Residual: TypeAlias = npDType  # r_{i, t}
 Residuals: TypeAlias = TypedList[NumPoints, Residual]
 ResidualsCollection: TypeAlias = TypedList[NumDemos, Residuals[NumPoints]]
 
+MetricValue: TypeAlias = npDType
+MetricSeries: TypeAlias = TypedList[NumPoints, MetricValue]
+MetricCollection: TypeAlias = TypedList[NumDemos, MetricSeries[NumPoints]]
+
 # ──────────────────────────────────────────────────────────────────────────────
 
 ZScore: TypeAlias = npDType  # z_{i, t}
@@ -113,14 +117,14 @@ class RobustStatistics(RuntimeGeneric[DimState, DimAction]):
     median_state: State[DimState]  # alpha_s[b] = median{ x_{i, t} : (i, t) \in I_b }
 
     ## Pace
-    median_action_strength: npDType
+    median_action_strength: MetricValue
     # beta_a[b] = median{ ||a_{i, t}|| : (i, t) \in I_b }
     # Captures strength of actions
-    median_state_change: npDType
+    median_state_change: MetricValue
     # beta_s[b] = median{ ||xdot_{i, t}|| : (i, t) \in I_b }
     # Captures typical rate of state change
 
-    median_state_norm: npDType
+    median_state_norm: MetricValue
 
     ## Local task dynamics
     # NOTE: `action_tangent` and `state_tangent` are not stored here,
@@ -147,9 +151,9 @@ class RobustStatistics(RuntimeGeneric[DimState, DimAction]):
 
         median_action = Action[DimAction](median(actions, axis=0))
         median_state = State[DimState](median(states, axis=0))
-        median_action_strength = npDType(median(action_norms, axis=0))
-        median_state_norm = npDType(median(state_norms, axis=0))
-        median_state_change = npDType(median(state_change_norms, axis=0))
+        median_action_strength = MetricValue(median(action_norms, axis=0))
+        median_state_norm = MetricValue(median(state_norms, axis=0))
+        median_state_change = MetricValue(median(state_change_norms, axis=0))
 
         return cls(
             median_action=median_action,
@@ -168,11 +172,11 @@ class RibbonToken(RuntimeGeneric[DimState, DimAction]):  # z_b
     """
 
     median_action: Action[DimAction]  # alpha_a[b]
-    median_action_strength: npDType  # beta_a[b]
+    median_action_strength: MetricValue  # beta_a[b]
     median_state: State[DimState]  # alpha_s[b]
-    median_state_change: npDType  # beta_s[b]
+    median_state_change: MetricValue  # beta_s[b]
 
-    median_state_norm: npDType
+    median_state_norm: MetricValue
 
     ## Local task dynamics
     action_tangent: Action[DimAction] = field(init=False)
@@ -324,8 +328,8 @@ class RibbonTokenConsolidator(
 class TrustValueParams:
     """Hyperparameters controlling trust value computations."""
 
-    tukey_cutoff: npDType | float = 4.685  # c
-    min_trust: npDType | float = 0.02  # w_min
+    tukey_cutoff: np.floating[Any] | float = 4.685  # c
+    min_trust: np.floating[Any] | float = 0.02  # w_min
 
     def __post_init__(self) -> None:
         assert 3 <= self.tukey_cutoff <= 5
@@ -434,7 +438,7 @@ class VectorMode(
     # Field access
     vec_from_sample: Callable[[Sample[DimState, DimAction]], _VecT]
     anchor_from_stats: Callable[[RobustStatistics[DimState, DimAction]], _VecT]
-    strength_from_token: Callable[[RibbonToken[DimState, DimAction]], npDType]
+    strength_from_token: Callable[[RibbonToken[DimState, DimAction]], MetricValue]
 
     # Construction
     wrap: Callable[[Any], _VecT]
@@ -498,10 +502,10 @@ def state_mode() -> VectorMode[
 class PseudoLabelParams:
     """Hyperparameters controlling pseudo-label corrections."""
 
-    debias_weight: npDType | float = 0.5  # lambda_{debias}
-    sideways_attenuation_shrinkage: npDType | float = 0.5  # rho_0
-    speed_regularisation_influence: npDType | float = 0.5  # eta_0
-    temporal_smoothing_weight: npDType | float = 0.0  # kappa
+    debias_weight: np.floating[Any] | float = 0.5  # lambda_{debias}
+    sideways_attenuation_shrinkage: np.floating[Any] | float = 0.5  # rho_0
+    speed_regularisation_influence: np.floating[Any] | float = 0.5  # eta_0
+    temporal_smoothing_weight: np.floating[Any] | float = 0.0  # kappa
 
     def __post_init__(self) -> None:
         assert 0 <= self.sideways_attenuation_shrinkage <= 1
@@ -524,12 +528,12 @@ class PseudoLabelComputer(
         params: PseudoLabelParams,
         anchor: Vector[Dim1],
         unit_tangent: Vector[Dim1],
-        median_strength: npDType,
-        trust: npDType,
+        median_strength: MetricValue,
+        trust: TrustValue,
         apply_sideways_attenuation: bool,
     ) -> Vector[Dim1]:
         # Debiasing towards the anchor
-        gamma = 1 - params.debias_weight * (1 - trust)  # gamma_{i, t}
+        gamma = npDType(1 - params.debias_weight * (1 - trust))  # gamma_{i, t}
         assert 0 <= gamma <= 1
         y1 = gamma * v + (1 - gamma) * anchor  # y^{(1)}_{i, t}
 
@@ -537,14 +541,14 @@ class PseudoLabelComputer(
         y1_pll = np.dot(y1, unit_tangent) * unit_tangent
         y1_perp = y1 - y1_pll
         rho = (
-            params.sideways_attenuation_shrinkage * (1 - trust)
+            npDType(params.sideways_attenuation_shrinkage * (1 - trust))
             if apply_sideways_attenuation
             else npDType(0)
         )
         y2 = y1_pll + (1 - rho) * y1_perp  # y^{(2)}_{i, t}
 
         # Speed regularisation
-        eta = params.speed_regularisation_influence * (1 - trust)  # eta_{i, t}
+        eta = npDType(params.speed_regularisation_influence * (1 - trust))  # eta_{i, t}
         s = (1 - eta) * la.norm(y2) + eta * median_strength  # s_{i, t}
         y3 = s * (y2 / (la.norm(y2) + EPS))  # y^{(3)}_{i, t}
 
