@@ -33,6 +33,7 @@ from pacer.base import (
 )
 from pacer.pacer import (
     Bins,
+    MetricSeries,
     MetricValue,
     PACERResult,
     Residual,
@@ -48,6 +49,7 @@ from pacer.typings import (
     NumBins,
     NumDemos,
     NumPoints,
+    Vector,
     npDType,
 )
 
@@ -440,6 +442,254 @@ def plot_smoothness_comparison(
     plt.tight_layout()
 
 
+def plot_trust_colored_trajectory(
+    states: States[NumPoints, TWO],
+    trust_values: MetricSeries[NumPoints] | Vector[NumPoints],
+    *,
+    title: str = "Trust-Colored Trajectory",
+    cmap: str = "viridis",
+    linewidth: float = 2.5,
+    point_size: float = 28,
+) -> None:
+    """
+    Plot 2D trajectories where each sample is colored by trust value.
+    High trust -> bright/clean; Low trust  -> dark/suspicious
+    """
+    xs = states.coord(0)
+    ys = states.coord(1)
+    trust = np.asarray(trust_values, dtype=npDType)
+    plt.figure(figsize=(7, 7))
+    scatter = plt.scatter(xs, ys, c=trust, cmap=cmap, s=point_size, zorder=3)
+    plt.plot(xs, ys, color="grey", alpha=0.35, linewidth=linewidth, zorder=1)
+    plt.colorbar(scatter, label="Trust")
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title(title)
+    plt.axis("equal")
+    plt.margins(0.05)
+    plt.tight_layout()
+
+
+def plot_trust_colored_action_field(
+    states: States[NumPoints, TWO],
+    actions: Actions[NumPoints, TWO],
+    trust_values: MetricSeries[NumPoints] | Vector[NumPoints],
+    *,
+    title: str = "Trust-Colored Action Field",
+    cmap: str = "coolwarm",
+    action_scale: float = 1.0,
+    step: int = 1,
+) -> None:
+    """Plot action vectors colored by trust value."""
+    xs = states.coord(0)[::step]
+    ys = states.coord(1)[::step]
+    ax = actions.coord(0)[::step]
+    ay = actions.coord(1)[::step]
+    trust = np.asarray(trust_values, dtype=npDType)[::step]
+
+    plt.figure(figsize=(7, 7))
+    quiver = plt.quiver(
+        xs,
+        ys,
+        ax,
+        ay,
+        trust,
+        cmap=cmap,
+        angles="xy",
+        scale_units="xy",
+        scale=1.0 / action_scale,
+        width=0.004,
+        alpha=0.9,
+    )
+    plt.colorbar(quiver, label="Trust")
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title(title)
+    plt.axis("equal")
+    plt.margins(0.05)
+    plt.tight_layout()
+
+
+def plot_action_correction_vectors(
+    states: States[NumPoints, TWO],
+    original_actions: Actions[NumPoints, TWO],
+    pseudo_actions: Actions[NumPoints, TWO],
+    *,
+    title: str = "Action Correction Vectors",
+    correction_scale: float = 1.0,
+    threshold: float = 1e-3,
+    step: int = 1,
+) -> None:
+    """
+    Visualize PACER corrections:
+        `delta = pseudo - original`
+    Only corrections above threshold are drawn.
+    """
+    original = original_actions.numpy()
+    pseudo = pseudo_actions.numpy()
+    delta = pseudo - original
+    magnitude = np.linalg.norm(delta, axis=1)
+    xs = states.coord(0)
+    ys = states.coord(1)
+    mask = magnitude > threshold
+    xs_q: Vector[int] = xs[mask][::step]  # pyright: ignore[reportUnknownVariableType]
+    ys_q: Vector[int] = ys[mask][::step]  # pyright: ignore[reportUnknownVariableType]
+    dx = delta[:, 0][mask][::step]
+    dy = delta[:, 1][mask][::step]
+
+    plt.figure(figsize=(7, 7))
+    plt.plot(xs, ys, alpha=0.25)
+    plt.quiver(
+        xs_q,
+        ys_q,
+        dx,
+        dy,
+        magnitude[mask][::step],
+        cmap="inferno",
+        angles="xy",
+        scale_units="xy",
+        scale=1.0 / correction_scale,
+        width=0.004,
+    )
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title(title)
+    plt.axis("equal")
+    plt.tight_layout()
+
+
+def plot_phase_aligned_trajectories(
+    states_collection: StatesCollection[NumDemos, NumPoints, TWO],
+    phases: PhasesCollection[NumDemos, NumPoints],
+    *,
+    title: str = "Phase-Aligned Trajectories",
+    alpha: float = 0.8,
+) -> None:
+    """
+    Plot trajectories parameterized by phase instead of time.
+    Useful for visualising PACER alignment quality.
+    """
+    plt.figure(figsize=(7, 7))
+    scatter = None
+    for i, (states, tau) in enumerate(zip(states_collection, phases.values())):
+        xs = states.coord(0)
+        ys = states.coord(1)
+        scatter = plt.scatter(
+            xs,
+            ys,
+            c=np.asarray(tau, dtype=npDType),
+            cmap="plasma",
+            s=14,
+            alpha=alpha,
+            label=f"Demo {i}",
+        )
+        plt.plot(xs, ys, alpha=0.2)
+    if scatter is not None:
+        plt.colorbar(scatter, label=r"Phase $\tau$")
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title(title)
+    plt.axis("equal")
+    plt.tight_layout()
+
+
+def plot_ribbon_corridor(
+    bins: Bins[NumBins, NumDemos, NumPoints, TWO, TWO],
+    *,
+    title: str = "Ribbon Consensus Corridor",
+    variability_scale: float = 1.0,
+) -> None:
+    """
+    Plot ribbon median trajectory with variability corridor.
+    Corridor radius is derived from MAD residual.
+    """
+    median_xs: list[npDType] = []
+    median_ys: list[npDType] = []
+    variability: list[Residual] = []
+    for bin in bins:
+        token = bin.ribbon_token
+        median_state = token.median_state
+        median_xs.append(median_state[0])
+        median_ys.append(median_state[1])
+        variability.append(token.MAD_action_residual)
+    xs = np.asarray(median_xs, dtype=npDType)
+    ys = np.asarray(median_ys, dtype=npDType)
+    var = variability_scale * np.asarray(variability, dtype=npDType)
+
+    plt.figure(figsize=(7, 7))
+    plt.plot(xs, ys, linewidth=3, label="Ribbon median")
+    plt.fill_between(xs, ys - var, ys + var, alpha=0.2, label="MAD corridor")
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title(title)
+    plt.axis("equal")
+    plt.legend()
+    plt.tight_layout()
+
+
+def plot_residual_vs_phase(
+    phases: PhasesCollection[NumDemos, NumPoints],
+    residuals: ResidualsCollection[NumDemos, NumPoints],
+    *,
+    title: str = "Residual vs Phase",
+    alpha: float = 0.5,
+) -> None:
+    """
+    Scatter plot of residual magnitude against phase.
+    Useful for identifying difficult task regions.
+    """
+    xs: list[npDType] = []
+    ys: list[Residual] = []
+    for i in phases.keys():
+        tau = phases[i]
+        residual_series = residuals[i]
+        xs.extend(tau)
+        ys.extend(residual_series)
+
+    plt.figure(figsize=(8, 4))
+    plt.scatter(xs, ys, alpha=alpha)
+    plt.xlabel(r"Phase $\tau$")
+    plt.ylabel("Residual magnitude")
+    plt.title(title)
+    plt.tight_layout()
+
+
+def plot_action_angle_deviation(
+    actions: ActionsCollection[NumDemos, NumPoints, TWO],
+    bins: Bins[NumBins, NumDemos, NumPoints, TWO, TWO],
+    phases: PhasesCollection[NumDemos, NumPoints],
+    *,
+    title: str = "Action Angle Deviation",
+) -> None:
+    """
+    Plot angular deviation from ribbon median action.
+    Measures directional disagreement.
+    """
+    xs: list[npDType] = []
+    ys: list[npDType] = []
+    bin_list = list(bins)
+    for i, demo_actions in enumerate(actions):
+        tau = phases[i]
+        for t in range(len(demo_actions)):
+            action = demo_actions[t]
+            phase = tau[t]
+            bin_index = min(int(phase * len(bin_list)), len(bin_list) - 1)
+            reference = bin_list[bin_index].ribbon_token.median_action
+            numerator = np.dot(action, reference)
+            denominator = np.linalg.norm(action) * np.linalg.norm(reference) + 1e-8
+            cosine = np.clip(numerator / denominator, -1.0, 1.0)
+            angle = np.arccos(cosine)
+            xs.append(phase)
+            ys.append(angle)
+
+    plt.figure(figsize=(8, 4))
+    plt.scatter(xs, ys, alpha=0.4)
+    plt.xlabel(r"Phase $\tau$")
+    plt.ylabel("Angular deviation [rad]")
+    plt.title(title)
+    plt.tight_layout()
+
+
 ## ── PACER Visualisation ──────────────────────────────────────────────────────
 
 
@@ -466,6 +716,14 @@ class PACERVisualisationConfig:
     ribbon_statistics: bool = True
     phase_velocity: bool = True
     smoothness_comparison: bool = True
+
+    trust_colored_trajectory: bool = True
+    trust_colored_action_field: bool = True
+    action_correction_vectors: bool = True
+    phase_aligned_trajectories: bool = True
+    ribbon_corridor: bool = True
+    residual_vs_phase: bool = True
+    action_angle_deviation: bool = True
 
 
 @dataclass
@@ -523,10 +781,6 @@ class PACERVisualiser(Generic[NumBins, NumDemos, NumPoints]):
                 self.demonstrations.actions, self.pacer_result.pseudo_labels.actions
             )
 
-        correction_analysis = CorrectionMagnitudeAnalyser(
-            self.demonstrations, self.pacer_result
-        ).analyse_actions()
-
         if self.config.residual_distribution:
             residual_analysis = ResidualAnalyser(
                 self.demonstrations, pacer_result=self.pacer_result
@@ -540,6 +794,9 @@ class PACERVisualiser(Generic[NumBins, NumDemos, NumPoints]):
             plot_bin_occupancy(self.pacer_result.bins)
 
         if self.config.trust_vs_correction:
+            correction_analysis = CorrectionMagnitudeAnalyser(
+                self.demonstrations, self.pacer_result
+            ).analyse_actions()
             plot_trust_vs_correction(
                 self.pacer_result.action_trust_values, correction_analysis
             )
@@ -558,6 +815,55 @@ class PACERVisualiser(Generic[NumBins, NumDemos, NumPoints]):
                 self.pacer_result.pseudo_labels.actions
             ).analyse()
             plot_smoothness_comparison(original_smoothness, pseudo_smoothness)
+
+        if self.config.trust_colored_trajectory:
+            for i, demo in enumerate(self.demonstrations):
+                plot_trust_colored_trajectory(
+                    demo.states,
+                    self.pacer_result.action_trust_values[i],
+                    title=f"Demo {i}: Trust-Colored Trajectory",
+                )
+
+        if self.config.trust_colored_action_field:
+            for i, demo in enumerate(self.demonstrations):
+                plot_trust_colored_action_field(
+                    demo.states,
+                    demo.actions,
+                    self.pacer_result.action_trust_values[i],
+                    title=f"Demo {i}: Trust-Colored Action Field",
+                )
+
+        if self.config.action_correction_vectors:
+            for i, demo in enumerate(self.demonstrations):
+                plot_action_correction_vectors(
+                    demo.states,
+                    demo.actions,
+                    self.pacer_result.pseudo_labels.actions[i],
+                    title=f"Demo {i}: Action Correction Vectors",
+                )
+
+        if self.config.phase_aligned_trajectories:
+            plot_phase_aligned_trajectories(
+                self.demonstrations.states, self.pacer_result.phases
+            )
+
+        if self.config.ribbon_corridor:
+            plot_ribbon_corridor(self.pacer_result.bins)
+
+        if self.config.residual_vs_phase:
+            residual_analysis = ResidualAnalyser(
+                self.demonstrations, pacer_result=self.pacer_result
+            ).compute_action_residuals()
+            plot_residual_vs_phase(
+                self.pacer_result.phases, residual_analysis.residuals
+            )
+
+        if self.config.action_angle_deviation:
+            plot_action_angle_deviation(
+                self.demonstrations.actions,
+                self.pacer_result.bins,
+                self.pacer_result.phases,
+            )
 
         if self.config.save_dir is not None:
             save_dir = Path(self.config.save_dir)
@@ -579,6 +885,8 @@ class PACERVisualiser(Generic[NumBins, NumDemos, NumPoints]):
 
         if self.config.show:
             plt.show()
+
+        plt.close("all")
 
 
 ## ─────────────────────────────────────────────────────────────────────────────

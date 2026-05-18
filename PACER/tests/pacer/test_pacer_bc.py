@@ -110,5 +110,12 @@ if __name__ == "__main__":
             ribbon_statistics=True,
             phase_velocity=True,
             smoothness_comparison=True,
+            trust_colored_trajectory=True,
+            trust_colored_action_field=True,
+            action_correction_vectors=True,
+            phase_aligned_trajectories=True,
+            ribbon_corridor=True,
+            residual_vs_phase=True,
+            action_angle_deviation=True,
         ),
     ).render()
