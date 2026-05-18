@@ -41,7 +41,7 @@ from pacer.pacer import (
     TrustValue,
     TrustValuesCollection,
 )
-from pacer.phase.base import PhasesCollection
+from pacer.phase import PhasesCollection
 from pacer.typings import (
     DemoIndex,
     DimAction,

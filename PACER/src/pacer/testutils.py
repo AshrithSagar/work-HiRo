@@ -33,15 +33,13 @@ from pacer.datasets.interactive.plugins import (
     SavePlugin,
     default_plugins,
 )
-from pacer.phase.base import PhasesCollection
+from pacer.phase import PhaseEstimator, PhaseEvaluationReport, PhasesCollection
 from pacer.phase.estimation import (
     MLPPhaseEstimator,
     MLPPhaseEstimatorConfig,
     NormalisedTimeIndexPhaseEstimator,
     PathLengthPhaseEstimator,
-    PhaseEstimator,
 )
-from pacer.phase.evaluation import PhaseEvaluationReport
 from pacer.typings import DimAction, DimState, NumDemos, NumPoints
 from pacer.utils import SEED, TORCH_DEVICE, set_seed
 
