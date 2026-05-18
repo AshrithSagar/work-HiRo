@@ -475,8 +475,9 @@ class DebiasTowardsAnchorStep:
     def apply(
         self, y: VectorType, *, ctx: PseudoLabelContext[VectorType, DimState, DimAction]
     ) -> VectorType:
-        gamma = npDType(1.0 - self.debias_weight * (1.0 - ctx.trust))
-        y_next = gamma * y + (1.0 - gamma) * ctx.anchor
+        gamma = npDType(1.0 - self.debias_weight * (1.0 - ctx.trust))  # gamma_{i, t}
+        assert 0 <= gamma <= 1
+        y_next = gamma * y + (1.0 - gamma) * ctx.anchor  # y^{(1)}_{i, t}
         return type(y)(y_next)
 
 
@@ -495,7 +496,7 @@ class SidewaysAttenuationStep:
         if not ctx.apply_sideways_attenuation:
             return y
         rho = npDType(self.shrinkage * (1.0 - ctx.trust))
-        y_next = attenuate_perpendicular(
+        y_next = attenuate_perpendicular(  # y^{(2)}_{i, t}
             y, unit_direction=ctx.unit_tangent, attenuation=rho
         )
         return type(y)(y_next)
@@ -513,9 +514,9 @@ class SpeedRegularisationStep:
     def apply(
         self, y: VectorType, *, ctx: PseudoLabelContext[VectorType, DimState, DimAction]
     ) -> VectorType:
-        eta = npDType(self.influence * (1.0 - ctx.trust))
-        target_norm = (1.0 - eta) * la.norm(y) + eta * ctx.median_strength
-        y_next = rescale_norm(y, target_norm=target_norm)
+        eta = npDType(self.influence * (1.0 - ctx.trust))  # eta_{i, t}
+        target_norm = (1.0 - eta) * la.norm(y) + eta * ctx.median_strength  # s_{i, t}
+        y_next = rescale_norm(y, target_norm=target_norm)  # y^{(3)}_{i, t}
         return type(y)(y_next)
 
 
