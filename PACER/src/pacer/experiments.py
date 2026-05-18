@@ -13,10 +13,9 @@ from warnings import deprecated
 import matplotlib.pyplot as plt
 from pyLASAHandwritingDataset import ALL_SINGLE_PATTERN_MOTIONS, SinglePatternMotion
 from torch import Tensor
-from typingkit.numpy._typed.helpers import TWO
 
 from pacer import console
-from pacer.base import Action, Demonstrations, State
+from pacer.base import Demonstrations
 from pacer.bc import BCTrainConfig, BCTrainer, WeightedBCTrainer
 from pacer.pacer import (
     PACER,
@@ -90,9 +89,7 @@ class PACERBCExperiment(Generic[NumBins, NumDemos, NumPoints, DimState, DimActio
 
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     _: KW_ONLY
-    pacer_config: PACERConfig[NumBins, DimState, DimAction] = field(
-        default_factory=PACERConfig[NumBins, DimState, DimAction]
-    )
+    pacer_config: PACERConfig[NumBins] = field(default_factory=PACERConfig[NumBins])
     bc_train_config: BCTrainConfig = field(default_factory=BCTrainConfig)
 
     def run(
@@ -151,13 +148,13 @@ class BCvsPACERBCExperimentLegacy(Generic[NumBins]):
     action_trust_value_params: TrustValueParams = field(
         default_factory=TrustValueParams
     )
-    action_pseudo_label_params: PseudoLabelParams[Action[TWO]] = field(
-        default_factory=PseudoLabelParams[Action[TWO]]
+    action_pseudo_label_params: PseudoLabelParams = field(
+        default_factory=PseudoLabelParams
     )
     use_state_labels: bool = False
     state_trust_value_params: TrustValueParams = field(default_factory=TrustValueParams)
-    state_pseudo_label_params: PseudoLabelParams[State[TWO]] = field(
-        default_factory=PseudoLabelParams[State[TWO]]
+    state_pseudo_label_params: PseudoLabelParams = field(
+        default_factory=PseudoLabelParams
     )
     bc_train_config: BCTrainConfig = field(default_factory=BCTrainConfig)
     pacer_visualisation_config: PACERVisualisationConfig = field(
@@ -289,9 +286,7 @@ class BCvsPACERBCExperiment(Generic[NumBins, NumDemos, NumPoints, DimState, DimA
 
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     _: KW_ONLY
-    pacer_config: PACERConfig[NumBins, DimState, DimAction] = field(
-        default_factory=PACERConfig[NumBins, DimState, DimAction]
-    )
+    pacer_config: PACERConfig[NumBins] = field(default_factory=PACERConfig[NumBins])
     bc_train_config: BCTrainConfig = field(default_factory=BCTrainConfig)
 
     def run(

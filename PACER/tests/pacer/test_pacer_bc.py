@@ -4,9 +4,7 @@ Test BC Policy vs. PACER + BC Policy.
 # tests/test_pacer_bc.py
 
 from typingkit.core import RuntimeOptions, set_global_default_runtime_options
-from typingkit.numpy._typed.helpers import TWO
 
-from pacer.base import Action, State
 from pacer.bc import BCTrainConfig
 from pacer.experiments import BCvsPACERBCExperiment
 from pacer.pacer import (
@@ -58,7 +56,7 @@ if __name__ == "__main__":
                 tukey_cutoff=4.685,  # c
                 min_trust=0.02,  # w_min
             ),
-            action_pseudo_label_params=PseudoLabelParams[Action[TWO]](
+            action_pseudo_label_params=PseudoLabelParams(
                 pipeline=RefinementPipeline(
                     steps=(
                         DebiasTowardsAnchorStep(debias_weight=0.5),  # lambda_{debias}
@@ -73,7 +71,7 @@ if __name__ == "__main__":
                 tukey_cutoff=4.685,  # c
                 min_trust=0.02,  # w_min
             ),
-            state_pseudo_label_params=PseudoLabelParams[State[TWO]](
+            state_pseudo_label_params=PseudoLabelParams(
                 pipeline=RefinementPipeline(
                     steps=(
                         DebiasTowardsAnchorStep(debias_weight=0.1),  # lambda_{debias}

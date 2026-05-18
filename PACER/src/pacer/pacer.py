@@ -444,7 +444,7 @@ class PseudoLabelContext(Generic[VectorType, DimState, DimAction]):
     apply_sideways_attenuation: bool
 
 
-class PseudoLabelRefinementStep(Protocol[VectorType]):
+class PseudoLabelRefinementStep(Protocol):
     """Single pseudo-label refinement step."""
 
     def apply(
@@ -453,10 +453,10 @@ class PseudoLabelRefinementStep(Protocol[VectorType]):
 
 
 @dataclass(frozen=True, slots=True)
-class RefinementPipeline(Generic[VectorType]):
+class RefinementPipeline:
     """Sequential refinement pipeline."""
 
-    steps: tuple[PseudoLabelRefinementStep[VectorType], ...] = ()
+    steps: tuple[PseudoLabelRefinementStep, ...] = field(default_factory=tuple)
 
     def apply(
         self, y: VectorType, *, ctx: PseudoLabelContext[VectorType, DimState, DimAction]
@@ -467,7 +467,7 @@ class RefinementPipeline(Generic[VectorType]):
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)
-class DebiasTowardsAnchorStep(Generic[VectorType]):
+class DebiasTowardsAnchorStep:
     """Pull labels toward robust consensus anchor."""
 
     debias_weight: FloatLike = 0.5  # lambda_{debias}
@@ -481,7 +481,7 @@ class DebiasTowardsAnchorStep(Generic[VectorType]):
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)
-class SidewaysAttenuationStep(Generic[VectorType]):
+class SidewaysAttenuationStep:
     """Shrinks perpendicular components relative to ribbon tangent."""
 
     shrinkage: FloatLike = 0.5  # rho_0
@@ -502,7 +502,7 @@ class SidewaysAttenuationStep(Generic[VectorType]):
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)
-class SpeedRegularisationStep(Generic[VectorType]):
+class SpeedRegularisationStep:
     """Blends magnitude toward robust consensus magnitude."""
 
     influence: FloatLike = 0.5  # eta_0
@@ -520,7 +520,7 @@ class SpeedRegularisationStep(Generic[VectorType]):
 
 
 @dataclass(slots=True, kw_only=True)
-class TemporalSmoother(Generic[VectorType]):
+class TemporalSmoother:
     """Exponential moving average smoothing across trajectory."""
 
     smoothing_weight: FloatLike = 0.0  # kappa
@@ -616,13 +616,9 @@ def state_mode() -> VectorMode[
 
 
 @dataclass(kw_only=True)
-class PseudoLabelParams(Generic[VectorType]):
-    pipeline: RefinementPipeline[VectorType] = field(
-        default_factory=RefinementPipeline[VectorType]
-    )
-    smoother: TemporalSmoother[VectorType] = field(
-        default_factory=TemporalSmoother[VectorType]
-    )
+class PseudoLabelParams:
+    pipeline: RefinementPipeline = field(default_factory=RefinementPipeline)
+    smoother: TemporalSmoother = field(default_factory=TemporalSmoother)
 
 
 @dataclass
@@ -640,7 +636,7 @@ class PseudoLabelComputer(
         mode: VectorMode[
             CollectionType, VectorType, NumDemos, NumPoints, DimState, DimAction
         ],
-        params: PseudoLabelParams[VectorType],
+        params: PseudoLabelParams,
     ) -> CollectionType:
         pre_smooth = mode.make_collection(self.demonstrations)  # y^{(3)} for all (i, t)
         for bin in self.bins:
@@ -696,8 +692,8 @@ class PseudoLabelComputer(
         action_trust_values: TrustValuesCollection[NumDemos, NumPoints],
         state_trust_values: TrustValuesCollection[NumDemos, NumPoints] | None = None,
         *,
-        action_params: PseudoLabelParams[Action[DimAction]],
-        state_params: PseudoLabelParams[State[DimState]] | None = None,
+        action_params: PseudoLabelParams,
+        state_params: PseudoLabelParams | None = None,
     ) -> PseudoLabels[NumDemos, NumPoints, DimState, DimAction]:
         """Produces final pseudo-labels for actions and optionally states."""
         actions = self._compute_labels(
@@ -715,7 +711,7 @@ class PseudoLabelComputer(
 
 
 @dataclass(kw_only=True)
-class PACERConfig(RuntimeGeneric[NumBins, DimState, DimAction]):
+class PACERConfig(RuntimeGeneric[NumBins]):
     phase_pipeline_config: PhasePipelineConfig = field(
         default_factory=PhasePipelineConfig
     )
@@ -723,13 +719,13 @@ class PACERConfig(RuntimeGeneric[NumBins, DimState, DimAction]):
     action_trust_value_params: TrustValueParams = field(
         default_factory=TrustValueParams
     )
-    action_pseudo_label_params: PseudoLabelParams[Action[DimAction]] = field(
-        default_factory=PseudoLabelParams[Action[DimAction]]
+    action_pseudo_label_params: PseudoLabelParams = field(
+        default_factory=PseudoLabelParams
     )
     use_state_labels: bool = False
     state_trust_value_params: TrustValueParams = field(default_factory=TrustValueParams)
-    state_pseudo_label_params: PseudoLabelParams[State[DimState]] = field(
-        default_factory=PseudoLabelParams[State[DimState]]
+    state_pseudo_label_params: PseudoLabelParams = field(
+        default_factory=PseudoLabelParams
     )
 
 
@@ -746,9 +742,7 @@ class PACERResult(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimActi
 class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     _: KW_ONLY
-    config: PACERConfig[NumBins, DimState, DimAction] = field(
-        default_factory=PACERConfig[NumBins, DimState, DimAction]
-    )
+    config: PACERConfig[NumBins] = field(default_factory=PACERConfig[NumBins])
 
     def run(self) -> PACERResult[NumBins, NumDemos, NumPoints, DimState, DimAction]:
         phases = PhasePipeline(
