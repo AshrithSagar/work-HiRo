@@ -10,14 +10,12 @@ https://openreview.net/forum?id=gaYyBvP2Rz
 
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from dataclasses import KW_ONLY, dataclass, field
-from typing import Any, Callable, Literal, Self, TypeAlias, cast
+from typing import Any, Callable, Generic, Literal, Protocol, Self, TypeAlias, cast
 
-import numpy as np
 import numpy.linalg as la
 from typingkit.core import RuntimeGeneric, TypedDict, TypedList
-from typingkit.numpy._typed.helpers import Dim1
 
 from pacer.base import (
     Action,
@@ -40,16 +38,23 @@ from pacer.typings import (
     DemoIndex,
     DimAction,
     DimState,
+    FloatLike,
     NumBins,
     NumDemos,
     NumPoints,
     SampleIndex,
     TimeIndex,
-    Vector,
     VectorType,
     npDType,
 )
-from pacer.utils import EPS, MAD_SCALE, median, normalise
+from pacer.utils import (
+    EPS,
+    MAD_SCALE,
+    attenuate_perpendicular,
+    median,
+    normalise,
+    rescale_norm,
+)
 
 ## ── PACER ────────────────────────────────────────────────────────────────────
 
@@ -107,7 +112,7 @@ class TrustValuesCollection(TypedDict[NumDemos, DemoIndex, TrustValues[NumPoints
         )
 
 
-# ──────────────────────────────────────────────────────────────────────────────
+# ── Binning ───────────────────────────────────────────────────────────────────
 
 
 @dataclass(kw_only=True)
@@ -324,15 +329,15 @@ class RibbonTokenConsolidator(
         return self.bins
 
 
-# ──────────────────────────────────────────────────────────────────────────────
+# ── Trust Value Computation ───────────────────────────────────────────────────
 
 
 @dataclass(kw_only=True)
 class TrustValueParams:
     """Hyperparameters controlling trust value computations."""
 
-    tukey_cutoff: np.floating[Any] | float = 4.685  # c
-    min_trust: np.floating[Any] | float = 0.02  # w_min
+    tukey_cutoff: FloatLike = 4.685  # c
+    min_trust: FloatLike = 0.02  # w_min
 
     def __post_init__(self) -> None:
         assert 3 <= self.tukey_cutoff <= 5
@@ -417,7 +422,7 @@ class TrustValueComputer(
         return trust_values  # [[w_{i, t}]_{t = 1}^{T_i}]_{i = 1}^{N}
 
 
-# ──────────────────────────────────────────────────────────────────────────────
+# ── Pseudo-Label Refinement ───────────────────────────────────────────────────
 
 
 @dataclass(kw_only=True)
@@ -426,6 +431,115 @@ class PseudoLabels(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
 
     actions: ActionsCollection[NumDemos, NumPoints, DimAction]
     states: StatesCollection[NumDemos, NumPoints, DimState] | None = None
+
+
+@dataclass(frozen=True, kw_only=True, slots=True)
+class PseudoLabelContext(Generic[VectorType, DimState, DimAction]):
+    """Immutable shared pseudo-label refinement context."""
+
+    trust: TrustValue
+    anchor: VectorType
+    unit_tangent: VectorType
+    median_strength: MetricValue
+    apply_sideways_attenuation: bool
+
+
+class PseudoLabelRefinementStep(Protocol[VectorType]):
+    """Single pseudo-label refinement step."""
+
+    def apply(
+        self, y: VectorType, *, ctx: PseudoLabelContext[VectorType, DimState, DimAction]
+    ) -> VectorType: ...
+
+
+@dataclass(frozen=True, slots=True)
+class RefinementPipeline(Generic[VectorType]):
+    """Sequential refinement pipeline."""
+
+    steps: tuple[PseudoLabelRefinementStep[VectorType], ...] = ()
+
+    def apply(
+        self, y: VectorType, *, ctx: PseudoLabelContext[VectorType, DimState, DimAction]
+    ) -> VectorType:
+        for step in self.steps:
+            y = step.apply(y, ctx=ctx)
+        return y
+
+
+@dataclass(frozen=True, kw_only=True, slots=True)
+class DebiasTowardsAnchorStep(Generic[VectorType]):
+    """Pull labels toward robust consensus anchor."""
+
+    debias_weight: FloatLike = 0.5  # lambda_{debias}
+
+    def apply(
+        self, y: VectorType, *, ctx: PseudoLabelContext[VectorType, DimState, DimAction]
+    ) -> VectorType:
+        gamma = npDType(1.0 - self.debias_weight * (1.0 - ctx.trust))
+        y_next = gamma * y + (1.0 - gamma) * ctx.anchor
+        return type(y)(y_next)
+
+
+@dataclass(frozen=True, kw_only=True, slots=True)
+class SidewaysAttenuationStep(Generic[VectorType]):
+    """Shrinks perpendicular components relative to ribbon tangent."""
+
+    shrinkage: FloatLike = 0.5  # rho_0
+
+    def __post_init__(self) -> None:
+        assert 0 <= self.shrinkage <= 1
+
+    def apply(
+        self, y: VectorType, *, ctx: PseudoLabelContext[VectorType, DimState, DimAction]
+    ) -> VectorType:
+        if not ctx.apply_sideways_attenuation:
+            return y
+        rho = npDType(self.shrinkage * (1.0 - ctx.trust))
+        y_next = attenuate_perpendicular(
+            y, unit_direction=ctx.unit_tangent, attenuation=rho
+        )
+        return type(y)(y_next)
+
+
+@dataclass(frozen=True, kw_only=True, slots=True)
+class SpeedRegularisationStep(Generic[VectorType]):
+    """Blends magnitude toward robust consensus magnitude."""
+
+    influence: FloatLike = 0.5  # eta_0
+
+    def __post_init__(self) -> None:
+        assert 0 <= self.influence <= 1
+
+    def apply(
+        self, y: VectorType, *, ctx: PseudoLabelContext[VectorType, DimState, DimAction]
+    ) -> VectorType:
+        eta = npDType(self.influence * (1.0 - ctx.trust))
+        target_norm = (1.0 - eta) * la.norm(y) + eta * ctx.median_strength
+        y_next = rescale_norm(y, target_norm=target_norm)
+        return type(y)(y_next)
+
+
+@dataclass(slots=True, kw_only=True)
+class TemporalSmoother(Generic[VectorType]):
+    """Exponential moving average smoothing across trajectory."""
+
+    smoothing_weight: FloatLike = 0.0  # kappa
+
+    def smooth(self, labels: Iterable[VectorType]) -> list[VectorType]:
+        labels = list(labels)
+        if not labels:
+            return []
+        smoothed = list[VectorType]()
+        prev: VectorType | None = None
+        for y in labels:
+            if prev is None:
+                prev = y
+            else:
+                prev = type(y)(
+                    (1.0 - self.smoothing_weight) * y + self.smoothing_weight * prev
+                )
+            smoothed.append(prev)
+        return smoothed
 
 
 # VectorType :: State / Action
@@ -502,17 +616,13 @@ def state_mode() -> VectorMode[
 
 
 @dataclass(kw_only=True)
-class PseudoLabelParams:
-    """Hyperparameters controlling pseudo-label corrections."""
-
-    debias_weight: np.floating[Any] | float = 0.5  # lambda_{debias}
-    sideways_attenuation_shrinkage: np.floating[Any] | float = 0.5  # rho_0
-    speed_regularisation_influence: np.floating[Any] | float = 0.5  # eta_0
-    temporal_smoothing_weight: np.floating[Any] | float = 0.0  # kappa
-
-    def __post_init__(self) -> None:
-        assert 0 <= self.sideways_attenuation_shrinkage <= 1
-        assert 0 <= self.speed_regularisation_influence <= 1
+class PseudoLabelParams(Generic[VectorType]):
+    pipeline: RefinementPipeline[VectorType] = field(
+        default_factory=RefinementPipeline[VectorType]
+    )
+    smoother: TemporalSmoother[VectorType] = field(
+        default_factory=TemporalSmoother[VectorType]
+    )
 
 
 @dataclass
@@ -524,51 +634,15 @@ class PseudoLabelComputer(
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     bins: Bins[NumBins, NumDemos, NumPoints, DimState, DimAction]
 
-    def _apply_correction(
-        self,
-        v: Vector[Dim1],
-        *,
-        params: PseudoLabelParams,
-        anchor: Vector[Dim1],
-        unit_tangent: Vector[Dim1],
-        median_strength: MetricValue,
-        trust: TrustValue,
-        apply_sideways_attenuation: bool,
-    ) -> Vector[Dim1]:
-        # Debiasing towards the anchor
-        gamma = npDType(1 - params.debias_weight * (1 - trust))  # gamma_{i, t}
-        assert 0 <= gamma <= 1
-        y1 = gamma * v + (1 - gamma) * anchor  # y^{(1)}_{i, t}
-
-        # Sideways attentuation
-        y1_pll = np.dot(y1, unit_tangent) * unit_tangent
-        y1_perp = y1 - y1_pll
-        rho = (
-            npDType(params.sideways_attenuation_shrinkage * (1 - trust))
-            if apply_sideways_attenuation
-            else npDType(0)
-        )
-        y2 = y1_pll + (1 - rho) * y1_perp  # y^{(2)}_{i, t}
-
-        # Speed regularisation
-        eta = npDType(params.speed_regularisation_influence * (1 - trust))  # eta_{i, t}
-        s = (1 - eta) * la.norm(y2) + eta * median_strength  # s_{i, t}
-        y3 = s * (y2 / (la.norm(y2) + EPS))  # y^{(3)}_{i, t}
-
-        return Vector[Dim1](y3)
-
     def _compute_labels(
         self,
         trust_values: TrustValuesCollection[NumDemos, NumPoints],
         mode: VectorMode[
             CollectionType, VectorType, NumDemos, NumPoints, DimState, DimAction
         ],
-        params: PseudoLabelParams,
+        params: PseudoLabelParams[VectorType],
     ) -> CollectionType:
-        kappa = npDType(params.temporal_smoothing_weight)
         pre_smooth = mode.make_collection(self.demonstrations)  # y^{(3)} for all (i, t)
-        smoothed = mode.make_collection(self.demonstrations)  # y* for all (i, t)
-
         for bin in self.bins:
             token = bin.ribbon_token
             has_state_tangent = token.state_tangent is not None
@@ -578,9 +652,9 @@ class PseudoLabelComputer(
                 if token.state_tangent is not None
                 else token.action_tangent
             )
-            unit_tangent = Vector[int](normalise(tangent, method="NORM"))
+            unit_tangent = mode.wrap(normalise(tangent, method="NORM"))
 
-            apply_attenuation = (
+            apply_sideways_attenuation = (
                 not mode.attenuation_requires_state_tangent
             ) or has_state_tangent
 
@@ -592,27 +666,28 @@ class PseudoLabelComputer(
                 median_strength = mode.strength_from_token(token)
 
                 for t, sample in bin.samples_collection[j].items():
-                    w = trust_values[j][t]
-                    y3 = self._apply_correction(
-                        mode.vector_from_sample(sample),
-                        params=params,
+                    trust = trust_values[j][t]  # w_{j, t}
+                    ctx = PseudoLabelContext[VectorType, DimState, DimAction](
+                        trust=trust,
                         anchor=anchor,
                         unit_tangent=unit_tangent,
                         median_strength=median_strength,
-                        trust=w,
-                        apply_sideways_attenuation=apply_attenuation,
+                        apply_sideways_attenuation=apply_sideways_attenuation,
                     )
-                    mode.set_item(pre_smooth, j, t, mode.wrap(y3))
+                    y = mode.vector_from_sample(sample)
+                    y_refined = params.pipeline.apply(y, ctx=ctx)
+                    mode.set_item(pre_smooth, j, t, mode.wrap(y_refined))
 
         # Temporal smoothing
+        smoothed = mode.make_collection(self.demonstrations)  # y* for all (i, t)
         for i in self.demonstrations.demo_indices:
-            prev = None
-            for t in self.demonstrations[i].time_indices:
-                y3 = mode.get_item(pre_smooth, i, t)
-                prev = (
-                    y3 if prev is None else mode.wrap((1 - kappa) * y3 + kappa * prev)
-                )
-                mode.set_item(smoothed, i, t, prev)
+            labels = [
+                mode.get_item(pre_smooth, i, t)
+                for t in self.demonstrations[i].time_indices
+            ]
+            refined = params.smoother.smooth(labels)
+            for t, y in zip(self.demonstrations[i].time_indices, refined):
+                mode.set_item(smoothed, i, t, y)
 
         return smoothed
 
@@ -621,8 +696,8 @@ class PseudoLabelComputer(
         action_trust_values: TrustValuesCollection[NumDemos, NumPoints],
         state_trust_values: TrustValuesCollection[NumDemos, NumPoints] | None = None,
         *,
-        action_params: PseudoLabelParams,
-        state_params: PseudoLabelParams | None = None,
+        action_params: PseudoLabelParams[Action[DimAction]],
+        state_params: PseudoLabelParams[State[DimState]] | None = None,
     ) -> PseudoLabels[NumDemos, NumPoints, DimState, DimAction]:
         """Produces final pseudo-labels for actions and optionally states."""
         actions = self._compute_labels(
@@ -640,7 +715,7 @@ class PseudoLabelComputer(
 
 
 @dataclass(kw_only=True)
-class PACERConfig(RuntimeGeneric[NumBins]):
+class PACERConfig(RuntimeGeneric[NumBins, DimState, DimAction]):
     phase_pipeline_config: PhasePipelineConfig = field(
         default_factory=PhasePipelineConfig
     )
@@ -648,13 +723,13 @@ class PACERConfig(RuntimeGeneric[NumBins]):
     action_trust_value_params: TrustValueParams = field(
         default_factory=TrustValueParams
     )
-    action_pseudo_label_params: PseudoLabelParams = field(
-        default_factory=PseudoLabelParams
+    action_pseudo_label_params: PseudoLabelParams[Action[DimAction]] = field(
+        default_factory=PseudoLabelParams[Action[DimAction]]
     )
     use_state_labels: bool = False
     state_trust_value_params: TrustValueParams = field(default_factory=TrustValueParams)
-    state_pseudo_label_params: PseudoLabelParams = field(
-        default_factory=PseudoLabelParams
+    state_pseudo_label_params: PseudoLabelParams[State[DimState]] = field(
+        default_factory=PseudoLabelParams[State[DimState]]
     )
 
 
@@ -671,7 +746,9 @@ class PACERResult(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimActi
 class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     _: KW_ONLY
-    config: PACERConfig[NumBins] = field(default_factory=PACERConfig[NumBins])
+    config: PACERConfig[NumBins, DimState, DimAction] = field(
+        default_factory=PACERConfig[NumBins, DimState, DimAction]
+    )
 
     def run(self) -> PACERResult[NumBins, NumDemos, NumPoints, DimState, DimAction]:
         phases = PhasePipeline(

@@ -18,9 +18,10 @@ import numpy.typing as npt
 import optype.numpy as onp
 import torch
 from torch._prims_common import DeviceLikeType
+from typingkit.numpy._typed.helpers import Dim1
 
 from pacer import console
-from pacer.typings import npDType
+from pacer.typings import FloatLike, Vector, npDType
 
 ## ── Utils ────────────────────────────────────────────────────────────────────
 
@@ -82,6 +83,36 @@ def normalise(
             _min = min(_vec)
             _max = max(_vec)
             return (_vec - _min) / (_max - _min + EPS)
+
+
+def project_parallel(v: Vector[Dim1], /, unit_direction: Vector[Dim1]) -> Vector[Dim1]:
+    """Parallel component of `v` along direction."""
+    return Vector[Dim1](np.dot(v, unit_direction) * unit_direction, dtype=npDType)
+
+
+def project_perpendicular(
+    v: Vector[Dim1], /, unit_direction: Vector[Dim1]
+) -> Vector[Dim1]:
+    """Orthogonal component of `v`."""
+    v_parallel = project_parallel(v, unit_direction)
+    return Vector[Dim1](v - v_parallel, dtype=npDType)
+
+
+def attenuate_perpendicular(
+    v: Vector[Dim1], /, *, unit_direction: Vector[Dim1], attenuation: FloatLike
+) -> Vector[Dim1]:
+    """Shrinks orthogonal components."""
+    v_parallel = project_parallel(v, unit_direction)
+    v_perpendicular = project_perpendicular(v, unit_direction)
+    return Vector[Dim1](
+        v_parallel + (1.0 - attenuation) * v_perpendicular, dtype=npDType
+    )
+
+
+def rescale_norm(v: Vector[Dim1], /, *, target_norm: FloatLike) -> Vector[Dim1]:
+    """Rescales vector magnitude while preserving direction."""
+    norm = la.norm(v)
+    return Vector[Dim1](target_norm * (v / (norm + EPS)), dtype=npDType)
 
 
 ## ─────────────────────────────────────────────────────────────────────────────

@@ -4,10 +4,21 @@ Test BC Policy vs. PACER + BC Policy.
 # tests/test_pacer_bc.py
 
 from typingkit.core import RuntimeOptions, set_global_default_runtime_options
+from typingkit.numpy._typed.helpers import TWO
 
+from pacer.base import Action, State
 from pacer.bc import BCTrainConfig
 from pacer.experiments import BCvsPACERBCExperiment
-from pacer.pacer import PACERConfig, PseudoLabelParams, TrustValueParams
+from pacer.pacer import (
+    DebiasTowardsAnchorStep,
+    PACERConfig,
+    PseudoLabelParams,
+    RefinementPipeline,
+    SidewaysAttenuationStep,
+    SpeedRegularisationStep,
+    TemporalSmoother,
+    TrustValueParams,
+)
 from pacer.phase.estimation import MLPPhaseEstimatorConfig
 from pacer.plotting import PACERVisualisationConfig, PACERVisualiser
 from pacer.testutils import (
@@ -47,22 +58,30 @@ if __name__ == "__main__":
                 tukey_cutoff=4.685,  # c
                 min_trust=0.02,  # w_min
             ),
-            action_pseudo_label_params=PseudoLabelParams(
-                debias_weight=0.5,  # lambda_{debias}
-                sideways_attenuation_shrinkage=0.5,  # rho_0
-                speed_regularisation_influence=0.5,  # eta_0
-                temporal_smoothing_weight=0.0,  # kappa
+            action_pseudo_label_params=PseudoLabelParams[Action[TWO]](
+                pipeline=RefinementPipeline(
+                    steps=(
+                        DebiasTowardsAnchorStep(debias_weight=0.5),  # lambda_{debias}
+                        SidewaysAttenuationStep(shrinkage=0.5),  # rho_0
+                        SpeedRegularisationStep(influence=0.5),  # eta_0
+                    ),
+                ),
+                smoother=TemporalSmoother(smoothing_weight=0.0),  # kappa
             ),
             use_state_labels=False,
             state_trust_value_params=TrustValueParams(
                 tukey_cutoff=4.685,  # c
                 min_trust=0.02,  # w_min
             ),
-            state_pseudo_label_params=PseudoLabelParams(
-                debias_weight=0.1,  # lambda_{debias}
-                sideways_attenuation_shrinkage=0.1,  # rho_0
-                speed_regularisation_influence=0.1,  # eta_0
-                temporal_smoothing_weight=0.9,  # kappa
+            state_pseudo_label_params=PseudoLabelParams[State[TWO]](
+                pipeline=RefinementPipeline(
+                    steps=(
+                        DebiasTowardsAnchorStep(debias_weight=0.1),  # lambda_{debias}
+                        SidewaysAttenuationStep(shrinkage=0.1),  # rho_0
+                        SpeedRegularisationStep(influence=0.1),  # eta_0
+                    ),
+                ),
+                smoother=TemporalSmoother(smoothing_weight=0.9),  # kappa
             ),
         ),
         bc_train_config=BCTrainConfig(

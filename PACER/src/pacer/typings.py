@@ -35,6 +35,8 @@ NumBins = TypeVar("NumBins", bound=int, default=int)  # B
 
 # ──────────────────────────────────────────────────────────────────────────────
 
+FloatLike: TypeAlias = np.floating | float
+
 npDType: TypeAlias = np.float32
 """The default NumPy scalar dtype."""
 
