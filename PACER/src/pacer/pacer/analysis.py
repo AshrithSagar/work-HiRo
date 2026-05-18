@@ -3,7 +3,7 @@ Analysis
 =======
 Diagnostics and analysis utilities.
 """
-# src/pacer/analysis.py
+# src/pacer/pacer/analysis.py
 
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
@@ -15,11 +15,11 @@ import numpy.linalg as la
 from typingkit.core import TypedList
 
 from pacer.base import ActionsCollection, Demonstrations
-from pacer.pacer import (
+from pacer.pacer import PACERResult
+from pacer.pacer.base import (
     MetricCollection,
     MetricSeries,
     MetricValue,
-    PACERResult,
     Residual,
     Residuals,
     ResidualsCollection,

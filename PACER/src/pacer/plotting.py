@@ -17,13 +17,6 @@ import numpy as np
 from typingkit.numpy._typed.helpers import TWO
 
 from pacer import console
-from pacer.analysis import (
-    CorrectionMagnitudeAnalyser,
-    CorrectionMagnitudeAnalysis,
-    ResidualAnalyser,
-    SmoothnessAnalyser,
-    SmoothnessAnalysis,
-)
 from pacer.base import (
     Actions,
     ActionsCollection,
@@ -31,16 +24,23 @@ from pacer.base import (
     States,
     StatesCollection,
 )
-from pacer.pacer import (
-    Bins,
+from pacer.pacer import PACERResult
+from pacer.pacer.analysis import (
+    CorrectionMagnitudeAnalyser,
+    CorrectionMagnitudeAnalysis,
+    ResidualAnalyser,
+    SmoothnessAnalyser,
+    SmoothnessAnalysis,
+)
+from pacer.pacer.base import (
     MetricSeries,
     MetricValue,
-    PACERResult,
     Residual,
     ResidualsCollection,
     TrustValue,
     TrustValuesCollection,
 )
+from pacer.pacer.binning import Bins
 from pacer.phase import PhasesCollection
 from pacer.typings import (
     DemoIndex,

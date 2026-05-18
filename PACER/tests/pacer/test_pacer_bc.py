@@ -9,16 +9,16 @@ from typingkit.core import RuntimeOptions, set_global_default_runtime_options
 
 from pacer.bc import BCTrainConfig
 from pacer.experiments import BCvsPACERBCExperiment
-from pacer.pacer import (
+from pacer.pacer import PACERConfig
+from pacer.pacer.pseudolabel import (
     DebiasTowardsAnchorStep,
-    PACERConfig,
     PseudoLabelParams,
     RefinementPipeline,
     SidewaysAttenuationStep,
     SpeedRegularisationStep,
     TemporalSmoother,
-    TrustValueParams,
 )
+from pacer.pacer.trust import TrustValueParams
 from pacer.phase.estimation import MLPPhaseEstimatorConfig
 from pacer.plotting import PACERVisualisationConfig, PACERVisualiser
 from pacer.testutils import (

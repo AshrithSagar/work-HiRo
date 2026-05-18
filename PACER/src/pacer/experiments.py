@@ -17,13 +17,9 @@ from torch import Tensor
 from pacer import console
 from pacer.base import Demonstrations
 from pacer.bc import BCTrainConfig, BCTrainer, WeightedBCTrainer
-from pacer.pacer import (
-    PACER,
-    PACERConfig,
-    PACERResult,
-    PseudoLabelParams,
-    TrustValueParams,
-)
+from pacer.pacer import PACER, PACERConfig, PACERResult
+from pacer.pacer.pseudolabel import PseudoLabelParams
+from pacer.pacer.trust import TrustValueParams
 from pacer.phase.estimation import MLPPhaseEstimatorConfig
 from pacer.plotting import PACERVisualisationConfig, PACERVisualiser
 from pacer.testutils import (
