@@ -12,7 +12,7 @@ https://openreview.net/forum?id=gaYyBvP2Rz
 
 from collections.abc import Iterator
 from dataclasses import KW_ONLY, dataclass, field
-from typing import Any, Callable, Literal, Self, TypeAlias, TypeVar, cast
+from typing import Any, Callable, Literal, Self, TypeAlias, cast
 
 import numpy as np
 import numpy.linalg as la
@@ -36,6 +36,7 @@ from pacer.phase.base import Phase, PhasesCollection
 from pacer.testutils import PhasePipeline, PhasePipelineConfig
 from pacer.typings import (
     BinIndex,
+    CollectionType,
     DemoIndex,
     DimAction,
     DimState,
@@ -45,6 +46,7 @@ from pacer.typings import (
     SampleIndex,
     TimeIndex,
     Vector,
+    VectorType,
     npDType,
 )
 from pacer.utils import EPS, MAD_SCALE, median, normalise
@@ -229,7 +231,8 @@ class Binner(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
 
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     phases: PhasesCollection[NumDemos, NumPoints]
-    n_bins: NumBins = field(default=cast(NumBins, 96), kw_only=True)  # B
+    _: KW_ONLY
+    n_bins: NumBins = field(default=cast(NumBins, 96))  # B
 
     def phase_range(self, bin_idx: BinIndex) -> tuple[Phase, Phase]:
         return (Phase(bin_idx / self.n_bins), Phase((bin_idx + 1) / self.n_bins))
@@ -425,28 +428,28 @@ class PseudoLabels(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
     states: StatesCollection[NumDemos, NumPoints, DimState] | None = None
 
 
-_VecT = TypeVar("_VecT", bound=Vector, default=Vector)  # State / Action
-_Coll = TypeVar("_Coll")  # StatesCollection / ActionsCollection
+# VectorType :: State / Action
+# CollectionType :: StatesCollection / ActionsCollection
 
 
 @dataclass(frozen=True)
 class VectorMode(
-    RuntimeGeneric[_Coll, _VecT, NumDemos, NumPoints, DimState, DimAction]
+    RuntimeGeneric[CollectionType, VectorType, NumDemos, NumPoints, DimState, DimAction]
 ):
     """Encapsulates operations for state or action processing."""
 
     # Field access
-    vec_from_sample: Callable[[Sample[DimState, DimAction]], _VecT]
-    anchor_from_stats: Callable[[RobustStatistics[DimState, DimAction]], _VecT]
+    vector_from_sample: Callable[[Sample[DimState, DimAction]], VectorType]
+    anchor_from_stats: Callable[[RobustStatistics[DimState, DimAction]], VectorType]
     strength_from_token: Callable[[RibbonToken[DimState, DimAction]], MetricValue]
 
     # Construction
-    wrap: Callable[[Any], _VecT]
+    wrap: Callable[[Any], VectorType]
     make_collection: Callable[
-        [Demonstrations[NumDemos, NumPoints, DimState, DimAction]], _Coll
+        [Demonstrations[NumDemos, NumPoints, DimState, DimAction]], CollectionType
     ]
-    set_item: Callable[[_Coll, DemoIndex, TimeIndex, _VecT], None]
-    get_item: Callable[[_Coll, DemoIndex, TimeIndex], _VecT]
+    set_item: Callable[[CollectionType, DemoIndex, TimeIndex, VectorType], None]
+    get_item: Callable[[CollectionType, DemoIndex, TimeIndex], VectorType]
 
     # Correction behaviour
     attenuation_requires_state_tangent: bool
@@ -462,7 +465,7 @@ def action_mode() -> VectorMode[
 ]:
     """`VectorMode` configuration for actions."""
     return VectorMode(
-        vec_from_sample=lambda sample: sample.action,
+        vector_from_sample=lambda sample: sample.action,
         anchor_from_stats=lambda stats: stats.median_action,
         strength_from_token=lambda token: token.median_action_strength,
         wrap=Action[DimAction],
@@ -485,7 +488,7 @@ def state_mode() -> VectorMode[
 ]:
     """`VectorMode` configuration for states."""
     return VectorMode(
-        vec_from_sample=lambda sample: sample.state,
+        vector_from_sample=lambda sample: sample.state,
         anchor_from_stats=lambda stats: stats.median_state,
         strength_from_token=lambda token: token.median_state_norm,
         wrap=State[DimState],
@@ -557,9 +560,11 @@ class PseudoLabelComputer(
     def _compute_labels(
         self,
         trust_values: TrustValuesCollection[NumDemos, NumPoints],
-        mode: VectorMode[_Coll, _VecT, NumDemos, NumPoints, DimState, DimAction],
+        mode: VectorMode[
+            CollectionType, VectorType, NumDemos, NumPoints, DimState, DimAction
+        ],
         params: PseudoLabelParams,
-    ) -> _Coll:
+    ) -> CollectionType:
         kappa = npDType(params.temporal_smoothing_weight)
         pre_smooth = mode.make_collection(self.demonstrations)  # y^{(3)} for all (i, t)
         smoothed = mode.make_collection(self.demonstrations)  # y* for all (i, t)
@@ -589,7 +594,7 @@ class PseudoLabelComputer(
                 for t, sample in bin.samples_collection[j].items():
                     w = trust_values[j][t]
                     y3 = self._apply_correction(
-                        mode.vec_from_sample(sample),
+                        mode.vector_from_sample(sample),
                         params=params,
                         anchor=anchor,
                         unit_tangent=unit_tangent,
@@ -634,9 +639,8 @@ class PseudoLabelComputer(
 # ── PACER ─────────────────────────────────────────────────────────────────────
 
 
-@dataclass
+@dataclass(kw_only=True)
 class PACERConfig(RuntimeGeneric[NumBins]):
-    _: KW_ONLY
     phase_pipeline_config: PhasePipelineConfig = field(
         default_factory=PhasePipelineConfig
     )
@@ -654,9 +658,8 @@ class PACERConfig(RuntimeGeneric[NumBins]):
     )
 
 
-@dataclass
+@dataclass(kw_only=True)
 class PACERResult(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
-    _: KW_ONLY
     phases: PhasesCollection[NumDemos, NumPoints]
     bins: Bins[NumBins, NumDemos, NumPoints, DimState, DimAction]
     action_trust_values: TrustValuesCollection[NumDemos, NumPoints]

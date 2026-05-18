@@ -44,6 +44,11 @@ torchDType = torch.float32
 Vector: TypeAlias = Array1D[Dim1, np.dtype[npDType]]
 Matrix: TypeAlias = Array2D[Dim1, Dim2, np.dtype[npDType]]
 
+VectorType = TypeVar("VectorType", bound=Vector, default=Vector)
+# Ideally, we'd want HKTs; To bound to `Vector[Dim1]` instead of `Vector[Any]`.
+
+CollectionType = TypeVar("CollectionType")
+
 # ──────────────────────────────────────────────────────────────────────────────
 
 DemoIndex: TypeAlias = int  # i \in {0, 1, ..., N-1}
