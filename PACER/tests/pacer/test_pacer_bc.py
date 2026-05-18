@@ -3,6 +3,8 @@ Test BC Policy vs. PACER + BC Policy.
 """
 # tests/test_pacer_bc.py
 
+from pathlib import Path
+
 from typingkit.core import RuntimeOptions, set_global_default_runtime_options
 
 from pacer.bc import BCTrainConfig
@@ -93,8 +95,8 @@ if __name__ == "__main__":
         demonstrations,
         pacer_result=result.pacer_result,
         config=PACERVisualisationConfig(
-            show=True,
-            save_dir=None,
+            show=False,
+            save_dir=Path(__file__).parent / "plots_pacer_bc",
             trajectories=True,
             phases=True,
             trust_values=True,
