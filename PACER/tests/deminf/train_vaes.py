@@ -13,7 +13,7 @@ import torch
 from torch.utils.data import DataLoader, TensorDataset
 
 from deminf.deminf import BetaVAE
-from pacer.testutils import DemonstrationLoader, DemonstrationLoaderConfig
+from pacer.datasets import DemonstrationLoader, DemonstrationLoaderConfig
 from pacer.typings import npDType
 
 

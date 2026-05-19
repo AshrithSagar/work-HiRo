@@ -21,7 +21,7 @@ from deminf.deminf import (
 )
 from pacer import console
 from pacer.base import Demonstrations
-from pacer.testutils import DemonstrationLoader, DemonstrationLoaderConfig
+from pacer.datasets import DemonstrationLoader, DemonstrationLoaderConfig
 
 set_global_default_runtime_options(RuntimeOptions(validate=True))
 

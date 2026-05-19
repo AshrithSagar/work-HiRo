@@ -1,8 +1,8 @@
 """
-Test utils
+Demonstration Loader
 =======
 """
-# src/pacer/testutils.py
+# src/pacer/datasets/loader.py
 
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
@@ -15,24 +15,25 @@ from pyLASAHandwritingDataset import SinglePatternMotion
 from typingkit.numpy._typed.helpers import TWO
 
 from pacer.base import Demonstrations
-from pacer.corruptions import (
+from pacer.datasets.corruptions import (
     DemonstrationCorrupter,
     NoisyCorruptionConfig,
     NoisyDemonstrationCorrupter,
     PerPhaseBinCorruptionPlanner,
     SegmentGaussianCorrupter,
 )
-from pacer.datasets import InteractiveDataSet, LASADataSet, LegacyInteractiveDataSet
-from pacer.datasets.interactive.base import InteractiveFigure
+from pacer.datasets.interactive import InteractiveDataSet, InteractiveFigure
+from pacer.datasets.interactive.legacy import LegacyInteractiveDataSet
 from pacer.datasets.interactive.plugins import (
     LASALoadPlugin,
     LoadPlugin,
     SavePlugin,
     default_plugins,
 )
+from pacer.datasets.lasa import LASADataSet
 from pacer.utils import SEED, set_seed
 
-## ── Typings ──────────────────────────────────────────────────────────────────
+## ── Demonstration Loader ─────────────────────────────────────────────────────
 
 type DemonstrationsChoice = Literal[
     "FROM_LASA",
@@ -46,10 +47,6 @@ type DemonstrationsChoice = Literal[
 type CorruptionsChoice = Literal[
     "NOISY_ACTIONS", "SEGMENT_GAUSSIAN_ACTIONS", "SEGMENT_GAUSSIAN_STATES"
 ]
-
-## ── Test Utils ───────────────────────────────────────────────────────────────
-
-# ── Demonstration Loader ──────────────────────────────────────────────────────
 
 
 @dataclass

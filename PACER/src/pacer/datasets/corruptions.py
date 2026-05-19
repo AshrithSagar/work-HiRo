@@ -2,7 +2,7 @@
 Dataset corruptions
 =======
 """
-# src/pacer/corruptions.py
+# src/pacer/datasets/corruptions.py
 
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
@@ -16,14 +16,7 @@ import numpy as np
 import numpy.linalg as la
 from typingkit.core import RuntimeGeneric, TypedList
 
-from pacer.base import (
-    Action,
-    Actions,
-    Demonstration,
-    Demonstrations,
-    State,
-    States,
-)
+from pacer.base import Action, Actions, Demonstration, Demonstrations, State, States
 from pacer.typings import (
     DemoIndex,
     DimAction,

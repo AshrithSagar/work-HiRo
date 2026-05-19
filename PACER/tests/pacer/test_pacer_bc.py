@@ -8,6 +8,7 @@ from pathlib import Path
 from typingkit.core import RuntimeOptions, set_global_default_runtime_options
 
 from pacer.bc import BCTrainConfig
+from pacer.datasets import DemonstrationLoader, DemonstrationLoaderConfig
 from pacer.experiments import BCvsPACERBCExperiment
 from pacer.pacer import PACERConfig
 from pacer.pacer.pseudolabel import (
@@ -22,7 +23,6 @@ from pacer.pacer.trust import TrustValueParams
 from pacer.phase import PhasePipelineConfig
 from pacer.phase.estimation import MLPPhaseEstimatorConfig
 from pacer.plotting import PACERVisualisationConfig, PACERVisualiser
-from pacer.testutils import DemonstrationLoader, DemonstrationLoaderConfig
 
 set_global_default_runtime_options(RuntimeOptions(validate=True))
 
