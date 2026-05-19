@@ -14,15 +14,23 @@ from pacer.pacer import PACERConfig
 from pacer.pacer.pseudolabel import (
     DebiasTowardsAnchorStep,
     PseudoLabelParams,
-    RefinementPipeline,
+    PseudoLabelRefinementPipeline,
     SidewaysAttenuationStep,
     SpeedRegularisationStep,
     TemporalSmoother,
 )
-from pacer.pacer.trust import TrustValueParams
+from pacer.pacer.trust import (
+    EuclideanResidualComputer,
+    MADScaleEstimator,
+    MinimumTrustFloor,
+    TrustPipeline,
+    TrustValueParams,
+    TukeyBiweightKernel,
+)
 from pacer.phase import PhasePipelineConfig
 from pacer.phase.estimation import MLPPhaseEstimatorConfig
 from pacer.plotting import PACERVisualisationConfig, PACERVisualiser
+from pacer.utils import MAD_SCALE
 
 set_global_default_runtime_options(RuntimeOptions(validate=True))
 
@@ -52,11 +60,15 @@ if __name__ == "__main__":
             ),
             n_bins=96,  # B
             action_trust_value_params=TrustValueParams(
-                tukey_cutoff=4.685,  # c
-                min_trust=0.02,  # w_min
+                pipeline=TrustPipeline(
+                    residual_computer=EuclideanResidualComputer(),
+                    scale_estimator=MADScaleEstimator(consistency_scale=MAD_SCALE),
+                    kernel=TukeyBiweightKernel(cutoff=4.685),  # c
+                    transforms=(MinimumTrustFloor(minimum=0.02),),  # w_min
+                ),
             ),
             action_pseudo_label_params=PseudoLabelParams(
-                pipeline=RefinementPipeline(
+                pipeline=PseudoLabelRefinementPipeline(
                     steps=(
                         DebiasTowardsAnchorStep(debias_weight=0.5),  # lambda_{debias}
                         SidewaysAttenuationStep(shrinkage=0.5),  # rho_0
@@ -67,11 +79,15 @@ if __name__ == "__main__":
             ),
             use_state_labels=False,
             state_trust_value_params=TrustValueParams(
-                tukey_cutoff=4.685,  # c
-                min_trust=0.02,  # w_min
+                pipeline=TrustPipeline(
+                    residual_computer=EuclideanResidualComputer(),
+                    scale_estimator=MADScaleEstimator(consistency_scale=MAD_SCALE),
+                    kernel=TukeyBiweightKernel(cutoff=4.685),  # c
+                    transforms=(MinimumTrustFloor(minimum=0.02),),  # w_min
+                ),
             ),
             state_pseudo_label_params=PseudoLabelParams(
-                pipeline=RefinementPipeline(
+                pipeline=PseudoLabelRefinementPipeline(
                     steps=(
                         DebiasTowardsAnchorStep(debias_weight=0.1),  # lambda_{debias}
                         SidewaysAttenuationStep(shrinkage=0.1),  # rho_0

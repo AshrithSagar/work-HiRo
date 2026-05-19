@@ -12,8 +12,9 @@ from typing import cast
 from typingkit.core import RuntimeGeneric
 
 from pacer.base import Demonstrations
-from pacer.pacer.base import TrustValuesCollection
+from pacer.pacer.base import TrustValuesCollection, ZScoresCollection
 from pacer.pacer.binning import Binner, Bins, RibbonTokenConsolidator
+from pacer.pacer.mode import action_mode, state_mode
 from pacer.pacer.pseudolabel import PseudoLabelComputer, PseudoLabelParams, PseudoLabels
 from pacer.pacer.trust import TrustValueComputer, TrustValueParams
 from pacer.phase import PhasePipeline, PhasePipelineConfig, PhasesCollection
@@ -45,7 +46,9 @@ class PACERConfig(RuntimeGeneric[NumBins]):
 class PACERResult(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
     phases: PhasesCollection[NumDemos, NumPoints]
     bins: Bins[NumBins, NumDemos, NumPoints, DimState, DimAction]
+    action_z_scores: ZScoresCollection[NumDemos, NumPoints]
     action_trust_values: TrustValuesCollection[NumDemos, NumPoints]
+    state_z_scores: ZScoresCollection[NumDemos, NumPoints] | None
     state_trust_values: TrustValuesCollection[NumDemos, NumPoints] | None
     pseudo_labels: PseudoLabels[NumDemos, NumPoints, DimState, DimAction]
 
@@ -60,18 +63,22 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
         phases = PhasePipeline(
             self.demonstrations, config=self.config.phase_pipeline_config
         ).run()
+
         bins = Binner(
             self.demonstrations, phases, n_bins=self.config.n_bins
         ).make_bins()
         bins = RibbonTokenConsolidator(bins).consolidate_ribbon_tokens()
-        action_trust_values = TrustValueComputer(
-            self.demonstrations, bins, choice="Action"
-        ).compute_trust_values(params=self.config.action_trust_value_params)
-        state_trust_values = None
+
+        action_z_scores, action_trust_values = TrustValueComputer(
+            self.demonstrations, bins
+        ).compute(mode=action_mode(), params=self.config.action_trust_value_params)
+
+        state_z_scores, state_trust_values = None, None
         if self.config.use_state_labels:
-            state_trust_values = TrustValueComputer(
-                self.demonstrations, bins, choice="State"
-            ).compute_trust_values(params=self.config.state_trust_value_params)
+            state_z_scores, state_trust_values = TrustValueComputer(
+                self.demonstrations, bins
+            ).compute(mode=state_mode(), params=self.config.state_trust_value_params)
+
         pseudo_labels = PseudoLabelComputer(
             self.demonstrations, bins
         ).compute_pseudo_labels(
@@ -80,10 +87,13 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
             action_params=self.config.action_pseudo_label_params,
             state_params=self.config.state_pseudo_label_params,
         )
+
         return PACERResult(
             phases=phases,
             bins=bins,
+            action_z_scores=action_z_scores,
             action_trust_values=action_trust_values,
+            state_z_scores=state_z_scores,
             state_trust_values=state_trust_values,
             pseudo_labels=pseudo_labels,
         )
