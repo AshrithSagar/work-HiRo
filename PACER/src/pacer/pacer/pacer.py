@@ -16,8 +16,7 @@ from pacer.pacer.base import TrustValuesCollection
 from pacer.pacer.binning import Binner, Bins, RibbonTokenConsolidator
 from pacer.pacer.pseudolabel import PseudoLabelComputer, PseudoLabelParams, PseudoLabels
 from pacer.pacer.trust import TrustValueComputer, TrustValueParams
-from pacer.phase import PhasesCollection
-from pacer.testutils import PhasePipeline, PhasePipelineConfig
+from pacer.phase import PhasePipeline, PhasePipelineConfig, PhasesCollection
 from pacer.typings import DimAction, DimState, NumBins, NumDemos, NumPoints
 
 ## ── PACER ────────────────────────────────────────────────────────────────────

@@ -8,15 +8,12 @@ Test utils
 
 from dataclasses import KW_ONLY, dataclass, field
 from pathlib import Path
-from typing import Any, Generic, Literal
+from typing import Any, Literal
 
 import matplotlib.pyplot as plt
 from pyLASAHandwritingDataset import SinglePatternMotion
-from rich.pretty import Pretty
-from torch._prims_common import DeviceLikeType
 from typingkit.numpy._typed.helpers import TWO
 
-from pacer import console
 from pacer.base import Demonstrations
 from pacer.corruptions import (
     DemonstrationCorrupter,
@@ -33,15 +30,7 @@ from pacer.datasets.interactive.plugins import (
     SavePlugin,
     default_plugins,
 )
-from pacer.phase import PhaseEstimator, PhaseEvaluationReport, PhasesCollection
-from pacer.phase.estimation import (
-    MLPPhaseEstimator,
-    MLPPhaseEstimatorConfig,
-    NormalisedTimeIndexPhaseEstimator,
-    PathLengthPhaseEstimator,
-)
-from pacer.typings import DimAction, DimState, NumDemos, NumPoints
-from pacer.utils import SEED, TORCH_DEVICE, set_seed
+from pacer.utils import SEED, set_seed
 
 ## ── Typings ──────────────────────────────────────────────────────────────────
 
@@ -54,7 +43,6 @@ type DemonstrationsChoice = Literal[
     "LEGACY_CUSTOM_FROM_LASA",
     "LEGACY_CUSTOM_DRAW",
 ]
-type PhaseEstimatorChoice = Literal["MLP", "NORMALISED_TIME_INDEX", "PATH_LENGTH"]
 type CorruptionsChoice = Literal[
     "NOISY_ACTIONS", "SEGMENT_GAUSSIAN_ACTIONS", "SEGMENT_GAUSSIAN_STATES"
 ]
@@ -165,54 +153,6 @@ class DemonstrationLoader:
                 pass
 
         return demonstrations
-
-
-# ── Phase Pipeline ────────────────────────────────────────────────────────────
-
-
-@dataclass
-class PhasePipelineConfig:
-    _: KW_ONLY
-    device: DeviceLikeType = TORCH_DEVICE
-    seed: int = SEED
-    phase_estimator_choice: PhaseEstimatorChoice = "MLP"
-    mlp_phase_estimator_config: MLPPhaseEstimatorConfig = field(
-        default_factory=MLPPhaseEstimatorConfig
-    )
-    evaluate_phases: bool = False
-
-
-@dataclass
-class PhasePipeline(Generic[NumDemos, NumPoints, DimState, DimAction]):
-    demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
-    _: KW_ONLY
-    config: PhasePipelineConfig = field(default_factory=PhasePipelineConfig)
-
-    def run(self) -> PhasesCollection[NumDemos, NumPoints]:
-        phase_estimator: PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]
-        match self.config.phase_estimator_choice:
-            case "MLP":
-                phase_estimator = MLPPhaseEstimator(
-                    self.demonstrations,
-                    device=self.config.device,
-                    seed=self.config.seed,
-                )
-                scorer_loss = phase_estimator.train(
-                    self.config.mlp_phase_estimator_config
-                )
-                console.print(f"Phase scorer loss: {scorer_loss}")
-            case "NORMALISED_TIME_INDEX":
-                phase_estimator = NormalisedTimeIndexPhaseEstimator(self.demonstrations)
-            case "PATH_LENGTH":
-                phase_estimator = PathLengthPhaseEstimator(self.demonstrations)
-
-        phases = phase_estimator.estimate_phases()
-
-        if self.config.evaluate_phases:
-            report = PhaseEvaluationReport.evaluate(self.demonstrations, phases)
-            console.print(Pretty(report, expand_all=True))
-
-        return phases
 
 
 ## ─────────────────────────────────────────────────────────────────────────────

@@ -21,14 +21,13 @@ from pacer.pacer import PACER, PACERConfig, PACERResult
 from pacer.pacer.pseudolabel import PseudoLabelParams
 from pacer.pacer.trust import TrustValueParams
 from pacer.phase.estimation import MLPPhaseEstimatorConfig
+from pacer.phase.pipeline import PhaseEstimatorChoice, PhasePipelineConfig
 from pacer.plotting import PACERVisualisationConfig, PACERVisualiser
 from pacer.testutils import (
     CorruptionsChoice,
     DemonstrationLoader,
     DemonstrationLoaderConfig,
     DemonstrationsChoice,
-    PhaseEstimatorChoice,
-    PhasePipelineConfig,
 )
 from pacer.typings import DimAction, DimState, NumBins, NumDemos, NumPoints
 

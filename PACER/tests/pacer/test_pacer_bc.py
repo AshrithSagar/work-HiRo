@@ -19,13 +19,10 @@ from pacer.pacer.pseudolabel import (
     TemporalSmoother,
 )
 from pacer.pacer.trust import TrustValueParams
+from pacer.phase import PhasePipelineConfig
 from pacer.phase.estimation import MLPPhaseEstimatorConfig
 from pacer.plotting import PACERVisualisationConfig, PACERVisualiser
-from pacer.testutils import (
-    DemonstrationLoader,
-    DemonstrationLoaderConfig,
-    PhasePipelineConfig,
-)
+from pacer.testutils import DemonstrationLoader, DemonstrationLoaderConfig
 
 set_global_default_runtime_options(RuntimeOptions(validate=True))
 
