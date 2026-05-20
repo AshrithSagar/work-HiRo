@@ -10,10 +10,10 @@ Plotting utils
 
 from dataclasses import KW_ONLY, dataclass, field
 from pathlib import Path
-from typing import Generic
 
 import matplotlib.pyplot as plt
 import numpy as np
+from typingkit.core import RuntimeGeneric
 from typingkit.numpy._typed.helpers import TWO
 
 from pacer import console
@@ -727,7 +727,7 @@ class PACERVisualisationConfig:
 
 
 @dataclass
-class PACERVisualiser(Generic[NumBins, NumDemos, NumPoints]):
+class PACERVisualiser(RuntimeGeneric[NumBins, NumDemos, NumPoints]):
     demonstrations: Demonstrations[NumDemos, NumPoints, TWO, TWO]
     pacer_result: PACERResult[NumBins, NumDemos, NumPoints, TWO, TWO]
     _: KW_ONLY

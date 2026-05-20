@@ -10,7 +10,7 @@ Draw your own custom 2D trajectories with the mouse
 
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
-from typing import Any, Generic, Self
+from typing import Any, Self
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -19,7 +19,7 @@ from matplotlib.backend_bases import KeyEvent, MouseEvent
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 from pyLASAHandwritingDataset import SinglePatternMotion
-from typingkit.core import TypedList
+from typingkit.core import RuntimeGeneric, TypedList
 from typingkit.numpy._typed.helpers import TWO, Array3D
 
 from pacer import console
@@ -30,7 +30,7 @@ from pacer.typings import NumDemos, NumPoints, npDType
 ## ── Interactive Drawer ───────────────────────────────────────────────────────
 
 
-class LegacyInteractiveDataSet(Generic[NumDemos, NumPoints]):
+class LegacyInteractiveDataSet(RuntimeGeneric[NumDemos, NumPoints]):
     """Draw demonstrations with mouse."""
 
     def __init__(

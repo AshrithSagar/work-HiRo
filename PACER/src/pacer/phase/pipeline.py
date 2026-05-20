@@ -7,10 +7,11 @@ Phase pipeline
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
 from dataclasses import KW_ONLY, dataclass, field
-from typing import Generic, Literal
+from typing import Literal
 
 from rich.pretty import Pretty
 from torch._prims_common import DeviceLikeType
+from typingkit.core import RuntimeGeneric
 
 from pacer import console
 from pacer.base import Demonstrations
@@ -44,7 +45,7 @@ class PhasePipelineConfig:
 
 
 @dataclass
-class PhasePipeline(Generic[NumDemos, NumPoints, DimState, DimAction]):
+class PhasePipeline(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     _: KW_ONLY
     config: PhasePipelineConfig = field(default_factory=PhasePipelineConfig)

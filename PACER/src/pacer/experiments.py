@@ -7,12 +7,13 @@ Experiment runs
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
 from dataclasses import KW_ONLY, dataclass, field
-from typing import Any, Generic, Literal, cast
+from typing import Any, Literal, cast
 from warnings import deprecated
 
 import matplotlib.pyplot as plt
 from pyLASAHandwritingDataset import ALL_SINGLE_PATTERN_MOTIONS, SinglePatternMotion
 from torch import Tensor
+from typingkit.core import RuntimeGeneric
 
 from pacer import console
 from pacer.base import Demonstrations
@@ -35,13 +36,13 @@ from pacer.typings import DimAction, DimState, NumBins, NumDemos, NumPoints
 
 
 @dataclass(kw_only=True)
-class BCExperimentResult(Generic[NumDemos, NumPoints, DimState, DimAction]):
+class BCExperimentResult(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     bc_policy_loss: Tensor
 
 
 @dataclass
-class BCExperiment(Generic[NumDemos, NumPoints, DimState, DimAction]):
+class BCExperiment(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
     """BC Policy."""
 
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
@@ -71,7 +72,7 @@ class BCExperiment(Generic[NumDemos, NumPoints, DimState, DimAction]):
 
 @dataclass(kw_only=True)
 class PACERBCExperimentResult(
-    Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]
+    RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]
 ):
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     pacer_result: PACERResult[NumBins, NumDemos, NumPoints, DimState, DimAction]
@@ -79,7 +80,9 @@ class PACERBCExperimentResult(
 
 
 @dataclass
-class PACERBCExperiment(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
+class PACERBCExperiment(
+    RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]
+):
     """PACER + BC Policy."""
 
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
@@ -122,7 +125,7 @@ class PACERBCExperiment(Generic[NumBins, NumDemos, NumPoints, DimState, DimActio
     "Use BCvsPACERBCExperiment instead, till an improved sweep variation refactor is done."
 )
 @dataclass(kw_only=True)
-class BCvsPACERBCExperimentLegacy(Generic[NumBins]):
+class BCvsPACERBCExperimentLegacy(RuntimeGeneric[NumBins]):
     """BC Policy vs. PACER + BC Policy."""
 
     show_plots: bool = True
@@ -257,7 +260,7 @@ class BCvsPACERBCExperimentLegacy(Generic[NumBins]):
 
 @dataclass(kw_only=True)
 class BCvsPACERBCExperimentResult(
-    Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]
+    RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]
 ):
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     bc_result: BCExperimentResult[NumDemos, NumPoints, DimState, DimAction]
@@ -273,7 +276,9 @@ class BCvsPACERBCExperimentResult(
 
 
 @dataclass
-class BCvsPACERBCExperiment(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
+class BCvsPACERBCExperiment(
+    RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]
+):
     """
     BC Policy vs. PACER + BC Policy.\\
     Uses same `BCTrainConfig` for both `BCExperiment` and `PACERBCExperiment`.

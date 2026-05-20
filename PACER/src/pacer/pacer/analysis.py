@@ -8,11 +8,10 @@ Diagnostics and analysis utilities.
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
 from dataclasses import KW_ONLY, dataclass
-from typing import Generic
 
 import numpy as np
 import numpy.linalg as la
-from typingkit.core import TypedList
+from typingkit.core import RuntimeGeneric, TypedList
 
 from pacer.base import ActionsCollection, Demonstrations
 from pacer.pacer import PACERResult
@@ -41,7 +40,7 @@ from pacer.typings import (
 
 
 @dataclass(slots=True)
-class ResidualAnalysis(Generic[NumDemos, NumPoints, DimState, DimAction]):
+class ResidualAnalysis(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
     residuals: ResidualsCollection[NumDemos, NumPoints]
 
     @property
@@ -62,7 +61,9 @@ class ResidualAnalysis(Generic[NumDemos, NumPoints, DimState, DimAction]):
 
 
 @dataclass(slots=True)
-class ResidualAnalyser(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
+class ResidualAnalyser(
+    RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]
+):
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     _: KW_ONLY
     pacer_result: PACERResult[NumBins, NumDemos, NumPoints, DimState, DimAction]
@@ -99,7 +100,7 @@ class TrustStatistics:
 
 
 @dataclass(slots=True)
-class TrustValueAnalysis(Generic[NumDemos, NumPoints]):
+class TrustValueAnalysis(RuntimeGeneric[NumDemos, NumPoints]):
     trust_values: TrustValuesCollection[NumDemos, NumPoints]
 
     def statistics(self) -> TrustStatistics:
@@ -127,7 +128,9 @@ class TrustValueAnalysis(Generic[NumDemos, NumPoints]):
 
 
 @dataclass(slots=True)
-class CorrectionMagnitudeAnalysis(Generic[NumDemos, NumPoints, DimState, DimAction]):
+class CorrectionMagnitudeAnalysis(
+    RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]
+):
     magnitudes: MetricCollection[NumDemos, NumPoints]
 
     @property
@@ -145,7 +148,7 @@ class CorrectionMagnitudeAnalysis(Generic[NumDemos, NumPoints, DimState, DimActi
 
 @dataclass(slots=True)
 class CorrectionMagnitudeAnalyser(
-    Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]
+    RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]
 ):
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     pacer_result: PACERResult[NumBins, NumDemos, NumPoints, DimState, DimAction]
@@ -169,7 +172,7 @@ class CorrectionMagnitudeAnalyser(
 
 
 @dataclass(slots=True)
-class SmoothnessAnalysis(Generic[NumDemos, NumPoints]):
+class SmoothnessAnalysis(RuntimeGeneric[NumDemos, NumPoints]):
     smoothness_scores: TypedList[NumDemos, MetricValue]
 
     @property
@@ -178,7 +181,9 @@ class SmoothnessAnalysis(Generic[NumDemos, NumPoints]):
 
 
 @dataclass(slots=True)
-class SmoothnessAnalyser(Generic[NumBins, NumDemos, NumPoints, DimState, DimAction]):
+class SmoothnessAnalyser(
+    RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]
+):
     actions: ActionsCollection[NumDemos, NumPoints, DimAction]
 
     def analyse(self) -> SmoothnessAnalysis[NumDemos, NumPoints]:
