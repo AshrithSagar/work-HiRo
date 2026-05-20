@@ -241,6 +241,22 @@ For each bin $b$, robust summaries are computed:
     \beta_s[b]  & = \mathrm{median}\{\|\dot{x}_{i,t}\| : (i,t)\in\mathcal{I}_b\}.
 \end{align}
 Action and state tangents $t_a[b]$ and $t_s[b]$ are obtained by finite differencing the per-bin medians, capturing the canonical direction of motion at each task phase.
+\begin{equation}
+    t_a[b] =
+    \begin{cases}
+        \alpha_a[b+1] - \alpha_a[b], & b = 1, \\
+        \frac{1}{2}\left(\alpha_a[b+1] - \alpha_a[b-1]\right), & 1 < b < B, \\
+        \alpha_a[b] - \alpha_a[b-1], & b = B.
+    \end{cases}
+\end{equation}
+\begin{equation}
+    t_s[b] =
+    \begin{cases}
+        \alpha_s[b+1] - \alpha_s[b], & b = 1, \\
+        \frac{1}{2}\left(\alpha_s[b+1] - \alpha_s[b-1]\right), & 1 < b < B, \\
+        \alpha_s[b] - \alpha_s[b-1], & b = B.
+    \end{cases}
+\end{equation}
 
 \subsection{Trust Estimation via Leave-One-Out Residuals}
 
