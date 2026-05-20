@@ -38,15 +38,22 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{abstract}
 
-    Imitation learning from human demonstrations provides a compelling paradigm for robot skill acquisition, yet practical deployments face two persistent difficulties.
-    Demonstrations of the same task may unfold at different speeds---a phenomenon referred to here as \emph{pace variability}---and individual trajectories can contain short, biased deviations that arise from operator fatigue or unintended motion, referred to as \emph{local corruptions}.
-    These difficulties are most consequential in low-data regimes, where each collected demonstration carries disproportionate influence over the learned policy.
-
-    We present PACER (Progress-Aligned Curation for Error-Resilient Imitation Learning), a framework that addresses both challenges jointly, as a pre-processing stage that runs before policy training begins.
-    PACER learns a state-dependent latent task phase that serves as a shared progress coordinate, enabling temporal alignment across demonstrations that execute at different paces.
-    Building on this alignment, it applies robust statistical tools---specifically, medians, median absolute deviation (MAD), and Tukey biweight reweighting---within a leave-one-out consensus scheme to detect and suppress corrupted action segments, without allowing a demonstration to participate in the consensus used to evaluate its own deviations.
-    Corrupted samples are then repaired through a structured pseudo-label refinement procedure that combines anchor debiasing, directional alignment, speed regularisation, and temporal smoothing.
-    The resulting training objective is a weighted Huber behavioral cloning loss, keeping the learning stage stable, interpretable, and easy to reason about.
+    Imitation learning from human demonstrations is an attractive paradigm for robot skill
+    acquisition, but practical deployments are complicated by two recurring sources of
+    imperfection: \emph{pace variability}, where different demonstrations of the same task
+    unfold at different speeds, and \emph{local corruptions}, where short segments of biased
+    action error arise from operator fatigue or momentary inattention.
+    We present PACER (Progress-Aligned Curation for Error-Resilient Imitation Learning),
+    a pre-processing framework that addresses both difficulties before policy training begins.
+    PACER learns a state-dependent latent task phase via a pairwise ranking loss, uses this
+    phase to group demonstrations by task progress, and then applies robust statistics within
+    a leave-one-out consensus scheme to detect and suppress corrupted segments.
+    Refined pseudo-labels for both actions and states are constructed through a sequence of
+    structured corrections and used to train a policy with a weighted Huber behavioral cloning
+    loss.
+    Experiments on the LASA Handwriting Dataset demonstrate that PACER correctly assigns lower
+    trust weights to injected corruptions, and the resulting PACER+BC policy achieves a lower
+    behavioral cloning loss than standard BC on both clean and corrupted data.
 
 \end{abstract}
 
