@@ -5,7 +5,7 @@
 \overrideIEEEmargins{}
 
 \usepackage{subfig, booktabs, url}
-\usepackage{amsfonts, amsmath, amssymb, bm, cancel, interval, latexsym, mathptmx, mathtools, mathptmx}
+\usepackage{amsfonts, amsmath, amssymb, bm, cancel, interval, latexsym, mathtools}
 \usepackage[colorlinks=true]{hyperref}
 \usepackage[ruled,linesnumbered]{algorithm2e}
 
@@ -104,8 +104,7 @@ PACER remains within a pure IL/BC regime: it repairs labels using phase-local co
 
 \subsection{Positioning of PACER}
 
-Where alignment-only methods assume clean labels once synchronized, and robustness-only methods often assume temporally aligned data, PACER combines a learned state-only phase with per-phase robust curation and pseudo-label
-construction.
+Where alignment-only methods assume clean labels once synchronized, and robustness-only methods often assume temporally aligned data, PACER combines a learned state-only phase with per-phase robust curation and pseudo-label construction.
 This yields a simple training objective while jointly addressing pace variability and local corruptions observed in real demonstrations.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -133,8 +132,7 @@ The \emph{median absolute deviation} (MAD) is a robust measure of spread:
 \[
     \mathrm{MAD} = 1.4826 \times \mathrm{median}_i |v_i - \mathrm{median}_j(v_j)|.
 \]
-The constant $1.4826$ ensures that for Gaussian data, MAD coincides with the
-standard deviation~\cite{rousseeuw1993mad}.
+The constant $1.4826$ ensures that for Gaussian data, MAD coincides with the standard deviation~\cite{rousseeuw1993mad}.
 MAD remains reliable even when a minority of observations are extreme outliers, unlike the sample variance.
 
 The \emph{Tukey biweight}~\cite{kafadar1983biweight} is a redescending weight function that smoothly down-weights moderate deviations and entirely discards extreme ones:
@@ -148,7 +146,16 @@ The \emph{Tukey biweight}~\cite{kafadar1983biweight} is a redescending weight fu
 where $c \in [3,5]$ is the cutoff.
 Applied to robust $z$-scores, this yields trust weights that are near one for consistent samples and exactly zero for gross outliers.
 
-The \emph{Huber loss}~\cite{huber1964robust} combines the squared loss for small residuals with a linear penalty for large ones, providing robustness to outliers in the regression objective itself.
+The \emph{Huber loss}~\cite{huber1964robust} combines the squared loss for small residuals with a linear penalty for large ones, providing robustness to outliers in the regression objective itself, while preserving smooth gradients for small errors.
+\[
+    \mathrm{Huber}(u) =
+    \begin{cases}
+        \frac{1}{2}|u|_2^2, & |u|_2 \le \delta, \\
+        \delta\left(|u|_2-\frac{1}{2}\delta\right), & |u|_2 > \delta,
+    \end{cases},
+    \quad
+    u = f_\theta(x_{i,t}) - y^*_{i,t}
+\]
 
 \subsection{Pairwise Ranking for Monotone Functions}
 
@@ -220,8 +227,7 @@ and convert to a trust weight via the Tukey biweight:
     w_{i,t}^{(-i)} = \max\!\Bigl(\bigl[1-(z_{i,t}^{(-i)}/c)^2\bigr]^2 \cdot \mathbf{1}[z_{i,t}^{(-i)}\leq c],\; w_{\min}\Bigr),
 \]
 with cutoff $c \in [3,5]$ and floor $w_{\min}$ preventing vanishing gradients.
-Samples close to the phase consensus receive weights near one; gross outliers
-receive exactly $w_{\min}$.
+Samples close to the phase consensus receive weights near one; gross outliers receive exactly $w_{\min}$.
 
 \subsection{Pseudo-Label Refinement}
 
@@ -234,7 +240,7 @@ Low-trust actions are softly corrected toward the LOO median:
     \quad \gamma_{i,t} = 1 - \lambda_{\mathrm{debias}}(1-w_{i,t}).
 \]
 
-\textbf{2. Direction selection:}
+\textbf{2. Alignment with ribbon tangent:}
 A canonical forward direction $t_{\mathrm{dir}}[b]$ is chosen as the state tangent $t_s[b]$ when available (manipulation tasks with a clear geometric path), and the action tangent $t_a[b]$ otherwise.
 
 \textbf{3. Sideways attenuation:}
@@ -244,8 +250,7 @@ The perpendicular component is attenuated in proportion to corruption:
     y^{(2)}_{i,t} = y^{(1)}_\parallel + (1 - \rho_{i,t})\, y^{(1)}_\perp,
     \quad \rho_{i,t} = \rho_0(1-w_{i,t})\,\mathbf{1}[t_s[b]\text{ available}],
 \]
-pulling low-trust samples toward the ribbon in tasks with a clear geometric
-structure.
+pulling low-trust samples toward the ribbon in tasks with a clear geometric structure.
 
 \textbf{4. Speed regularization:}
 The action magnitude is blended toward the bin-level consensus speed:
@@ -301,8 +306,7 @@ All methods use the same MLP architecture and Adam optimizer; the principal diff
 
 \subsection{Discussion}
 
-The consistent gains across both domains highlight two design decisions in
-PACER.\@
+The consistent gains across both domains highlight two design decisions in PACER.\@
 First, progress-aligned binning places samples from the same task stage into the same bin regardless of demonstration speed, making the consensus meaningful.
 Without alignment, samples from disparate task phases would be pooled together, diluting the signal from which corruptions are detected.
 Second, the LOO scheme ensures that a demonstration containing a corrupted segment cannot contribute to the consensus that is then used to evaluate that same segment, preventing self-validation.
@@ -334,9 +338,7 @@ With very few demonstrations or a large number of bins, some bins may be sparsel
 Several directions remain open for future investigation.
 Richer sensory modalities such as images or point clouds could be incorporated by learning progress from high-dimensional observations using contrastive or self-supervised objectives.
 The current consensus step uses medians as point estimates; replacing these with uncertainty-aware representations (e.g., Gaussian processes over phase) could provide more calibrated trust scores.
-Integrating PACER with diffusion or sequence policies, which operate over
-entire trajectory distributions rather than pointwise actions, is a natural
-extension.
+Integrating PACER with diffusion or sequence policies, which operate over entire trajectory distributions rather than pointwise actions, is a natural extension.
 Combining offline label repair with limited online interaction for iterative refinement could address compounding errors in complex tasks.
 Finally, evaluating PACER on real hardware with diverse operators would validate its practical utility beyond simulated corruption.
 
