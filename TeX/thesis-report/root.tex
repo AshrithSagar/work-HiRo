@@ -593,19 +593,38 @@ I would additionally like to thank Grok and Claude for helping me to proof-read 
         \toprule
         \multicolumn{2}{l}{\textbf{Category / Parameter}} & \textbf{Value} \\
         \midrule
-        \multicolumn{3}{l}{BC / PACER (Shared) } \\
+
+        \multicolumn{3}{l}{BC / PACER (Shared)} \\
         \quad & Network width (MLP hidden size) & 128 \\
         \quad & Optimizer / LR & Adam / $1\times10^{-3}$ \\
         \quad & Epochs & 240 \\
         \quad & Gradient clip (global norm) & 1.0 \\
+
         \midrule
+
         \multicolumn{3}{l}{PACER} \\
         \quad & Phase bins $B$ & 96 \\
         \quad & Tukey cutoff $c$ & 4.685 \\
         \quad & Min sample weight $w_{\min}$ & 0.02 \\
-        \quad & LOO debias $\lambda_{\text{debias}}$ & 0.5 \\
-        \quad & Magnitude blend $\eta_0$ & 0.5 \\
-        \quad & EMA coefficient $\kappa$ & 0.0 \\
+
+        \quad & LOO debias $\lambda_{\text{debias}}$ &
+        \begin{tabular}[t]{@{}cc@{}}
+            \textbf{State} & \textbf{Action} \\
+            0.1 & 0.5
+        \end{tabular} \\
+
+        \quad & Magnitude blend $\eta_0$ &
+        \begin{tabular}[t]{@{}cc@{}}
+            \textbf{State} & \textbf{Action} \\
+            0.1 & 0.5
+        \end{tabular} \\
+
+        \quad & EMA coefficient $\kappa$ &
+        \begin{tabular}[t]{@{}cc@{}}
+            \textbf{State} & \textbf{Action} \\
+            0.9 & 0.0
+        \end{tabular} \\
+
         \bottomrule
     \end{tabular}
     \caption{\textbf{Hyperparameters.} Values used in all reported experiments unless otherwise noted.}\label{tab:hparams}
