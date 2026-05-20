@@ -5,7 +5,7 @@
 \overrideIEEEmargins{}
 
 \usepackage{subfig, booktabs, url}
-\usepackage{amsfonts, amsmath, amssymb, bm, cancel, interval, latexsym, mathtools}
+\usepackage{amsfonts, amsmath, amssymb, bm, cancel, interval, latexsym, mathtools, microtype}
 \usepackage[colorlinks=true]{hyperref}
 \usepackage[ruled,linesnumbered]{algorithm2e}
 
@@ -30,13 +30,15 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{abstract}
 
-    Imitation learning from human demonstrations provides a compelling paradigm for robot skill acquisition, yet practical deployments face two persistent difficulties: demonstrations of the same task may unfold at different speeds (\emph{pace variability}), and individual trajectories can contain short, biased deviations arising from operator fatigue or unintended motion (\emph{local corruptions}).
-    These issues are most severe in low-data regimes where each demonstration carries significant weight.
-    We present PACER (Progress-Aligned Curation for Error-Resilient imitation learning), a framework that addresses both challenges jointly before policy training begins.
-    PACER learns a state-dependent latent task phase that provides a shared progress coordinate for temporal alignment across demonstrations running at different paces.
-    It then applies robust statistics---medians, median absolute deviation (MAD), and Tukey biweight reweighting---in a leave-one-out consensus scheme to detect and suppress corrupted segments without allowing a demonstration to validate its own deviations.
-    Corrupted samples are repaired through a structured pseudo-label refinement procedure that combines anchor debiasing, directional alignment, speed regularization, and temporal smoothing.
-    The resulting training objective is a simple weighted Huber behavioral cloning loss, keeping the learning stage stable and interpretable.
+    Imitation learning from human demonstrations provides a compelling paradigm for robot skill acquisition, yet practical deployments face two persistent difficulties.
+    Demonstrations of the same task may unfold at different speeds---a phenomenon referred to here as \emph{pace variability}---and individual trajectories can contain short, biased deviations that arise from operator fatigue or unintended motion, referred to as \emph{local corruptions}.
+    These difficulties are most consequential in low-data regimes, where each collected demonstration carries disproportionate influence over the learned policy.
+
+    We present PACER (Progress-Aligned Curation for Error-Resilient Imitation Learning), a framework that addresses both challenges jointly, as a pre-processing stage that runs before policy training begins.
+    PACER learns a state-dependent latent task phase that serves as a shared progress coordinate, enabling temporal alignment across demonstrations that execute at different paces.
+    Building on this alignment, it applies robust statistical tools---specifically, medians, median absolute deviation (MAD), and Tukey biweight reweighting---within a leave-one-out consensus scheme to detect and suppress corrupted action segments, without allowing a demonstration to participate in the consensus used to evaluate its own deviations.
+    Corrupted samples are then repaired through a structured pseudo-label refinement procedure that combines anchor debiasing, directional alignment, speed regularisation, and temporal smoothing.
+    The resulting training objective is a weighted Huber behavioral cloning loss, keeping the learning stage stable, interpretable, and easy to reason about.
 
 \end{abstract}
 
@@ -51,235 +53,263 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{INTRODUCTION}
 
-Acquiring robot skills directly from human demonstrations reduces the need for hand-engineered reward functions and enables rapid deployment across diverse tasks.
-Imitation learning (IL) provides a natural mechanism: a policy is trained to reproduce demonstrated state-action pairs, bypassing the complexity of reward specification.
+Acquiring robot manipulation skills directly from human demonstrations reduces the need for hand-engineered reward functions and enables rapid deployment across varied tasks.
+Imitation learning (IL) provides a natural mechanism for this: a policy is trained to reproduce demonstrated state-action pairs, bypassing the considerable difficulty of reward specification and environment instrumentation.
 In practice, however, demonstrations are both expensive to collect and rarely perfect.
-Operators vary in execution timing, exhibit fatigue over extended sessions, and occasionally introduce brief, unintended deviations---hesitations, slip-ups, or momentary corrections---that can appear at arbitrary points in a trajectory.
-When only a handful of demonstrations are available, as is common in real-world deployment, each trajectory carries substantial influence over the learned policy, making these imperfections especially damaging.
 
-Two distinct but related challenges arise in this setting.
+Operators vary in their execution timing across sessions.
+They exhibit fatigue over extended data collection runs, and occasionally introduce brief, unintended deviations---hesitations, overcorrections, or momentary lapses in attention---that can appear at arbitrary points within a trajectory.
+When only a handful of demonstrations are available, as is common in real-world robot deployment, each trajectory carries substantial influence over the final learned policy, which makes these imperfections particularly damaging.
+
+Two distinct but related challenges arise from these realities.
 The first is \emph{pace variability}: different demonstrations of the same task may unfold at different speeds, causing the same stage of task execution to appear at different time indices across trajectories.
-A policy trained on time-indexed data will conflate temporal position with task state, degrading generalization.
-The second is \emph{local corruption}: short segments of biased action error that are not attributable to Gaussian noise but represent genuine deviations from intended behavior.
-Standard behavioral cloning (BC) treats all demonstrated actions as equally valid supervision targets, so corrupted segments are learned alongside clean ones.
+A policy trained on time-indexed data will conflate temporal position with task state, degrading its generalisation to novel execution speeds or operator styles.
+The second challenge is \emph{local corruption}: short segments of biased action error that are not attributable to random Gaussian noise, but represent genuine deviations from the intended behavior---deviations that are systematic, if transient.
+Standard behavioral cloning (BC) treats all demonstrated actions as equally valid supervision targets, so corrupted segments are learned alongside clean ones with equal weight.
 
-Existing methods address these challenges in isolation.
-Temporal alignment approaches such as dynamic time warping and movement primitives with phase variables handle pace variability but typically assume that once synchronized, demonstrated actions are trustworthy. Robustness-oriented methods filter or reweight demonstrations based on quality estimates but often assume temporal alignment or require large datasets to reliably infer demonstrator expertise.
+Existing approaches to imitation learning address these two challenges in isolation.
+Temporal alignment methods, such as dynamic time warping or movement primitives with phase variables, handle pace variability but typically assume that once demonstrations are synchronised, the actions they contain are trustworthy.
+Robustness-oriented methods filter or reweight demonstrations based on quality estimates, but often assume temporal alignment as a precondition, or require large datasets to reliably infer demonstrator expertise.
 
-We propose PACER to close this gap by handling both challenges in a unified
-pre-processing framework. \\
-Concretely, PACER:\@
+We propose PACER to close this gap by handling both challenges within a unified pre-processing framework that operates entirely before policy training.
+PACER's contributions are threefold:
 \begin{enumerate}
-    \item learns a monotone, state-dependent latent task phase that provides a shared progress variable for aligning demonstrations of varying paces;
-    \item applies robust statistics --- medians, MAD, and Tukey biweights --- in a leave-one-out (LOO) consensus scheme to detect and down-weight corrupted action segments; and
-    \item constructs pseudo-labels that repair corrupted samples using phase-local consensus anchors, directional alignment, speed regularization, and temporal smoothing.
+    \item It learns a monotone, state-dependent latent task phase that provides a shared progress variable for aligning demonstrations executed at varying paces.
+    \item It applies robust statistics---medians, MAD, and Tukey biweights---within a leave-one-out (LOO) consensus scheme to detect and down-weight corrupted action segments.
+    \item It constructs pseudo-labels that repair corrupted samples using phase-local consensus anchors, directional alignment, speed regularisation, and temporal smoothing.
 \end{enumerate}
-The final policy is trained with a weighted Huber BC loss; all complexity is concentrated in the pre-processing stage.
+The final policy is trained with a weighted Huber BC loss; all complexity is concentrated in the pre-processing stage, leaving the training procedure itself simple and standard.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{RELATED WORK}
 
 \subsection{Phase Variables and Temporal Alignment}
 
-Early work on movement primitives, such as DMPs~\cite{ijspeert2013dmp} and ProMPs~\cite{paraschos2013promp}, encoded trajectories with an explicit phase or progress variable to synchronize executions across demonstrations running at different paces.
-In these formulations the phase is typically a hand-crafted function of time rather than a learned quantity.
-Differentiable sequence alignment via soft-DTW~\cite{cuturi2017softdtw} enables end-to-end learning with time-warping losses, while time-contrastive networks~\cite{sermanet2018tcn} estimate progress directly from observations using self-supervised representation learning.
-TACO~\cite{shiarlis2018taco} jointly aligns weak supervision with demonstrations while learning policies.
-Our work learns a state-only monotone phase via a pairwise ranking loss and uses it strictly as a synchronization coordinate before robust aggregation. Crucially, temporal alignment alone does not detect or suppress short, biased action deviations; corrupted segments can be time-warped into apparent agreement without additional robustness mechanisms.
+Early work on movement primitives, particularly Dynamical Movement Primitives (DMPs)~\cite{ijspeert2013dmp} and Probabilistic Movement Primitives (ProMPs)~\cite{paraschos2013promp}, encoded demonstrated trajectories using an explicit phase or progress variable to synchronize executions across demonstrations running at different speeds.
+In these formulations the phase variable is typically a hand-crafted function of time---a monotonically increasing clock---rather than a quantity learned from state observations.
+This limits their applicability to settings where the relationship between time and task progress is approximately fixed.
+
+Differentiable sequence alignment via soft-DTW~\cite{cuturi2017softdtw} enables end-to-end learning with time-warping losses, allowing gradients to flow through the alignment step.
+Time-contrastive networks~\cite{sermanet2018tcn} take a different approach, estimating progress directly from observations using self-supervised representation learning, without relying on an explicit temporal signal.
+TACO~\cite{shiarlis2018taco} jointly performs alignment with weak supervision and policy learning, allowing task decomposition structure to emerge from the data.
+
+PACER departs from these approaches in a specific and important way.
+It learns a monotone phase function from state observations alone, using a pairwise ranking loss, and uses this phase strictly as a synchronisation coordinate before robust aggregation.
+Critically, temporal alignment alone does not detect or suppress short, biased action deviations.
+A corrupted segment can be time-warped into apparent agreement with the rest of the dataset without any robustness mechanism flagging it; additional machinery is required to address this.
 
 \subsection{Robust Imitation from Imperfect Demonstrations}
 
-Tangkaratt et al.~\cite{tangkaratt2020robust} and Liu et al.~\cite{liu2022robust} propose symmetric-loss objectives and median-of-means
-formulations for learning from noisy demonstrations.
-Confidence-based methods reweight data using quality scores: Wu et al.~\cite{wu2019imperfect} propose 2IWIL and IC-GAIL, combining confidence with unlabeled data through importance weighting and occupancy-measure matching.
-ILEED~\cite{beliaev2022ileed} jointly learns a policy and a state- and demonstrator-dependent expertise variable using demonstrator identities, targeting crowd-sourced settings with widely varying proficiency.
-While effective at filtering suboptimal contributors, such approaches typically assume broad state coverage or large datasets.
-PACER operates in few-demonstration regimes and targets short, within-trajectory corruptions, aligning demonstrations by phase and applying robust statistics locally without requiring demonstrator identities.
+A complementary line of work focuses on the problem of learning from imperfect or mixed-quality demonstrations, rather than on temporal alignment.
+Tangkaratt et al.~\cite{tangkaratt2020robust} and Liu et al.~\cite{liu2022robust} propose symmetric-loss objectives and median-of-means formulations for imitation learning from noisy demonstrations.
+These approaches modify the loss function itself to be less sensitive to corrupted labels.
+
+Confidence-based methods take a different route, reweighting data using quality scores inferred from the data.
+Wu et al.~\cite{wu2019imperfect} propose 2IWIL and IC-GAIL, which combine confidence estimates with unlabeled data through importance weighting and occupancy-measure matching.
+ILEED~\cite{beliaev2022ileed} jointly learns a policy and a state-and-demonstrator-dependent expertise variable, using demonstrator identities to separate high- and low-quality contributors in crowd-sourced settings.
+
+While these approaches are effective at filtering suboptimal contributions at the level of entire demonstrations or demonstrators, they typically assume broad state coverage or access to large datasets.
+PACER is designed to operate in few-demonstration regimes and targets short, within-trajectory corruptions specifically.
+By aligning demonstrations by phase before applying robust statistics locally, PACER avoids requiring demonstrator identities and does not depend on broad state coverage.
 
 \subsection{Reward Learning and Noise Modeling}
 
-VILD~\cite{tangkaratt2019vild} tackles diverse-quality demonstrations by explicitly modeling a noise density and learning a reward via variational IRL/RL.\@
-This approach is powerful but requires substantial environment interaction, which may be impractical in data-scarce settings.
-PACER remains within a pure IL/BC regime: it repairs labels using phase-local consensus and robust reweighting, then trains with a weighted Huber loss, avoiding additional environment rollouts.
+VILD~\cite{tangkaratt2019vild} addresses diverse-quality demonstrations by explicitly modeling a noise density alongside a latent reward, learned via variational inverse RL.\@
+This approach is powerful and principled, but requires substantial environment interaction to train the reward model, which may be impractical in data-scarce settings where IL is most attractive.
+
+PACER remains entirely within a pure IL/BC regime.
+It repairs labels using phase-local consensus and robust reweighting, and trains with a weighted Huber loss, with no additional environment rollouts required at any stage.
 
 \subsection{Positioning of PACER}
 
-Where alignment-only methods assume clean labels once synchronized, and robustness-only methods often assume temporally aligned data, PACER combines a learned state-only phase with per-phase robust curation and pseudo-label construction.
-This yields a simple training objective while jointly addressing pace variability and local corruptions observed in real demonstrations.
+The landscape of related work reveals a consistent gap.
+Alignment-only methods assume clean labels once demonstrations are synchronised, while robustness-only methods often assume temporal alignment as a precondition.
+PACER combines a learned state-only phase variable with per-phase robust curation and pseudo-label construction, yielding a framework that addresses both pace variability and local corruptions simultaneously.
+This produces a simple training objective while jointly handling the two dominant sources of imperfection observed in realistic human demonstrations.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{BACKGROUND}
 
 \subsection{Behavioral Cloning}
 
-Behavioral cloning is the simplest approach to imitation learning.
+Behavioral cloning is the simplest and most widely-used approach to imitation learning.
 Given a dataset of demonstrated state-action pairs $\{(x_t, a_t)\}$, BC minimizes a supervised loss between the policy output $f_\theta(x_t)$ and the demonstrated action $a_t$:
-\[
+\begin{equation}
     \mathcal{L}_{\mathrm{BC}} = \mathbb{E}_{t}\bigl[\ell\bigl(f_\theta(x_t),\, a_t\bigr)\bigr],
-\]
+\end{equation}
 where $\ell$ is typically a squared error or Huber loss.
-BC is simple and stable but is sensitive to distribution shift at test time: small policy errors compound over a trajectory because the policy was never trained on states that result from its own imperfect actions~\cite{ross2011dagger}.
-In the presence of corrupted demonstrations, BC also propagates erroneous supervision directly into the learned policy.
+
+BC is simple and stable but is sensitive to distribution shift at test time.
+Small policy errors compound over a trajectory because the policy was never trained on states that result from its own imperfect actions---a problem formalised by Ross et al.~\cite{ross2011dagger} as covariate shift.
+In the presence of corrupted demonstrations, BC additionally propagates erroneous supervision directly into the learned policy without any mechanism to identify or down-weight such samples.
 
 \subsection{Robust Statistics: Median, MAD, and Tukey Biweight}
 
-Three classical tools from robust statistics underpin \; PACER's corruption detection.
+Three classical tools from robust statistics underpin PACER's corruption detection and suppression mechanism.
 
-The \emph{sample median} of a set $\{v_i\}$ is the value minimizing the sum of absolute deviations; it is unaffected by a fraction of arbitrarily large
-outliers, unlike the mean.
+\paragraph{Sample Median.}
+The sample median of a set $\{v_i\}$ is the value that minimizes the sum of absolute deviations from itself.
+It is resistant to a fraction of arbitrarily large outliers, unlike the arithmetic mean, which is sensitive to even a single extreme observation.
 
-The \emph{median absolute deviation} (MAD) is a robust measure of spread:
-\[
-    \mathrm{MAD} = 1.4826 \times \mathrm{median}_i |v_i - \mathrm{median}_j(v_j)|.
-\]
-The constant $1.4826$ ensures that for Gaussian data, MAD coincides with the standard deviation~\cite{rousseeuw1993mad}.
-MAD remains reliable even when a minority of observations are extreme outliers, unlike the sample variance.
+\paragraph{Median Absolute Deviation (MAD).}
+The MAD is a robust measure of statistical spread, defined as:
+\begin{equation}
+    \mathrm{MAD} = 1.4826 \times \mathrm{median}_i \left|v_i - \mathrm{median}_j(v_j)\right|.
+\end{equation}
+The constant $1.4826$ ensures that, for Gaussian data, the MAD coincides with the standard deviation~\cite{rousseeuw1993mad}, making it a drop-in replacement for the standard deviation in settings where outliers may be present.
+Unlike the sample variance, MAD remains reliable even when a substantial minority of observations are extreme outliers.
 
-The \emph{Tukey biweight}~\cite{kafadar1983biweight} is a redescending weight function that smoothly down-weights moderate deviations and entirely discards extreme ones:
-\[
+\paragraph{Tukey Biweight.}
+The Tukey biweight~\cite{kafadar1983biweight} is a redescending weight function that smoothly down-weights moderate deviations and entirely discards extreme ones:
+\begin{equation}
     \rho(z; c) =
     \begin{cases}
         {\bigl(1 - {(z/c)}^2\bigr)}^2, & |z| \leq c, \\
         0, & |z| > c,
     \end{cases}
-\]
-where $c \in [3,5]$ is the cutoff.
-Applied to robust $z$-scores, this yields trust weights that are near one for consistent samples and exactly zero for gross outliers.
+\end{equation}
+where $c \in [3,5]$ is a cutoff parameter.
+When applied to robust $z$-scores, this yields trust weights that are near one for samples consistent with the consensus and exactly zero for gross outliers.
 
-The \emph{Huber loss}~\cite{huber1964robust} combines the squared loss for small residuals with a linear penalty for large ones, providing robustness to outliers in the regression objective itself, while preserving smooth gradients for small errors.
-\[
+\paragraph{Huber Loss.}
+The Huber loss~\cite{huber1964robust} combines the squared loss for small residuals with a linear penalty for large ones, providing robustness to outliers in the regression objective while preserving smooth gradients for small errors:
+\begin{equation}
     \mathrm{Huber}(u) =
     \begin{cases}
-        \frac{1}{2}|u|_2^2, & |u|_2 \le \delta, \\
-        \delta\left(|u|_2-\frac{1}{2}\delta\right), & |u|_2 > \delta,
-    \end{cases},
-    \quad
-    u = f_\theta(x_{i,t}) - y^*_{i,t}
-\]
+        \frac{1}{2}\|u\|_2^2, & \|u\|_2 \le \delta, \\
+        \delta\!\left(\|u\|_2-\frac{1}{2}\delta\right), & \|u\|_2 > \delta,
+    \end{cases}
+\end{equation}
+where $u = f_\theta(x_{i,t}) - y^*_{i,t}$ is the residual.
 
-\subsection{Pairwise Ranking for Monotone Functions}
+\section{Pairwise Ranking for Monotone Functions}
 
-Learning a monotone function $g : \mathcal{X} \to \mathbb{R}$ from ordinal constraints can be accomplished via a pairwise ranking (margin) loss.
-Given pairs $(x_t, x_{t'})$ with $t > t'$ (so $g(x_t)$ should exceed $g(x_{t'})$), the loss penalizes violations:
-\[
+Learning a monotone function $g : \mathcal{X} \to \mathbb{R}$ from ordinal constraints can be accomplished via a pairwise ranking loss.
+Given pairs $(x_t, x_{t'})$ with $t > t'$, so that $g(x_t)$ should exceed $g(x_{t'})$, the loss penalizes violations:
+\begin{equation}
     \mathcal{L}_{\mathrm{rank}} = \sum_{t > t'} \log\!\bigl(1 + \exp\!\bigl(m - (g(x_t) - g(x_{t'}))\bigr)\bigr),
-\]
-with margin $m > 0$ preventing score collapse.
-Minimizing this loss encourages $g$ to assign higher scores to later states while tolerating small violations with a soft penalty.
+\end{equation}
+with margin $m > 0$ preventing score collapse to a constant function.
+Minimizing this loss encourages $g$ to assign strictly higher scores to states that occur later in a trajectory, while tolerating small violations through a soft, log-sigmoid penalty.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{METHODOLOGY}
 
 \subsection{Problem Formulation}
 
-We are given $N$ demonstrations ${\{D_i\}}_{i=1}^N$, where each demonstration $D_i$ consists of a time-ordered sequence of state-action pairs:
-\[
+Consider a collection of $N$ demonstrations ${\{D_i\}}_{i=1}^N$, where each demonstration $D_i$ consists of a time-ordered sequence of state-action pairs:
+\begin{equation}
     D_i = {\{(x_{i,t},\, a_{i,t})\}}_{t=1}^{T_i},
-\]
+\end{equation}
 with $x_{i,t} \in \mathbb{R}^{d_x}$ and $a_{i,t} \in \mathbb{R}^{d_a}$.
-Demonstrations share a consistent underlying task intent but may differ in (i) execution pace and (ii) short segments of local corruption---biased action deviations arising from unintended operator motion or fatigue.
-The goal is to learn a policy $f_\theta$ that reproduces the intended behavior while disregarding corrupted segments.
+The demonstrations share a consistent underlying task intent but may differ along two axes: (i) execution pace, meaning different demonstrations may take different amounts of time to complete the same task; and (ii) local corruption, meaning short segments of biased action deviations arising from unintended operator motion or fatigue.
+The goal is to learn a policy $f_\theta$ that reproduces the intended task behavior while disregarding corrupted segments.
 
 \subsection{Phase Alignment}
 
-We define a scalar task phase $\tau \in [0,1]$ that represents task progression independently of absolute time.
-Phase depends only on the robot state, enabling alignment across demonstrations running at different speeds.
+We define a scalar task phase $\tau \in [0,1]$ representing task progression independently of absolute time.
+Because the phase depends only on the robot state and not on the time index, it provides a common coordinate across demonstrations that run at different speeds.
 
-To estimate $\tau$, we train a scoring network $g_\psi : \mathcal{X} \to \mathbb{R}$ with a pairwise ranking loss that enforces monotonicity along each demonstration:
-\[
+To estimate $\tau$, a scoring network $g_\psi : \mathcal{X} \to \mathbb{R}$ is trained with a pairwise ranking loss that enforces monotonicity along each demonstration:
+\begin{equation}
     \mathcal{L}_{\mathrm{rank}} = \sum_i \sum_{t > t'}
     \log\!\bigl(1 + \exp\!\bigl(m - (g_\psi(x_{i,t}) - g_\psi(x_{i,t'}))\bigr)\bigr),
-\]
+\end{equation}
 where $m > 0$ is a margin preventing score collapse.
-After training, scores are normalized per-demonstration to $\tau_{i,t} \in [0,1]$.
+After training, raw scores are normalised per demonstration to yield $\tau_{i,t} \in [0,1]$, so that the first state of each demonstration maps to approximately zero and the last to approximately one.
 
 \subsection{Robust Consensus Statistics}
 
-The phase interval $[0,1]$ is discretized into $B$ equal bins.
-Sample $(x_{i,t}, a_{i,t})$ is assigned to bin $b$ if $\tau_{i,t} \in [b/B,\, (b{+}1)/B)$.
-We denote the index set of all samples in bin $b$ across all demonstrations as $\mathcal{I}_b$.
-Because all samples in a bin share approximately the same task-progress value, their actions should be comparable regardless of which demonstration contributed them.
+The phase interval $[0,1]$ is discretised into $B$ equal bins.
+A sample $(x_{i,t}, a_{i,t})$ is assigned to bin $b$ if $\tau_{i,t} \in [b/B,\, (b{+}1)/B)$.
+We denote by $\mathcal{I}_b$ the index set of all samples in bin $b$ across all demonstrations.
+Because all samples in a given bin share approximately the same task-progress value, their actions are directly comparable regardless of which demonstration contributed them, and regardless of absolute time.
 
-For each bin $b$, we compute robust summaries:
-\begin{align*}
-    \alpha_a[b] & = \mathrm{median}\{a_{i,t} : (i,t)\in\mathcal{I}_b\},            \\
-    \alpha_s[b] & = \mathrm{median}\{x_{i,t} : (i,t)\in\mathcal{I}_b\},            \\
-    \beta_a[b]  & = \mathrm{median}\{\|a_{i,t}\| : (i,t)\in\mathcal{I}_b\},        \\
+For each bin $b$, robust summaries are computed:
+\begin{align}
+    \alpha_a[b] & = \mathrm{median}\{a_{i,t} : (i,t)\in\mathcal{I}_b\}, \\
+    \alpha_s[b] & = \mathrm{median}\{x_{i,t} : (i,t)\in\mathcal{I}_b\}, \\
+    \beta_a[b]  & = \mathrm{median}\{\|a_{i,t}\| : (i,t)\in\mathcal{I}_b\}, \\
     \beta_s[b]  & = \mathrm{median}\{\|\dot{x}_{i,t}\| : (i,t)\in\mathcal{I}_b\}.
-\end{align*}
-Action and state tangents $t_a[b]$, $t_s[b]$ are obtained by finite differencing the per-bin medians, capturing the canonical direction of progress at each phase.
+\end{align}
+Action and state tangents $t_a[b]$ and $t_s[b]$ are obtained by finite differencing the per-bin medians, capturing the canonical direction of motion at each task phase.
 
-\subsection{Trust Estimation via LOO Residuals}
+\subsection{Trust Estimation via Leave-One-Out Residuals}
 
-To prevent corrupted demonstrations from validating their own deviations, all per-sample trust scores are computed in a leave-one-out (LOO) manner.
-When evaluating a sample from demonstration $i$, the bin consensus statistics are recomputed on $\mathcal{I}_b^{(-i)} = \{(j,u)\in\mathcal{I}_b : j\neq i\}$.
+A critical design consideration is preventing corrupted demonstrations from participating in the consensus that is subsequently used to evaluate their own deviations.
+To address this, all per-sample trust scores are computed in a leave-one-out (LOO) manner.
+When evaluating a sample from demonstration $i$, the bin consensus statistics are recomputed on $\mathcal{I}_b^{(-i)} = \{(j,u)\in\mathcal{I}_b : j\neq i\}$, i.e., on all samples in that bin drawn from demonstrations other than $i$.
 
 The action residual for sample $(i,t)$ in bin $b$ is:
-\[
-    r_{i,t} = \|a_{i,t} - \alpha_a^{(-i)}[b]\|.
-\]
-We normalize by the LOO MAD to obtain a robust $z$-score:
-\[
+\begin{equation}
+    r_{i,t}^{(-i)} = \|a_{i,t} - \alpha_a^{(-i)}[b]\|.
+\end{equation}
+This is normalised by the LOO MAD to obtain a robust $z$-score:
+\begin{equation}
     z_{i,t}^{(-i)} = \frac{r_{i,t}^{(-i)}}{\mathrm{MAD}_a^{(-i)}[b] + \varepsilon},
-\]
-and convert to a trust weight via the Tukey biweight:
-\[
-    w_{i,t}^{(-i)} = \max\!\Bigl(\bigl[1-(z_{i,t}^{(-i)}/c)^2\bigr]^2 \cdot \mathbf{1}[z_{i,t}^{(-i)}\leq c],\; w_{\min}\Bigr),
-\]
+\end{equation}
+and converted to a trust weight via the Tukey biweight:
+\begin{equation}
+    w_{i,t}^{(-i)} = \max\!\Bigl({\Bigl\{1-{\bigl(z_{i,t}^{(-i)}/c\bigr)}^2\Bigr\}}^2 \cdot \mathbf{1}[z_{i,t}^{(-i)}\leq c],\; w_{\min}\Bigr),
+\end{equation}
 with cutoff $c \in [3,5]$ and floor $w_{\min}$ preventing vanishing gradients.
-Samples close to the phase consensus receive weights near one; gross outliers receive exactly $w_{\min}$.
+Samples that lie close to the phase consensus receive weights near one; gross outliers receive exactly $w_{\min}$.
 
 \subsection{Pseudo-Label Refinement}
 
-For each sample $(x_{i,t}, a_{i,t})$ in bin $b$, we construct a refined pseudo-label $y^*_{i,t}$ through five sequential steps, each parameterized by the trust weight $w_{i,t}$.
+For each sample $(x_{i,t}, a_{i,t})$ in bin $b$, a refined pseudo-label $y^*_{i,t}$ is constructed through five sequential steps, each parameterised by the trust weight $w_{i,t}$.
 
-\textbf{1. Debiasing toward the anchor:}
-Low-trust actions are softly corrected toward the LOO median:
-\[
+\paragraph{Debiasing toward the Anchor}
+Low-trust actions are softly corrected toward the LOO median for their bin:
+\begin{equation}
     y^{(1)}_{i,t} = \gamma_{i,t}\, a_{i,t} + (1-\gamma_{i,t})\, \alpha_a^{(-i)}[b],
     \quad \gamma_{i,t} = 1 - \lambda_{\mathrm{debias}}(1-w_{i,t}).
-\]
+\end{equation}
+Actions with high trust ($w_{i,t} \approx 1$) are largely unchanged; actions with low trust are pulled substantially toward the consensus anchor.
 
-\textbf{2. Alignment with ribbon tangent:}
-A canonical forward direction $t_{\mathrm{dir}}[b]$ is chosen as the state tangent $t_s[b]$ when available (manipulation tasks with a clear geometric path), and the action tangent $t_a[b]$ otherwise.
+\paragraph{Alignment with the Ribbon Tangent}
+A canonical forward direction $t_{\mathrm{dir}}[b]$ is selected.
+In tasks with a clear geometric path (e.g., manipulation tasks where a state trajectory traces a coherent path through space), the state tangent $t_s[b]$ is used; otherwise, the action tangent $t_a[b]$ is used.
 
-\textbf{3. Sideways attenuation:}
-$y^{(1)}_{i,t}$ is decomposed into components parallel and perpendicular to $t_{\mathrm{dir}}[b]$.
-The perpendicular component is attenuated in proportion to corruption:
-\[
-    y^{(2)}_{i,t} = y^{(1)}_\parallel + (1 - \rho_{i,t})\, y^{(1)}_\perp,
-    \quad \rho_{i,t} = \rho_0(1-w_{i,t})\,\mathbf{1}[t_s[b]\text{ available}],
-\]
-pulling low-trust samples toward the ribbon in tasks with a clear geometric structure.
+\paragraph{Sideways Attenuation}
+The intermediate label $y^{(1)}_{i,t}$ is decomposed into components parallel and perpendicular to $t_{\mathrm{dir}}[b]$.
+The perpendicular component is attenuated in proportion to the degree of corruption:
+\begin{equation}
+    \begin{aligned}
+        y^{(2)}_{i,t} &= y^{(1)}_\parallel + (1 - \rho_{i,t})\, y^{(1)}_\perp,\\
+        \rho_{i,t} &= \rho_0(1-w_{i,t})\;\mathbf{1}[t_s[b]\text{ available}].
+    \end{aligned}
+\end{equation}
+This step pulls low-trust samples toward the consensus ribbon in tasks where geometric structure is available, removing lateral deviations that are likely artifactual.
 
-\textbf{4. Speed regularization:}
+\paragraph{Speed Regularisation}
 The action magnitude is blended toward the bin-level consensus speed:
-\[
+\begin{equation}
     s_{i,t} = (1-\eta_{i,t})\|y^{(2)}_{i,t}\| + \eta_{i,t}\,\beta_a[b],
     \quad y^{(3)}_{i,t} = s_{i,t}\,\frac{y^{(2)}_{i,t}}{\|y^{(2)}_{i,t}\|+\varepsilon},
-\]
+\end{equation}
 where $\eta_{i,t} = \eta_0(1-w_{i,t})$.
+This prevents corrupted samples from introducing spurious speed anomalies while preserving the direction of the corrected action.
 
-\textbf{5. Temporal smoothing:}
-An exponential moving average is applied across consecutive targets within the same demonstration, with a smoothing coefficient $\kappa_{i,t}$ that increases when both the current and previous samples have low trust:
-\[
+\paragraph{Temporal Smoothing}
+An exponential moving average is applied across consecutive targets within the same demonstration, with a smoothing coefficient $\kappa_{i,t}$ that increases when both the current and the previous sample have low trust:
+\begin{equation}
     y^*_{i,t} = (1-\kappa_{i,t})\, y^{(3)}_{i,t} + \kappa_{i,t}\, y^*_{i,t-1}.
-\]
+\end{equation}
+This discourages abrupt transitions in the pseudo-label sequence, which could introduce high-frequency artifacts at the boundaries of corrupted segments.
 
-\subsection{Policy Training}
+\section{Policy Training}
 
 The policy $f_\theta$ is a multilayer perceptron (MLP) trained with a weighted Huber behavioral cloning loss:
-\[
+\begin{equation}
     \mathcal{L} = \mathbb{E}_{i,t}\!\bigl[w_{i,t}\,\mathrm{Huber}(f_\theta(x_{i,t}) - y^*_{i,t})\bigr].
-\]
-All handling of corrupted demonstrations is encoded in the pseudo-label construction; the training stage itself remains a standard supervised learning procedure.
+\end{equation}
+All handling of corrupted demonstrations is encoded in the pseudo-label construction and trust weighting; the training stage itself remains a standard supervised learning procedure, unchanged from conventional BC.\@
 
-The full pipeline is summarized in Algorithm~\ref{alg:pacer}.
+The full PACER pipeline is summarised in Algorithm~\ref{alg:pacer}.
 
 \begin{algorithm}[t]
-    \caption{
-        PACER
-    }\label{alg:pacer}
+    \caption{PACER:\@ Progress Aligned Curation for Error Resilient Imitation Learning}\label{alg:pacer}
     \KwIn{Demonstrations $D=\{(x_{i,t},a_{i,t})\}$; bins $B$; Tukey cutoff $c$; floor $w_{\min}$;
     hyperparameters $\lambda_{\mathrm{debias}}, \rho_0, \eta_0, \kappa$.}
     Estimate phase $\tau \leftarrow \textsc{PhaseEstimate}(D)$\;
@@ -317,49 +347,62 @@ The intermediate quantities produced by PACER---per-bin medians, MAD scales, tru
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{LIMITATIONS \& FUTURE WORK}
 
-PACER's effectiveness rests on a set of assumptions that bound its applicability.
+\subsection{Limitations}
 
-\textbf{Progress estimation quality:}
-The phase model is trained on pairwise orderings within each demonstration.
-In tasks where state observations are highly redundant or uninformative about task progress (e.g., tasks defined primarily by contact forces or sensor modalities not captured in the state), the learned phase may be unreliable, degrading downstream alignment.
+PACER's effectiveness rests on a set of assumptions that bound its applicability in practice.
+Each of the following limitations represents a regime in which the framework's guarantees may degrade.
 
-\textbf{Corruption locality:}
+\paragraph{Progress Estimation Quality}
+The phase model is trained on pairwise orderings derived from within-demonstration temporal structure.
+In tasks where state observations are highly redundant or only weakly informative about task progress---for example, tasks defined primarily by contact forces, or tasks whose relevant state lies in sensor modalities not captured in the robot state vector---the learned phase may be unreliable.
+Degraded phase estimates propagate into degraded alignment, which in turn undermines the per-bin consensus.
+
+\paragraph{Locality of Corruptions}
 The per-bin consensus is well-calibrated when corruptions are short relative to the total trajectory length.
-Long-horizon or globally biased corruptions---where an entire demonstration deviates from the intended behavior for extended periods---are not addressed by PACER's local curation and may require complementary demonstration-level filtering.
+If an entire demonstration deviates from the intended behavior for extended periods---a globally biased demonstration rather than a locally corrupted one---PACER's local curation mechanisms are insufficient.
+Such demonstrations may require complementary demonstration-level filtering, applied prior to or in conjunction with PACER.\@
 
-\textbf{Hyperparameter sensitivity:}
-PACER introduces several robustness hyperparameters: the number of phase bins $B$, the Tukey cutoff $c$, the debias strength $\lambda_{\mathrm{debias}}$, the sideways attenuation $\rho_0$, the speed blend $\eta_0$, and the EMA coefficient $\kappa$.
-These mediate bias-variance trade-offs and were fixed across our experiments, but tasks with very different corruption profiles or demonstration counts may require tuning.
+\paragraph{Hyperparameter Sensitivity}
+PACER introduces several robustness hyperparameters: the number of phase bins $B$, the Tukey cutoff $c$, the debias strength $\lambda_{\mathrm{debias}}$, the sideways attenuation strength $\rho_0$, the speed blend coefficient $\eta_0$, and the EMA smoothing coefficient $\kappa$.
+Each of these mediates a bias-variance trade-off, and tasks with substantially different corruption profiles or demonstration counts may require tuning these values away from the defaults explored here.
 
-\textbf{Minimum demonstrations per bin:}
-The LOO consensus requires at least two demonstrations per phase bin to compute a meaningful leave-one-out statistic.
+\paragraph{Minimum Demonstrations Per Bin}
+The LOO consensus requires at least two demonstrations per phase bin to compute a meaningful leave-one-out statistic; with only one other demonstration available, the LOO consensus reduces to a single observation, losing its robustness guarantees.
 With very few demonstrations or a large number of bins, some bins may be sparsely populated, limiting the reliability of corruption detection in those regions.
 
+\subsection{Future Work}
+
 Several directions remain open for future investigation.
-Richer sensory modalities such as images or point clouds could be incorporated by learning progress from high-dimensional observations using contrastive or self-supervised objectives.
-The current consensus step uses medians as point estimates; replacing these with uncertainty-aware representations (e.g., Gaussian processes over phase) could provide more calibrated trust scores.
-Integrating PACER with diffusion or sequence policies, which operate over entire trajectory distributions rather than pointwise actions, is a natural extension.
-Combining offline label repair with limited online interaction for iterative refinement could address compounding errors in complex tasks.
-Finally, evaluating PACER on real hardware with diverse operators would validate its practical utility beyond simulated corruption.
+Richer sensory modalities, such as RGB images or point clouds, could be incorporated by learning progress representations from high-dimensional observations using contrastive or self-supervised objectives, along the lines of time-contrastive networks~\cite{sermanet2018tcn}.
+The current consensus step uses medians as point estimates; replacing these with uncertainty-aware representations---for example, Gaussian processes defined over the phase coordinate---could yield more calibrated trust scores and propagate uncertainty more faithfully through the pipeline.
+
+Integrating PACER with diffusion policies or sequence-level policy representations, which operate over entire trajectory distributions rather than pointwise actions, is a natural extension that would require adapting the pseudo-label construction step.
+Combining the offline label repair of PACER with limited online environment interaction for iterative refinement could further address compounding policy errors in tasks with long horizons.
+Finally, validating PACER on real robot hardware with diverse human operators would be the most important step toward establishing its practical utility beyond the settings explored in simulation.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{CONCLUSIONS}
 
-We introduced PACER, a pre-processing framework for imitation learning that jointly addresses pace variability and local action corruptions in small demonstration datasets.
-PACER learns a state-dependent latent task phase to align demonstrations temporally, applies robust statistics in a leave-one-out consensus to detect corrupted segments, and constructs refined pseudo-labels that repair corrupted samples before policy training.
-The result is a simple weighted Huber behavioral cloning objective that inherits the interpretability and stability of standard BC while being substantially more robust to the imperfections that arise in realistic human demonstrations.
+We present PACER, a pre-processing framework for imitation learning that jointly addresses pace variability and local action corruptions in small demonstration datasets.
 
-The intermediate per-phase diagnostics produced by PACER also serve as interpretable dataset inspection tools, making it practical to identify and understand sources of demonstration inconsistency before training begins.
+PACER learns a state-dependent latent task phase to align demonstrations temporally, ensuring that samples drawn from different demonstrations but representing the same stage of task execution are grouped together for comparison.
+It then applies robust statistics within a leave-one-out consensus scheme to detect corrupted action segments, ensuring that no demonstration can bias the consensus used to evaluate its own deviations.
+Finally, it constructs refined pseudo-labels that repair corrupted samples through a sequence of structured corrections, before training the policy with a weighted Huber behavioral cloning loss.
+
+The result inherits the interpretability and stability of standard behavioral cloning while being substantially more robust to the kinds of imperfections that arise inevitably in realistic human demonstration data.
+The intermediate per-phase diagnostics produced by the framework---per-bin medians, MAD scales, and per-sample trust weights---also serve as interpretable dataset inspection tools, making it practical to identify and understand sources of demonstration inconsistency before any policy training begins.
 
 \addtolength{\textheight}{-12cm}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section*{ACKNOWLEDGMENT}
 
-I would like to thank my guide, Dr.~Ravi Prakash, for his guidance, insights and support, and for providing me with the opportunity to work on this project. I also thank my colleague, Mr.~Shreyas Kumar from HiRo Lab for his support in helping me get started with the project.
-I would also like to thank Grok and Claude for helping me to proof-read the writing.
+I would like to thank my guide, Dr.~Ravi Prakash, for his guidance, insights, and sustained support throughout this project, and for providing me with the opportunity to pursue this line of research.
+I also thank my colleague, Mr.~Shreyas Kumar from HiRo Lab, for his support in helping me get started with the project.
+I would additionally like to thank Grok and Claude for helping me to proof-read portions of the writing.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\bibliographystyle{ieeetr}
 \begin{thebibliography}{10}
 
     \bibitem{ijspeert2013dmp}
