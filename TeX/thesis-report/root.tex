@@ -351,7 +351,6 @@ The full PACER pipeline is summarised in Algorithm~\ref{alg:pacer}.
     ${\{I_b\}}_{b=0}^{B-1} \leftarrow \texttt{PhaseBins}(\tau,B)$
 
     $\mathcal{S} \leftarrow \texttt{RobustBinStats}(\mathcal{D},\tau,B)$
-    \Comment*[r]{medians/magnitudes/tangents}
 
     \BlankLine{}
 
@@ -393,6 +392,8 @@ The full PACER pipeline is summarised in Algorithm~\ref{alg:pacer}.
     \BlankLine{}
 
     \Fn{\texttt{RobustBinStats}\:($\mathcal{D},\tau,B$)}{
+        \Comment*[r]{medians/magnitudes/tangents}
+
         For each bin $b$:
         \begin{equation*}
             \begin{aligned}
