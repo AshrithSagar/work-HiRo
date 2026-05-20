@@ -838,14 +838,14 @@ def _make_segments_3d(xs: np.ndarray, ys: np.ndarray, zs: np.ndarray) -> np.ndar
     return np.stack([points[:-1], points[1:]], axis=1)
 
 
-def plot_stacked_trust_trajectories(
+def plot_stacked_trust_colored_trajectories(
     states_collection: StatesCollection[NumDemos, NumPoints, TWO],
     trust_values_collection: Mapping[int, MetricSeries[NumPoints]]
     | Iterable[MetricSeries[NumPoints]],
     *,
     fig: Figure | None = None,
     ax: Axes3D | None = None,
-    title: str = "Stacked Trust Trajectories",
+    title: str = "Stacked Trust-Colored Trajectories",
     style: StackedTrajectoryStyle | None = None,
 ) -> None:
     """
@@ -894,18 +894,18 @@ def plot_stacked_trust_trajectories(
                 np.zeros(len(median_traj)),
                 median_traj[:, 0],
                 median_traj[:, 1],
-                color="black",
+                color="red",
                 linewidth=style.reference_linewidth,
-                alpha=0.35,
+                alpha=0.5,
                 label="Ribbon median",
             )
         else:
             ax.plot(
                 median_traj[:, 0],
                 median_traj[:, 1],
-                color="black",
+                color="red",
                 linewidth=style.reference_linewidth,
-                alpha=0.25,
+                alpha=0.5,
                 zorder=1,
                 path_effects=[
                     pe.Stroke(linewidth=7, foreground="white"),
@@ -1137,7 +1137,14 @@ class PACERVisualiser(RuntimeGeneric[NumBins, NumDemos, NumPoints]):
                     self.pacer_result.action_trust_values[i],
                     title=f"Demo {i}: Trust-Colored Trajectory",
                 )
-            plot_stacked_trust_trajectories(
+            plot_stacked_trust_colored_trajectories(
+                self.demonstrations.states,
+                self.pacer_result.action_trust_values,
+                style=StackedTrajectoryStyle(
+                    mode="isometric", spacing=10.0, offset_x=0, offset_y=0
+                ),
+            )
+            plot_stacked_trust_colored_trajectories(
                 self.demonstrations.states,
                 self.pacer_result.action_trust_values,
                 style=StackedTrajectoryStyle(
