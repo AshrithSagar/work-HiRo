@@ -21,6 +21,9 @@
     {\tt\small Email: ashrithy@iisc.ac.in}}
 }
 
+\intervalconfig{soft open fences}
+\vbadness=3000
+
 \begin{document}
 
 \maketitle
@@ -221,7 +224,7 @@ After training, raw scores are normalised per demonstration to yield $\tau_{i,t}
 \subsection{Robust Consensus Statistics}
 
 The phase interval $[0,1]$ is discretised into $B$ equal bins.
-A sample $(x_{i,t}, a_{i,t})$ is assigned to bin $b$ if $\tau_{i,t} \in [b/B,\, (b{+}1)/B)$.
+A sample $(x_{i,t}, a_{i,t})$ is assigned to bin $b$ if $\tau_{i,t} \in \interval[open right]{\frac{b}{B}}{\frac{b+1}{B}}$.
 We denote by $\mathcal{I}_b$ the index set of all samples in bin $b$ across all demonstrations.
 Because all samples in a given bin share approximately the same task-progress value, their actions are directly comparable regardless of which demonstration contributed them, and regardless of absolute time.
 
@@ -262,8 +265,10 @@ For each sample $(x_{i,t}, a_{i,t})$ in bin $b$, a refined pseudo-label $y^*_{i,
 \paragraph{Debiasing toward the Anchor}
 Low-trust actions are softly corrected toward the LOO median for their bin:
 \begin{equation}
-    y^{(1)}_{i,t} = \gamma_{i,t}\, a_{i,t} + (1-\gamma_{i,t})\, \alpha_a^{(-i)}[b],
-    \quad \gamma_{i,t} = 1 - \lambda_{\mathrm{debias}}(1-w_{i,t}).
+    \begin{aligned}
+        y^{(1)}_{i,t} &= \gamma_{i,t}\, a_{i,t} + (1-\gamma_{i,t})\, \alpha_a^{(-i)}[b],\\
+        \gamma_{i,t} &= 1 - \lambda_{\mathrm{debias}}(1-w_{i,t}).
+    \end{aligned}
 \end{equation}
 Actions with high trust ($w_{i,t} \approx 1$) are largely unchanged; actions with low trust are pulled substantially toward the consensus anchor.
 
@@ -308,7 +313,7 @@ All handling of corrupted demonstrations is encoded in the pseudo-label construc
 
 The full PACER pipeline is summarised in Algorithm~\ref{alg:pacer}.
 
-\begin{algorithm}[t]
+\begin{algorithm}[tbp]
     \caption{PACER:\@ Progress Aligned Curation for Error Resilient Imitation Learning}\label{alg:pacer}
     \KwIn{Demonstrations $D=\{(x_{i,t},a_{i,t})\}$; bins $B$; Tukey cutoff $c$; floor $w_{\min}$;
     hyperparameters $\lambda_{\mathrm{debias}}, \rho_0, \eta_0, \kappa$.}
