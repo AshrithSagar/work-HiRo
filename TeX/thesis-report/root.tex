@@ -190,7 +190,7 @@ The Huber loss~\cite{huber1964robust} combines the squared loss for small residu
 \end{equation}
 where $u = f_\theta(x_{i,t}) - y^*_{i,t}$ is the residual.
 
-\section{Pairwise Ranking for Monotone Functions}
+\subsection{Pairwise Ranking for Monotone Functions}
 
 Learning a monotone function $g : \mathcal{X} \to \mathbb{R}$ from ordinal constraints can be accomplished via a pairwise ranking loss.
 Given pairs $(x_t, x_{t'})$ with $t > t'$, so that $g(x_t)$ should exceed $g(x_{t'})$, the loss penalizes violations:
@@ -703,7 +703,7 @@ I would additionally like to thank Claude for helping me to proof-read portions 
 
         \multicolumn{3}{l}{\textit{BC / PACER (shared)}} \\
         & MLP hidden size & 128 \\
-        & Optimizer / LR & Adam, $1e^{-3}$ \\
+        & Optimizer / LR & Adam, $1\times10^{-3}$ \\
         & Epochs & 240 \\
         & Grad clip & 1.0 \\
 
