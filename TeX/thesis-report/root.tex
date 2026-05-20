@@ -510,8 +510,33 @@ The full PACER pipeline is summarised in Algorithm~\ref{alg:pacer}.
 
 \textbf{Baselines.} We compare against:
 (i) \textbf{BC}, standard behavioral cloning with unit weights on executed actions;
-(ii) \textbf{Weighted-BC}, per-demonstration scalar weights proportional to empirical corruption mass;
+(ii) \textbf{PACER+BC}, per-demonstration scalar weights proportional to the trust values computed through PACER;
 All methods use the same MLP architecture and Adam optimizer; the principal difference is the construction of supervision targets.
+
+We evaluate PACER on the LASA Handwriting Dataset~\cite{khansari2011lasa}, a standard benchmark for trajectory learning from demonstrations.
+The dataset contains multiple two-dimensional handwriting trajectories with natural variation in execution speed and geometry across demonstrations.
+Each trajectory provides planar positions and corresponding velocities, making the dataset suitable for evaluating temporal alignment and robustness to local deviations.
+We use the ``G Shape'' pattern, consisting of seven demonstrations, and additionally inject localized perturbations into selected trajectory segments to simulate corrupted demonstrations while preserving the overall task intent.
+
+See Table~\ref{tab:bc_vs_pacer} for the comparison of BC vs PACER + BC policies, compared over both original LASA ``G Shape'' and with corruptions added, as well as with and without using state labels in addition to the action pseudo-labels computed.
+
+\begin{table}[h]
+    \caption{BC Policy vs.\ PACER + BC Policy}\label{tab:bc_vs_pacer}
+    \centering
+    \footnotesize
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabular}{llccc}
+        \hline
+        \textbf{State} & \textbf{Data} & \textbf{BC} & \textbf{Phase} & \textbf{PACER+BC} \\
+        \textbf{Labels} & \textbf{Condition} & \textbf{Loss} & \textbf{Loss} & \textbf{Loss} \\
+        \hline
+        No  & Original  & 4.2973 & 0.0219 & 1.8111 \\
+        No  & Corrupted & 4.2530 & 0.0517 & 1.7996 \\
+        Yes & Original  & 4.2973 & 0.0219 & 1.7451 \\
+        Yes & Corrupted & 4.2530 & 0.0517 & 1.7202 \\
+        \hline
+    \end{tabular}
+\end{table}
 
 \subsection{Discussion}
 
@@ -707,6 +732,12 @@ I would additionally like to thank Grok and Claude for helping me to proof-read 
     ``A reduction of imitation learning and structured prediction to no-regret online learning'',
     in \emph{Proc. International Conference on Artificial Intelligence and Statistics (AISTATS)},
     pp.~627--635, 2011.
+
+    \bibitem{khansari2011lasa}
+    S.~M. Khansari-Zadeh and A.~Billard,
+    ``Learning stable nonlinear dynamical systems with Gaussian mixture models'',
+    \emph{IEEE Transactions on Robotics},
+    vol.~27, no.~5, pp.~943--957, 2011.
 
 \end{thebibliography}
 
