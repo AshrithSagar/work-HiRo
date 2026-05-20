@@ -8,14 +8,23 @@ Plotting utils
 
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import KW_ONLY, dataclass, field
 from pathlib import Path
+from typing import Literal
 
+import matplotlib.patheffects as pe
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
+from matplotlib.collections import LineCollection
 from matplotlib.figure import Figure
+from mpl_toolkits.mplot3d import (
+    Axes3D,  # type: ignore[import-untyped]  # pyright: ignore[reportMissingTypeStubs]
+)
+from mpl_toolkits.mplot3d.art3d import (  # type: ignore[import-untyped]  # pyright: ignore[reportMissingTypeStubs]
+    Line3DCollection,
+)
 from typingkit.core import RuntimeGeneric
 from typingkit.numpy._typed.helpers import TWO
 
@@ -333,32 +342,50 @@ def plot_ribbon_action_field(
     ax: Axes | None = None,
     title: str = "Ribbon Median Action Field",
     scale: float = 1.0,
+    pad: float = 0.05,
 ) -> None:
     """
     Visualize median action vectors at each bin.
     Assumes state_dim == 2 and action_dim == 2.
     """
-    xs = []
-    ys = []
-    us = []
-    vs = []
+    _xs: list[npDType] = []
+    _ys: list[npDType] = []
+    _us: list[npDType] = []
+    _vs: list[npDType] = []
 
     for bin in bins:
         token = bin.ribbon_token
         state = token.median_state
         action = token.median_action
 
-        xs.append(state[0])
-        ys.append(state[1])
-        us.append(action[0])
-        vs.append(action[1])
+        _xs.append(state[0])
+        _ys.append(state[1])
+        _us.append(action[0])
+        _vs.append(action[1])
+
+    xs = np.asarray(_xs)
+    ys = np.asarray(_ys)
+    us = np.asarray(_us)
+    vs = np.asarray(_vs)
 
     fig, ax = ensure_fig_ax(fig=fig, ax=ax, figsize=(6, 6))
     ax.quiver(xs, ys, us, vs, angles="xy", scale_units="xy", scale=scale)
+
+    # Include both arrow starts and ends
+    x_all = np.concatenate([xs, xs + us / scale])
+    y_all = np.concatenate([ys, ys + vs / scale])
+
+    # Padding
+    x_range = x_all.max() - x_all.min()
+    y_range = y_all.max() - y_all.min()
+
+    ax.set_xlim(x_all.min() - pad * x_range, x_all.max() + pad * x_range)
+    ax.set_ylim(y_all.min() - pad * y_range, y_all.max() + pad * y_range)
+
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     ax.set_title(title)
-    ax.axis("equal")
+    ax.set_aspect("equal", adjustable="box")
     fig.tight_layout()
 
 
@@ -769,40 +796,248 @@ def plot_action_angle_deviation(
     fig.tight_layout()
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+@dataclass
+class StackedTrajectoryStyle:
+    mode: Literal["isometric", "3d"] = "isometric"
+
+    # spacing between demonstrations
+    spacing: float = 1.0
+
+    # isometric offsets
+    offset_x: float = 0.4
+    offset_y: float = 0.4
+
+    # rendering
+    cmap: str = "viridis"
+    linewidth: float = 3.0
+    alpha: float = 0.95
+
+    # trust emphasis
+    trust_width_scale: float = 2.0
+    trust_alpha_floor: float = 0.15
+
+    # misc
+    show_phase_markers: bool = True
+    phase_marker_count: int = 5
+
+    # ribbon overlay
+    show_reference: bool = True
+    reference_linewidth: float = 5.0
+
+
+def _make_segments_2d(xs: np.ndarray, ys: np.ndarray) -> np.ndarray:
+    points = np.column_stack([xs, ys])
+    return np.stack([points[:-1], points[1:]], axis=1)
+
+
+def _make_segments_3d(xs: np.ndarray, ys: np.ndarray, zs: np.ndarray) -> np.ndarray:
+    points = np.column_stack([xs, ys, zs])
+    return np.stack([points[:-1], points[1:]], axis=1)
+
+
+def plot_stacked_trust_trajectories(
+    states_collection: StatesCollection[NumDemos, NumPoints, TWO],
+    trust_values_collection: Mapping[int, MetricSeries[NumPoints]]
+    | Iterable[MetricSeries[NumPoints]],
+    *,
+    fig: Figure | None = None,
+    ax: Axes3D | None = None,
+    title: str = "Stacked Trust Trajectories",
+    style: StackedTrajectoryStyle | None = None,
+) -> None:
+    """
+    PACER-style comparative trust visualization.
+
+    Each demonstration is rendered as:
+        - an offset trajectory layer
+        - trust-colored segments
+        - optional phase markers
+
+    Modes:
+        - "isometric" : fake depth using planar offsets
+        - "3d"        : actual 3D stacked planes
+    """
+
+    # Setup
+    if style is None:
+        style = StackedTrajectoryStyle()
+    if style.mode == "3d":
+        if fig is None or ax is None:
+            fig = plt.figure(figsize=(9, 8))
+            ax = fig.add_subplot(111, projection="3d")
+    else:
+        fig, ax = ensure_fig_ax(fig=fig, ax=ax, figsize=(9, 8))
+    assert ax is not None
+
+    trust_list: list[MetricSeries[NumPoints]] = (
+        list(trust_values_collection.values())
+        if isinstance(trust_values_collection, Mapping)
+        else list(trust_values_collection)
+    )
+
+    # Global ribbon reference
+    if style.show_reference:
+        stacked = np.stack(
+            [
+                np.column_stack([states.coord(0), states.coord(1)])
+                for states in states_collection
+            ],
+            axis=0,
+        )
+        median_traj = np.median(stacked, axis=0)
+
+        if style.mode == "3d":
+            ax.plot(
+                np.zeros(len(median_traj)),
+                median_traj[:, 0],
+                median_traj[:, 1],
+                color="black",
+                linewidth=style.reference_linewidth,
+                alpha=0.35,
+                label="Ribbon median",
+            )
+        else:
+            ax.plot(
+                median_traj[:, 0],
+                median_traj[:, 1],
+                color="black",
+                linewidth=style.reference_linewidth,
+                alpha=0.25,
+                zorder=1,
+                path_effects=[
+                    pe.Stroke(linewidth=7, foreground="white"),
+                    pe.Normal(),
+                ],
+            )
+
+    # Per-demo rendering
+    for i, (states, trust_values) in enumerate(zip(states_collection, trust_list)):
+        xs = np.asarray(states.coord(0), dtype=npDType)
+        ys = np.asarray(states.coord(1), dtype=npDType)
+        trust = np.asarray(trust_values, dtype=npDType)
+        seg_trust = 0.5 * (trust[:-1] + trust[1:])
+
+        # Isometric
+        if style.mode == "isometric":
+            dx = i * style.offset_x * style.spacing
+            dy = i * style.offset_y * style.spacing
+            xs_ = xs + dx
+            ys_ = ys + dy
+            segments = _make_segments_2d(xs_, ys_)
+            linewidths = style.linewidth + style.trust_width_scale * (1.0 - seg_trust)
+            collection = LineCollection(
+                segments, cmap=style.cmap, linewidths=linewidths, alpha=style.alpha
+            )
+            collection.set_array(seg_trust)
+            ax.add_collection(collection)
+
+            # Faint backbone
+            ax.plot(xs_, ys_, color="grey", alpha=0.15, linewidth=1.0, zorder=0)
+
+            # Phase markers
+            if style.show_phase_markers:
+                idxs = np.linspace(0, len(xs_) - 1, style.phase_marker_count, dtype=int)
+                ax.scatter(
+                    xs_[idxs],
+                    ys_[idxs],
+                    s=24,
+                    edgecolors="black",
+                    linewidths=0.5,
+                    zorder=5,
+                )
+            ax.text(xs_[0], ys_[0], f"D{i}", fontsize=9, alpha=0.8)  # Demo label
+
+        # 3D
+        else:
+            demo_axis = np.full_like(xs, i * style.spacing)
+            segments = _make_segments_3d(demo_axis, xs, ys)
+            linewidths = style.linewidth + style.trust_width_scale * (1.0 - seg_trust)
+            collection = Line3DCollection(
+                segments, cmap=style.cmap, linewidths=linewidths, alpha=style.alpha
+            )
+            collection.set_array(seg_trust)
+            ax.add_collection(collection)
+
+            # Phase markers
+            if style.show_phase_markers:
+                idxs = np.linspace(
+                    0,
+                    len(xs) - 1,
+                    style.phase_marker_count,
+                    dtype=int,
+                )
+                ax.scatter(
+                    demo_axis[idxs],
+                    xs[idxs],
+                    ys[idxs],
+                    s=24,
+                    edgecolors="black",
+                    linewidths=0.5,
+                )
+
+    # Final styling
+    ax.set_title(title)
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    if style.mode == "3d":
+        ax.set_xlabel("Demonstration")
+        ax.set_ylabel("x")
+        ax.set_zlabel("y")
+        ax.view_init(elev=20, azim=-35)
+        ax.set_box_aspect((1, 2, 2))
+
+        num_demos = len(trust_list)
+        demo_positions = np.arange(num_demos) * style.spacing
+        ax.set_xticks(demo_positions)
+        ax.set_xticklabels([str(i) for i in range(num_demos)])
+        ax.xaxis._axinfo["grid"]["linewidth"] = 0.0
+    ax.margins(0.08)
+
+    # Shared colorbar
+    sm = plt.cm.ScalarMappable(cmap=style.cmap)
+    sm.set_array([0.0, 1.0])
+    fig.colorbar(sm, ax=ax, label="Trust")
+
+    fig.tight_layout()
+
+
 ## ── PACER Visualisation ──────────────────────────────────────────────────────
 
 
 @dataclass
 class PACERVisualisationConfig:
-    show: bool = True
+    show: bool = False
     save_dir: Path | str | None = None
 
-    trajectories: bool = True
-    phases: bool = True
-    trust_values: bool = True
+    trajectories: bool = False
+    phases: bool = False
+    trust_values: bool = False
 
-    states_before_after: bool = True
-    action_comparison: bool = True
-    state_comparison: bool = True
+    states_before_after: bool = False
+    action_comparison: bool = False
+    state_comparison: bool = False
 
-    ribbon_action_field: bool = True
-    action_correction_magnitude: bool = True
+    ribbon_action_field: bool = False
+    action_correction_magnitude: bool = False
 
-    residual_distribution: bool = True
-    trust_heatmap: bool = True
-    bin_occupancy: bool = True
-    trust_vs_correction: bool = True
-    ribbon_statistics: bool = True
-    phase_velocity: bool = True
-    smoothness_comparison: bool = True
+    residual_distribution: bool = False
+    trust_heatmap: bool = False
+    bin_occupancy: bool = False
+    trust_vs_correction: bool = False
+    ribbon_statistics: bool = False
+    phase_velocity: bool = False
+    smoothness_comparison: bool = False
 
-    trust_colored_trajectory: bool = True
-    trust_colored_action_field: bool = True
-    action_correction_vectors: bool = True
-    phase_aligned_trajectories: bool = True
-    ribbon_corridor: bool = True
-    residual_vs_phase: bool = True
-    action_angle_deviation: bool = True
+    trust_colored_trajectory: bool = False
+    trust_colored_action_field: bool = False
+    action_correction_vectors: bool = False
+    phase_aligned_trajectories: bool = False
+    ribbon_corridor: bool = False
+    residual_vs_phase: bool = False
+    action_angle_deviation: bool = False
 
 
 @dataclass
@@ -902,6 +1137,13 @@ class PACERVisualiser(RuntimeGeneric[NumBins, NumDemos, NumPoints]):
                     self.pacer_result.action_trust_values[i],
                     title=f"Demo {i}: Trust-Colored Trajectory",
                 )
+            plot_stacked_trust_trajectories(
+                self.demonstrations.states,
+                self.pacer_result.action_trust_values,
+                style=StackedTrajectoryStyle(
+                    mode="3d", spacing=10.0, offset_x=0, offset_y=0
+                ),
+            )
 
         if self.config.trust_colored_action_field:
             for i, demo in enumerate(self.demonstrations):
