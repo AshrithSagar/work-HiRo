@@ -8,11 +8,14 @@ Plotting utils
 
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
+from collections.abc import Iterable
 from dataclasses import KW_ONLY, dataclass, field
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 from typingkit.core import RuntimeGeneric
 from typingkit.numpy._typed.helpers import TWO
 
@@ -56,34 +59,70 @@ from pacer.typings import (
 ## ── Plotting ─────────────────────────────────────────────────────────────────
 
 
+def ensure_fig_ax(
+    *,
+    fig: Figure | None = None,
+    ax: Axes | None = None,
+    figsize: tuple[float, float] = (6, 6),
+) -> tuple[Figure, Axes]:
+    """Ensure figure + axis exist."""
+    if fig is not None and ax is not None:
+        return fig, ax
+    created_fig, created_ax = plt.subplots(figsize=figsize)
+    return created_fig, created_ax
+
+
+def ensure_fig_axes(
+    *,
+    fig: Figure | None = None,
+    axes: Iterable[Axes] | np.ndarray | None = None,
+    nrows: int = 1,
+    figsize: tuple[float, float] = (8, 4),
+) -> tuple[Figure, list[Axes]]:
+    """Ensure figure + axes exist."""
+    if fig is not None and axes is not None:
+        return fig, list(axes)
+    created_fig, created_axes = plt.subplots(nrows, 1, figsize=figsize)
+    if nrows == 1:
+        return created_fig, [created_axes]
+    return created_fig, list(created_axes)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+
 def plot_trajectories(
     demonstrations: Demonstrations[NumDemos, NumPoints, TWO, TWO],
     *,
+    fig: Figure | None = None,
+    ax: Axes | None = None,
     title: str = "Demonstration trajectories",
 ) -> None:
     """Plot 2D state trajectories."""
-    plt.figure()
+    fig, ax = ensure_fig_ax(fig=fig, ax=ax, figsize=(6, 6))
     for i, demo in enumerate(demonstrations):
-        plt.plot(demo.states.coord(0), demo.states.coord(1), label=f"Demo {i}")
-    plt.xlabel("x")
-    plt.ylabel("y")
-    plt.title(title)
-    plt.legend()
-    plt.axis("equal")
-    plt.margins(0.05)
-    plt.tight_layout()
+        ax.plot(demo.states.coord(0), demo.states.coord(1), label=f"Demo {i}")
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_title(title)
+    ax.legend()
+    ax.axis("equal")
+    ax.margins(0.05)
+    fig.tight_layout()
 
 
 def plot_states_and_actions(
     demonstrations: Demonstrations[NumDemos, NumPoints, TWO, TWO],
     *,
+    fig: Figure | None = None,
+    ax: Axes | None = None,
     title: str = "Demonstrations",
     demo_indices: DemoIndex | list[DemoIndex] | None = None,
     action_scale: float = 1.0,
     action_step: int = 1,
 ) -> None:
     """Plot states and actions for the 2D case."""
-    plt.figure()
+    fig, ax = ensure_fig_ax(fig=fig, ax=ax, figsize=(6, 6))
 
     for i, demo in enumerate(demonstrations):
         match demo_indices:
@@ -99,19 +138,19 @@ def plot_states_and_actions(
         xs = demo.states.coord(0)
         ys = demo.states.coord(1)
 
-        (line,) = plt.plot(xs, ys, label=f"Demo {i}", linewidth=2)
+        (line,) = ax.plot(xs, ys, label=f"Demo {i}", linewidth=2)
         color = line.get_color()
-        plt.scatter(xs[0], ys[0], color=color, marker="o", s=15)
+        ax.scatter(xs[0], ys[0], color=color, marker="o", s=15)
 
-        ax = demo.actions.coord(0)
-        ay = demo.actions.coord(1)
+        ax_ = demo.actions.coord(0)
+        ay_ = demo.actions.coord(1)
 
         xs_q = xs[::action_step]
         ys_q = ys[::action_step]
-        ax_q = ax[::action_step]
-        ay_q = ay[::action_step]
+        ax_q = ax_[::action_step]
+        ay_q = ay_[::action_step]
 
-        plt.quiver(
+        ax.quiver(
             xs_q,
             ys_q,
             ax_q,
@@ -128,91 +167,101 @@ def plot_states_and_actions(
         )
 
         # Expand limits to include arrow tips
-        plt.scatter(xs_q + ax_q * action_scale, ys_q + ay_q * action_scale, alpha=0)
+        ax.scatter(xs_q + ax_q * action_scale, ys_q + ay_q * action_scale, alpha=0)
 
-    plt.xlabel("x")
-    plt.ylabel("y")
-    plt.title(title)
-    plt.legend()
-    plt.axis("equal")
-    plt.margins(0.05)
-    plt.tight_layout()
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_title(title)
+    ax.legend()
+    ax.axis("equal")
+    ax.margins(0.05)
+    fig.tight_layout()
 
 
 def plot_states(
     states_collection: StatesCollection[NumDemos, NumPoints, TWO],
     *,
+    fig: Figure | None = None,
+    ax: Axes | None = None,
     title: str = "Demonstration trajectories",
 ) -> None:
     """Plot 2D state trajectories."""
-    plt.figure()
+    fig, ax = ensure_fig_ax(fig=fig, ax=ax, figsize=(6, 6))
     for i, states in enumerate(states_collection):
-        plt.plot(states.coord(0), states.coord(1), label=f"Demo {i}")
-    plt.xlabel("x")
-    plt.ylabel("y")
-    plt.title(title)
-    plt.legend()
-    plt.axis("equal")
-    plt.margins(0.05)
-    plt.tight_layout()
+        ax.plot(states.coord(0), states.coord(1), label=f"Demo {i}")
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_title(title)
+    ax.legend()
+    ax.axis("equal")
+    ax.margins(0.05)
+    fig.tight_layout()
 
 
 def plot_states_before_after(
     original: StatesCollection[NumDemos, NumPoints, TWO],
     pseudo: StatesCollection[NumDemos, NumPoints, TWO],
     *,
+    fig: Figure | None = None,
+    ax: Axes | None = None,
     title: str = "States comparision",
 ) -> None:
     """Overlay original and refined trajectories."""
-    plt.figure(figsize=(7, 7))
+    fig, ax = ensure_fig_ax(fig=fig, ax=ax, figsize=(7, 7))
     for i, (orig, new) in enumerate(zip(original, pseudo)):
-        plt.plot(orig.coord(0), orig.coord(1), "--", alpha=0.5, label=f"Original {i}")
-        plt.plot(new.coord(0), new.coord(1), label=f"Refined {i}")
-    plt.xlabel("x")
-    plt.ylabel("y")
-    plt.title(title)
-    plt.legend()
-    plt.axis("equal")
-    plt.margins(0.05)
-    plt.tight_layout()
+        ax.plot(orig.coord(0), orig.coord(1), "--", alpha=0.5, label=f"Original {i}")
+        ax.plot(new.coord(0), new.coord(1), label=f"Refined {i}")
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_title(title)
+    ax.legend()
+    ax.axis("equal")
+    ax.margins(0.05)
+    fig.tight_layout()
 
 
 def plot_phases(
     phases: PhasesCollection[NumDemos, NumPoints],
     *,
+    fig: Figure | None = None,
+    ax: Axes | None = None,
     title: str = "Estimated phases",
 ) -> None:
     """Plot tau_{i,t} for each demonstration."""
-    plt.figure(figsize=(8, 4))
+    fig, ax = ensure_fig_ax(fig=fig, ax=ax, figsize=(8, 4))
     for i, tau in phases.items():
-        plt.plot(tau, label=f"Demo {i}", alpha=0.8)
-    plt.xlabel("Time index t")
-    plt.ylabel(r"Phase $\tau$")
-    plt.title(title)
-    plt.legend()
-    plt.tight_layout()
+        ax.plot(tau, label=f"Demo {i}", alpha=0.8)
+    ax.set_xlabel("Time index t")
+    ax.set_ylabel(r"Phase $\tau$")
+    ax.set_title(title)
+    ax.legend()
+    fig.tight_layout()
 
 
 def plot_trust_values(
     trust_values: TrustValuesCollection[NumDemos, NumPoints],
     *,
+    fig: Figure | None = None,
+    ax: Axes | None = None,
     title: str = "Trust values",
 ) -> None:
     """Plot w_{i,t}."""
-    plt.figure(figsize=(8, 4))
+    fig, ax = ensure_fig_ax(fig=fig, ax=ax, figsize=(8, 4))
     for i, w in trust_values.items():
-        plt.plot(w, label=f"Demo {i}", alpha=0.8)
-    plt.xlabel("Time index t")
-    plt.ylabel("Trust w")
-    plt.title(title)
-    plt.legend()
-    plt.tight_layout()
+        ax.plot(w, label=f"Demo {i}", alpha=0.8)
+    ax.set_xlabel("Time index t")
+    ax.set_ylabel("Trust w")
+    ax.set_title(title)
+    ax.legend()
+    fig.tight_layout()
 
 
 def plot_action_comparison(
     original: Actions[NumPoints, DimAction],
     pseudo: Actions[NumPoints, DimAction],
     *,
+    fig: Figure | None = None,
+    axes: Iterable[Axes] | np.ndarray | None = None,
     title: str = "Original vs Pseudo actions",
 ) -> None:
     """Compare action vectors over time (per dimension)."""
@@ -220,9 +269,7 @@ def plot_action_comparison(
     _pseudo = pseudo.numpy()
     dim = _original.shape[1]
 
-    fig, _axes = plt.subplots(dim, 1, figsize=(8, 3 * dim))
-    axes = [_axes] if dim == 1 else _axes
-
+    fig, axes = ensure_fig_axes(fig=fig, axes=axes, nrows=dim, figsize=(8, 3 * dim))
     for d in range(dim):
         axes[d].plot(_original[:, d], label="Original", alpha=0.8)
         axes[d].plot(_pseudo[:, d], label="Pseudo", alpha=0.8)
@@ -231,13 +278,15 @@ def plot_action_comparison(
 
     axes[-1].set_xlabel("Time index t")
     fig.suptitle(title)
-    plt.tight_layout()
+    fig.tight_layout()
 
 
 def plot_state_comparison(
     original: States[NumPoints, DimState],
     pseudo: States[NumPoints, DimState],
     *,
+    fig: Figure | None = None,
+    axes: Iterable[Axes] | np.ndarray | None = None,
     title: str = "Original vs Pseudo states",
 ) -> None:
     """Compare state vectors over time (per dimension)."""
@@ -245,9 +294,7 @@ def plot_state_comparison(
     _pseudo = pseudo.numpy()
     dim = _original.shape[1]
 
-    fig, _axes = plt.subplots(dim, 1, figsize=(8, 3 * dim))
-    axes = [_axes] if dim == 1 else _axes
-
+    fig, axes = ensure_fig_axes(fig=fig, axes=axes, nrows=dim, figsize=(8, 3 * dim))
     for d in range(dim):
         axes[d].plot(_original[:, d], label="Original", alpha=0.8)
         axes[d].plot(_pseudo[:, d], label="Pseudo", alpha=0.8)
@@ -256,30 +303,34 @@ def plot_state_comparison(
 
     axes[-1].set_xlabel("Time index t")
     fig.suptitle(title)
-    plt.tight_layout()
+    fig.tight_layout()
 
 
 def plot_action_correction_magnitude(
     original: ActionsCollection[NumDemos, NumPoints, TWO],
     pseudo: ActionsCollection[NumDemos, NumPoints, TWO],
     *,
+    fig: Figure | None = None,
+    ax: Axes | None = None,
     title: str = "Action Correction Magnitude",
 ) -> None:
     """Plot ||a_pseudo - a_original|| over time."""
-    plt.figure(figsize=(8, 4))
+    fig, ax = ensure_fig_ax(fig=fig, ax=ax, figsize=(8, 4))
     for i, (orig, new) in enumerate(zip(original, pseudo)):
         delta = np.linalg.norm(new.numpy() - orig.numpy(), axis=1)
-        plt.plot(delta, label=f"Demo {i}")
-    plt.xlabel("Time index")
-    plt.ylabel("Correction magnitude")
-    plt.title(title)
-    plt.legend()
-    plt.tight_layout()
+        ax.plot(delta, label=f"Demo {i}")
+    ax.set_xlabel("Time index")
+    ax.set_ylabel("Correction magnitude")
+    ax.set_title(title)
+    ax.legend()
+    fig.tight_layout()
 
 
 def plot_ribbon_action_field(
     bins: Bins[NumBins, NumDemos, NumPoints, TWO, TWO],
     *,
+    fig: Figure | None = None,
+    ax: Axes | None = None,
     title: str = "Ribbon Median Action Field",
     scale: float = 1.0,
 ) -> None:
@@ -302,75 +353,83 @@ def plot_ribbon_action_field(
         us.append(action[0])
         vs.append(action[1])
 
-    plt.figure(figsize=(6, 6))
-    plt.quiver(xs, ys, us, vs, angles="xy", scale_units="xy", scale=scale)
-    plt.xlabel("x")
-    plt.ylabel("y")
-    plt.title(title)
-    plt.axis("equal")
-    plt.tight_layout()
+    fig, ax = ensure_fig_ax(fig=fig, ax=ax, figsize=(6, 6))
+    ax.quiver(xs, ys, us, vs, angles="xy", scale_units="xy", scale=scale)
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_title(title)
+    ax.axis("equal")
+    fig.tight_layout()
 
 
 def plot_residual_distribution(
     residuals_collection: ResidualsCollection[NumDemos, NumPoints],
     *,
+    fig: Figure | None = None,
+    ax: Axes | None = None,
     title: str = "Residual distribution",
     bins: int = 32,
 ) -> None:
     """Plot histogram of correction residuals."""
-    plt.figure(figsize=(7, 4))
+    fig, ax = ensure_fig_ax(fig=fig, ax=ax, figsize=(7, 4))
     flat = [residual for residuals in residuals_collection for residual in residuals]
-    plt.hist(flat, bins=bins)
-    plt.xlabel("Residual magnitude")
-    plt.ylabel("Frequency")
-    plt.title(title)
-    plt.tight_layout()
+    ax.hist(flat, bins=bins)
+    ax.set_xlabel("Residual magnitude")
+    ax.set_ylabel("Frequency")
+    ax.set_title(title)
+    fig.tight_layout()
 
 
 def plot_trust_heatmap(
     trust_values: TrustValuesCollection[NumDemos, NumPoints],
     *,
+    fig: Figure | None = None,
+    ax: Axes | None = None,
     title: str = "Trust value heatmap",
 ) -> None:
     """Visualize trust values across demonstrations and time."""
-    plt.figure(figsize=(10, 4))
+    fig, ax = ensure_fig_ax(fig=fig, ax=ax, figsize=(10, 4))
     matrix = np.asarray(
         [np.asarray(values, dtype=npDType) for values in trust_values.values()]
     )
-    plt.imshow(matrix, aspect="auto")
-    plt.colorbar(label="Trust")
-    plt.xlabel("Time index")
-    plt.ylabel("Demo index")
-    plt.title(title)
-    plt.tight_layout()
+    im = ax.imshow(matrix, aspect="auto")
+    fig.colorbar(im, ax=ax, label="Trust")
+    ax.set_xlabel("Time index")
+    ax.set_ylabel("Demo index")
+    ax.set_title(title)
+    fig.tight_layout()
 
 
 def plot_bin_occupancy(
     bins: Bins[NumBins, NumDemos, NumPoints, TWO, TWO],
     *,
+    fig: Figure | None = None,
+    ax: Axes | None = None,
     title: str = "Phase bin occupancy",
 ) -> None:
     """Plot number of samples assigned to each phase bin."""
-    plt.figure(figsize=(8, 4))
+    fig, ax = ensure_fig_ax(fig=fig, ax=ax, figsize=(8, 4))
     occupancies: list[int] = []
     for bin in bins:
         count = sum(len(samples) for samples in bin.samples_collection.values())
         occupancies.append(count)
-    plt.plot(occupancies)
-    plt.xlabel("Bin index")
-    plt.ylabel("Sample count")
-    plt.title(title)
-    plt.tight_layout()
+    ax.plot(occupancies)
+    ax.set_xlabel("Bin index")
+    ax.set_ylabel("Sample count")
+    ax.set_title(title)
+    fig.tight_layout()
 
 
 def plot_trust_vs_correction(
     trust_values: TrustValuesCollection[NumDemos, NumPoints],
     correction_analysis: CorrectionMagnitudeAnalysis[NumDemos, NumPoints, TWO, TWO],
     *,
+    fig: Figure | None = None,
+    ax: Axes | None = None,
     title: str = "Trust vs correction magnitude",
 ) -> None:
     """Scatter plot comparing trust and correction size."""
-    plt.figure(figsize=(6, 6))
+    fig, ax = ensure_fig_ax(fig=fig, ax=ax, figsize=(6, 6))
     xs: list[TrustValue] = []
     ys: list[MetricValue] = []
     for demo_idx, trust_series in trust_values.items():
@@ -378,74 +437,82 @@ def plot_trust_vs_correction(
         for trust, magnitude in zip(trust_series, magnitudes):
             xs.append(trust)
             ys.append(magnitude)
-    plt.scatter(xs, ys, alpha=0.5)
-    plt.xlabel("Trust value")
-    plt.ylabel("Correction magnitude")
-    plt.title(title)
-    plt.tight_layout()
+    ax.scatter(xs, ys, alpha=0.5)
+    ax.set_xlabel("Trust value")
+    ax.set_ylabel("Correction magnitude")
+    ax.set_title(title)
+    fig.tight_layout()
 
 
 def plot_ribbon_statistics(
     bins: Bins[NumBins, NumDemos, NumPoints, TWO, TWO],
     *,
+    fig: Figure | None = None,
+    ax: Axes | None = None,
     title: str = "Ribbon statistics",
 ) -> None:
     """Plot robust ribbon statistics over phase bins."""
-    plt.figure(figsize=(10, 5))
+    fig, ax = ensure_fig_ax(fig=fig, ax=ax, figsize=(10, 5))
     strengths: list[npDType] = []
     variability: list[Residual] = []
     for bin in bins:
         token = bin.ribbon_token
         strengths.append(token.median_action_strength)
         variability.append(token.MAD_action_residual)
-    plt.plot(strengths, label="Median action strength")
-    plt.plot(variability, label="MAD residual")
-    plt.xlabel("Bin index")
-    plt.ylabel("Magnitude")
-    plt.title(title)
-    plt.legend()
-    plt.tight_layout()
+    ax.plot(strengths, label="Median action strength")
+    ax.plot(variability, label="MAD residual")
+    ax.set_xlabel("Bin index")
+    ax.set_ylabel("Magnitude")
+    ax.set_title(title)
+    ax.legend()
+    fig.tight_layout()
 
 
 def plot_phase_velocity(
     phases: PhasesCollection[NumDemos, NumPoints],
     *,
+    fig: Figure | None = None,
+    ax: Axes | None = None,
     title: str = "Phase velocity",
 ) -> None:
     """Plot d(tau)/dt for demonstrations."""
-    plt.figure(figsize=(8, 4))
+    fig, ax = ensure_fig_ax(fig=fig, ax=ax, figsize=(8, 4))
     for i, phase in phases.items():
         velocity = np.diff(phase)
-        plt.plot(velocity, label=f"Demo {i}")
-    plt.xlabel("Time index")
-    plt.ylabel("Phase velocity")
-    plt.title(title)
-    plt.legend()
-    plt.tight_layout()
+        ax.plot(velocity, label=f"Demo {i}")
+    ax.set_xlabel("Time index")
+    ax.set_ylabel("Phase velocity")
+    ax.set_title(title)
+    ax.legend()
+    fig.tight_layout()
 
 
 def plot_smoothness_comparison(
     original: SmoothnessAnalysis[NumDemos, NumPoints],
     pseudo: SmoothnessAnalysis[NumDemos, NumPoints],
     *,
+    fig: Figure | None = None,
+    ax: Axes | None = None,
     title: str = "Trajectory smoothness comparison",
 ) -> None:
     """Compare smoothness before and after PACER."""
-    plt.figure(figsize=(7, 4))
+    fig, ax = ensure_fig_ax(fig=fig, ax=ax, figsize=(7, 4))
     xs = np.arange(len(original.smoothness_scores))
-    plt.plot(xs, original.smoothness_scores, label="Original")
-    plt.plot(xs, pseudo.smoothness_scores, label="Pseudo")
-    plt.xlabel("Demo index")
-    plt.ylabel("Jerk energy")
-    plt.title(title)
-    plt.legend()
-    plt.tight_layout()
+    ax.plot(xs, original.smoothness_scores, label="Original")
+    ax.plot(xs, pseudo.smoothness_scores, label="Pseudo")
+    ax.set_xlabel("Demo index")
+    ax.set_ylabel("Jerk energy")
+    ax.set_title(title)
+    ax.legend()
+    fig.tight_layout()
 
 
 def plot_trust_colored_trajectory(
     states: States[NumPoints, TWO],
     trust_values: MetricSeries[NumPoints] | Vector[NumPoints],
     *,
+    fig: Figure | None = None,
+    ax: Axes | None = None,
     title: str = "Trust-Colored Trajectory",
     cmap: str = "viridis",
     linewidth: float = 2.5,
@@ -458,16 +525,16 @@ def plot_trust_colored_trajectory(
     xs = states.coord(0)
     ys = states.coord(1)
     trust = np.asarray(trust_values, dtype=npDType)
-    plt.figure(figsize=(7, 7))
-    scatter = plt.scatter(xs, ys, c=trust, cmap=cmap, s=point_size, zorder=3)
-    plt.plot(xs, ys, color="grey", alpha=0.35, linewidth=linewidth, zorder=1)
-    plt.colorbar(scatter, label="Trust")
-    plt.xlabel("x")
-    plt.ylabel("y")
-    plt.title(title)
-    plt.axis("equal")
-    plt.margins(0.05)
-    plt.tight_layout()
+    fig, ax = ensure_fig_ax(fig=fig, ax=ax, figsize=(7, 7))
+    scatter = ax.scatter(xs, ys, c=trust, cmap=cmap, s=point_size, zorder=3)
+    ax.plot(xs, ys, color="grey", alpha=0.35, linewidth=linewidth, zorder=1)
+    fig.colorbar(scatter, label="Trust")
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_title(title)
+    ax.axis("equal")
+    ax.margins(0.05)
+    fig.tight_layout()
 
 
 def plot_trust_colored_action_field(
@@ -475,6 +542,8 @@ def plot_trust_colored_action_field(
     actions: Actions[NumPoints, TWO],
     trust_values: MetricSeries[NumPoints] | Vector[NumPoints],
     *,
+    fig: Figure | None = None,
+    ax: Axes | None = None,
     title: str = "Trust-Colored Action Field",
     cmap: str = "coolwarm",
     action_scale: float = 1.0,
@@ -483,16 +552,16 @@ def plot_trust_colored_action_field(
     """Plot action vectors colored by trust value."""
     xs = states.coord(0)[::step]
     ys = states.coord(1)[::step]
-    ax = actions.coord(0)[::step]
-    ay = actions.coord(1)[::step]
+    ax_ = actions.coord(0)[::step]
+    ay_ = actions.coord(1)[::step]
     trust = np.asarray(trust_values, dtype=npDType)[::step]
 
-    plt.figure(figsize=(7, 7))
-    quiver = plt.quiver(
+    fig, ax = ensure_fig_ax(fig=fig, ax=ax, figsize=(7, 7))
+    quiver = ax.quiver(
         xs,
         ys,
-        ax,
-        ay,
+        ax_,
+        ay_,
         trust,
         cmap=cmap,
         angles="xy",
@@ -501,13 +570,13 @@ def plot_trust_colored_action_field(
         width=0.004,
         alpha=0.9,
     )
-    plt.colorbar(quiver, label="Trust")
-    plt.xlabel("x")
-    plt.ylabel("y")
-    plt.title(title)
-    plt.axis("equal")
-    plt.margins(0.05)
-    plt.tight_layout()
+    fig.colorbar(quiver, label="Trust")
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_title(title)
+    ax.axis("equal")
+    ax.margins(0.05)
+    fig.tight_layout()
 
 
 def plot_action_correction_vectors(
@@ -515,6 +584,8 @@ def plot_action_correction_vectors(
     original_actions: Actions[NumPoints, TWO],
     pseudo_actions: Actions[NumPoints, TWO],
     *,
+    fig: Figure | None = None,
+    ax: Axes | None = None,
     title: str = "Action Correction Vectors",
     correction_scale: float = 1.0,
     threshold: float = 1e-3,
@@ -537,9 +608,9 @@ def plot_action_correction_vectors(
     dx = delta[:, 0][mask][::step]
     dy = delta[:, 1][mask][::step]
 
-    plt.figure(figsize=(7, 7))
-    plt.plot(xs, ys, alpha=0.25)
-    plt.quiver(
+    fig, ax = ensure_fig_ax(fig=fig, ax=ax, figsize=(7, 7))
+    ax.plot(xs, ys, alpha=0.25)
+    ax.quiver(
         xs_q,
         ys_q,
         dx,
@@ -551,17 +622,19 @@ def plot_action_correction_vectors(
         scale=1.0 / correction_scale,
         width=0.004,
     )
-    plt.xlabel("x")
-    plt.ylabel("y")
-    plt.title(title)
-    plt.axis("equal")
-    plt.tight_layout()
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_title(title)
+    ax.axis("equal")
+    fig.tight_layout()
 
 
 def plot_phase_aligned_trajectories(
     states_collection: StatesCollection[NumDemos, NumPoints, TWO],
     phases: PhasesCollection[NumDemos, NumPoints],
     *,
+    fig: Figure | None = None,
+    ax: Axes | None = None,
     title: str = "Phase-Aligned Trajectories",
     alpha: float = 0.8,
 ) -> None:
@@ -569,12 +642,12 @@ def plot_phase_aligned_trajectories(
     Plot trajectories parameterized by phase instead of time.
     Useful for visualising PACER alignment quality.
     """
-    plt.figure(figsize=(7, 7))
+    fig, ax = ensure_fig_ax(fig=fig, ax=ax, figsize=(7, 7))
     scatter = None
     for i, (states, tau) in enumerate(zip(states_collection, phases.values())):
         xs = states.coord(0)
         ys = states.coord(1)
-        scatter = plt.scatter(
+        scatter = ax.scatter(
             xs,
             ys,
             c=np.asarray(tau, dtype=npDType),
@@ -583,19 +656,21 @@ def plot_phase_aligned_trajectories(
             alpha=alpha,
             label=f"Demo {i}",
         )
-        plt.plot(xs, ys, alpha=0.2)
+        ax.plot(xs, ys, alpha=0.2)
     if scatter is not None:
-        plt.colorbar(scatter, label=r"Phase $\tau$")
-    plt.xlabel("x")
-    plt.ylabel("y")
-    plt.title(title)
-    plt.axis("equal")
-    plt.tight_layout()
+        fig.colorbar(scatter, label=r"Phase $\tau$")
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_title(title)
+    ax.axis("equal")
+    fig.tight_layout()
 
 
 def plot_ribbon_corridor(
     bins: Bins[NumBins, NumDemos, NumPoints, TWO, TWO],
     *,
+    fig: Figure | None = None,
+    ax: Axes | None = None,
     title: str = "Ribbon Consensus Corridor",
     variability_scale: float = 1.0,
 ) -> None:
@@ -616,21 +691,23 @@ def plot_ribbon_corridor(
     ys = np.asarray(median_ys, dtype=npDType)
     var = variability_scale * np.asarray(variability, dtype=npDType)
 
-    plt.figure(figsize=(7, 7))
-    plt.plot(xs, ys, linewidth=3, label="Ribbon median")
-    plt.fill_between(xs, ys - var, ys + var, alpha=0.2, label="MAD corridor")
-    plt.xlabel("x")
-    plt.ylabel("y")
-    plt.title(title)
-    plt.axis("equal")
-    plt.legend()
-    plt.tight_layout()
+    fig, ax = ensure_fig_ax(fig=fig, ax=ax, figsize=(7, 7))
+    ax.plot(xs, ys, linewidth=3, label="Ribbon median")
+    ax.fill_between(xs, ys - var, ys + var, alpha=0.2, label="MAD corridor")
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_title(title)
+    ax.axis("equal")
+    ax.legend()
+    fig.tight_layout()
 
 
 def plot_residual_vs_phase(
     phases: PhasesCollection[NumDemos, NumPoints],
     residuals: ResidualsCollection[NumDemos, NumPoints],
     *,
+    fig: Figure | None = None,
+    ax: Axes | None = None,
     title: str = "Residual vs Phase",
     alpha: float = 0.5,
 ) -> None:
@@ -646,12 +723,12 @@ def plot_residual_vs_phase(
         xs.extend(tau)
         ys.extend(residual_series)
 
-    plt.figure(figsize=(8, 4))
-    plt.scatter(xs, ys, alpha=alpha)
-    plt.xlabel(r"Phase $\tau$")
-    plt.ylabel("Residual magnitude")
-    plt.title(title)
-    plt.tight_layout()
+    fig, ax = ensure_fig_ax(fig=fig, ax=ax, figsize=(8, 4))
+    ax.scatter(xs, ys, alpha=alpha)
+    ax.set_xlabel(r"Phase $\tau$")
+    ax.set_ylabel("Residual magnitude")
+    ax.set_title(title)
+    fig.tight_layout()
 
 
 def plot_action_angle_deviation(
@@ -659,6 +736,8 @@ def plot_action_angle_deviation(
     bins: Bins[NumBins, NumDemos, NumPoints, TWO, TWO],
     phases: PhasesCollection[NumDemos, NumPoints],
     *,
+    fig: Figure | None = None,
+    ax: Axes | None = None,
     title: str = "Action Angle Deviation",
 ) -> None:
     """
@@ -682,12 +761,12 @@ def plot_action_angle_deviation(
             xs.append(phase)
             ys.append(angle)
 
-    plt.figure(figsize=(8, 4))
-    plt.scatter(xs, ys, alpha=0.4)
-    plt.xlabel(r"Phase $\tau$")
-    plt.ylabel("Angular deviation [rad]")
-    plt.title(title)
-    plt.tight_layout()
+    fig, ax = ensure_fig_ax(fig=fig, ax=ax, figsize=(8, 4))
+    ax.scatter(xs, ys, alpha=0.4)
+    ax.set_xlabel(r"Phase $\tau$")
+    ax.set_ylabel("Angular deviation [rad]")
+    ax.set_title(title)
+    fig.tight_layout()
 
 
 ## ── PACER Visualisation ──────────────────────────────────────────────────────
