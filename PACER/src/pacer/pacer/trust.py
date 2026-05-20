@@ -7,7 +7,7 @@ Trust Value Computation
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
 from dataclasses import dataclass, field
-from typing import Generic, Protocol
+from typing import Protocol
 
 import numpy.linalg as la
 from typingkit.core import RuntimeGeneric
@@ -38,7 +38,7 @@ from pacer.utils import EPS, MAD_SCALE, median
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)
-class TrustComputationContext(Generic[VectorType]):
+class TrustComputationContext(RuntimeGeneric[VectorType]):
     """Shared immutable trust-computation context."""
 
     anchor: VectorType
@@ -169,6 +169,12 @@ class TrustValueParams:
     pipeline: TrustPipeline = field(default_factory=TrustPipeline)
 
 
+@dataclass(kw_only=True)
+class TrustValueComputationResult(RuntimeGeneric[NumDemos, NumPoints]):
+    z_scores: ZScoresCollection[NumDemos, NumPoints]  # (N x T_)
+    trust_values: TrustValuesCollection[NumDemos, NumPoints]  # (N x T_)
+
+
 @dataclass
 class TrustValueComputer(
     RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]
@@ -185,10 +191,7 @@ class TrustValueComputer(
             CollectionType, VectorType, NumDemos, NumPoints, DimState, DimAction
         ],
         params: TrustValueParams,
-    ) -> tuple[
-        ZScoresCollection[NumDemos, NumPoints],  # (N x T_)
-        TrustValuesCollection[NumDemos, NumPoints],  # (N x T_)
-    ]:
+    ) -> TrustValueComputationResult[NumDemos, NumPoints]:
         pipeline = params.pipeline
         z_scores = ZScoresCollection[NumDemos, NumPoints].zeros_like(
             self.demonstrations
@@ -227,7 +230,7 @@ class TrustValueComputer(
                     z_scores[i][t] = z_score  # z_{i, t}
                     trust_values[i][t] = trust
 
-        return z_scores, trust_values
+        return TrustValueComputationResult(z_scores=z_scores, trust_values=trust_values)
 
 
 ## ─────────────────────────────────────────────────────────────────────────────

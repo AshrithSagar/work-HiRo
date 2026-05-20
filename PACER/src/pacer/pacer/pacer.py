@@ -16,7 +16,11 @@ from pacer.pacer.base import TrustValuesCollection, ZScoresCollection
 from pacer.pacer.binning import Binner, Bins, RibbonTokenConsolidator
 from pacer.pacer.mode import action_mode, state_mode
 from pacer.pacer.pseudolabel import PseudoLabelComputer, PseudoLabelParams, PseudoLabels
-from pacer.pacer.trust import TrustValueComputer, TrustValueParams
+from pacer.pacer.trust import (
+    TrustValueComputationResult,
+    TrustValueComputer,
+    TrustValueParams,
+)
 from pacer.phase import PhasePipeline, PhasePipelineConfig, PhasesCollection
 from pacer.typings import DimAction, DimState, NumBins, NumDemos, NumPoints
 
@@ -46,11 +50,33 @@ class PACERConfig(RuntimeGeneric[NumBins]):
 class PACERResult(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
     phases: PhasesCollection[NumDemos, NumPoints]
     bins: Bins[NumBins, NumDemos, NumPoints, DimState, DimAction]
-    action_z_scores: ZScoresCollection[NumDemos, NumPoints]
-    action_trust_values: TrustValuesCollection[NumDemos, NumPoints]
-    state_z_scores: ZScoresCollection[NumDemos, NumPoints] | None
-    state_trust_values: TrustValuesCollection[NumDemos, NumPoints] | None
+    action_trust_result: TrustValueComputationResult[NumDemos, NumPoints]
+    state_trust_result: TrustValueComputationResult[NumDemos, NumPoints] | None
     pseudo_labels: PseudoLabels[NumDemos, NumPoints, DimState, DimAction]
+
+    @property
+    def action_z_scores(self) -> ZScoresCollection[NumDemos, NumPoints]:
+        return self.action_trust_result.z_scores
+
+    @property
+    def state_z_scores(self) -> ZScoresCollection[NumDemos, NumPoints] | None:
+        return (
+            self.state_trust_result.z_scores
+            if self.state_trust_result is not None
+            else None
+        )
+
+    @property
+    def action_trust_values(self) -> TrustValuesCollection[NumDemos, NumPoints]:
+        return self.action_trust_result.trust_values
+
+    @property
+    def state_trust_values(self) -> TrustValuesCollection[NumDemos, NumPoints] | None:
+        return (
+            self.state_trust_result.trust_values
+            if self.state_trust_result is not None
+            else None
+        )
 
 
 @dataclass
@@ -69,21 +95,21 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
         ).make_bins()
         bins = RibbonTokenConsolidator(bins).consolidate_ribbon_tokens()
 
-        action_z_scores, action_trust_values = TrustValueComputer(
-            self.demonstrations, bins
-        ).compute(mode=action_mode(), params=self.config.action_trust_value_params)
+        action_trust_result = TrustValueComputer(self.demonstrations, bins).compute(
+            mode=action_mode(), params=self.config.action_trust_value_params
+        )
 
-        state_z_scores, state_trust_values = None, None
+        state_trust_result = None
         if self.config.use_state_labels:
-            state_z_scores, state_trust_values = TrustValueComputer(
-                self.demonstrations, bins
-            ).compute(mode=state_mode(), params=self.config.state_trust_value_params)
+            state_trust_result = TrustValueComputer(self.demonstrations, bins).compute(
+                mode=state_mode(), params=self.config.state_trust_value_params
+            )
 
         pseudo_labels = PseudoLabelComputer(
             self.demonstrations, bins
         ).compute_pseudo_labels(
-            action_trust_values,
-            state_trust_values,
+            action_trust_result.trust_values,
+            state_trust_result.trust_values if state_trust_result is not None else None,
             action_params=self.config.action_pseudo_label_params,
             state_params=self.config.state_pseudo_label_params,
         )
@@ -91,10 +117,8 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
         return PACERResult(
             phases=phases,
             bins=bins,
-            action_z_scores=action_z_scores,
-            action_trust_values=action_trust_values,
-            state_z_scores=state_z_scores,
-            state_trust_values=state_trust_values,
+            action_trust_result=action_trust_result,
+            state_trust_result=state_trust_result,
             pseudo_labels=pseudo_labels,
         )
 
