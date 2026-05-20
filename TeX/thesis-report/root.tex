@@ -24,6 +24,11 @@
 \intervalconfig{soft open fences}
 \vbadness=3000
 
+\SetKwComment{Comment}{$\triangleright$\ }{}
+\SetKwProg{Fn}{Function}{}{}
+\SetKw{KwRet}{return}
+\DontPrintSemicolon{}
+
 \begin{document}
 
 \maketitle
@@ -315,18 +320,170 @@ The full PACER pipeline is summarised in Algorithm~\ref{alg:pacer}.
 
 \begin{algorithm}[tbp]
     \caption{PACER:\@ Progress Aligned Curation for Error Resilient Imitation Learning}\label{alg:pacer}
-    \KwIn{Demonstrations $D=\{(x_{i,t},a_{i,t})\}$; bins $B$; Tukey cutoff $c$; floor $w_{\min}$;
-    hyperparameters $\lambda_{\mathrm{debias}}, \rho_0, \eta_0, \kappa$.}
-    Estimate phase $\tau \leftarrow \textsc{PhaseEstimate}(D)$\;
-    Assign samples to bins ${\{\mathcal{I}_b\}}_{b=0}^{B-1}$\;
-    Compute robust bin statistics $S \leftarrow \textsc{RobustBinStats}(D,\tau,B)$\;
-    \ForEach{$(i,t)$ with $(i,t)\in\mathcal{I}_b$}{
-        $w \leftarrow \textsc{LooWeight}(i,t,b,S,c,w_{\min})$\;
-        $y^* \leftarrow \textsc{PseudoLabel}(i,t,b,S,w,\lambda_{\mathrm{debias}},\rho_0,\eta_0,\kappa)$\;
-        Accumulate $\mathcal{L} \mathrel{+}= w\cdot\mathrm{Huber}(f_\theta(x_{i,t})-y^*)$\;
+    \small
+
+    \KwIn{
+        Demos $\mathcal{D}=\{(x_{i,t},a_{i,t})\}$;
+        bins $B$;
+        Tukey cutoff $c$;
+        floor $w_{\min}$;
+        hyperparams $\lambda_{\text{debias}},\rho_0,\eta_0,\kappa$
     }
-    $\theta^\star \leftarrow \arg\min_\theta \mathcal{L}$\;
-    \Return~$f_{\theta^\star}$\;
+
+    $\tau \leftarrow \texttt{PhaseEstimate}(\mathcal{D})$
+
+    ${\{I_b\}}_{b=0}^{B-1} \leftarrow \texttt{PhaseBins}(\tau,B)$
+
+    $\mathcal{S} \leftarrow \texttt{RobustBinStats}(\mathcal{D},\tau,B)$
+    \Comment*[r]{medians/magnitudes/tangents}
+
+    \BlankLine{}
+
+    \ForEach{$(i,t)$ with $(i,t)\in I_b$}{
+        $w \leftarrow \texttt{LOOWeight}(i,t,b,\mathcal{S},c,w_{\min})$
+
+        $y^* \leftarrow
+        \texttt{PseudoLabel}(i,t,b,\mathcal{S},
+        w,\lambda_{\text{debias}},\rho_0,\eta_0,\kappa)$
+
+        $\mathcal{L} \mathrel{+}=
+        w\cdot \mathrm{Huber}(f_\theta(x_{i,t})-y^*)$
+    }
+
+    $\theta^\star \leftarrow \arg\min_{\theta}\mathcal{L}$
+
+    \KwRet{$f_{\theta^\star}$}
+
+    \BlankLine{}
+    \hrule
+    \BlankLine{}
+
+    \Fn{\texttt{PhaseEstimate}\:($\mathcal{D}$)}{
+        \Comment*[r]{state-only ranking $\to [0,1]$}
+
+        Train scorer $g_\psi$ with pairwise ranking loss
+        \begin{equation*}
+            \sum_i \sum_{t>t'}
+            \log\!\Bigl(
+                1+\exp\bigl(
+                    m-(g_\psi(x_{i,t})-g_\psi(x_{i,t'}))
+                \bigr)
+            \Bigr)
+        \end{equation*}
+        Normalize scores to $\tau\in[0,1]$
+        \KwRet{$\tau$}
+    }
+
+    \BlankLine{}
+
+    \Fn{\texttt{RobustBinStats}\:($\mathcal{D},\tau,B$)}{
+        For each bin $b$:
+        \begin{equation*}
+            \begin{aligned}
+                \alpha_a[b] &= \mathrm{median}\{a_{i,t}\}
+                &\quad
+                \beta_a[b] &= \mathrm{median}\{\|a_{i,t}\|\}
+                \\
+                \alpha_s[b] &= \mathrm{median}\{x_{i,t}\}
+                &\quad
+                \beta_s[b] &= \mathrm{median}\{\|\dot x_{i,t}\|\}
+            \end{aligned}
+        \end{equation*}
+
+        $t_a[b]\leftarrow \Delta\alpha_a[b]$\;
+        $t_s[b]\leftarrow \Delta\alpha_s[b]$
+        \Comment*[r]{finite-diff across bins}
+        \KwRet{$\{\alpha_a,\beta_a,\alpha_s,\beta_s,t_a,t_s\}$}
+    }
+
+    \BlankLine{}
+
+    \Fn{\texttt{LOOWeight}\:($i,t,b,\mathcal{S},c,w_{\min}$)}{
+        $\alpha^{(-i)}_a[b] \leftarrow$
+        median action in bin $b$ excluding demo $i$\;
+
+        $r^{(-i)} \leftarrow \|a_{i,t}-\alpha^{(-i)}_a[b]\|$
+        \begin{equation*}
+            \mathrm{MAD}^{(-i)}
+            =
+            1.4826\cdot
+            \mathrm{median}
+            \bigl|
+            r^{(-i)}-\mathrm{median}(r^{(-i)})
+            \bigr|
+        \end{equation*}
+
+        $z \leftarrow
+        \dfrac{r^{(-i)}}{\mathrm{MAD}^{(-i)}+\varepsilon}$
+        $
+        w \leftarrow
+        \max\!\left(
+            \mathbf{1}[z\le c]
+            {(1-{(z/c)}^2)}^2,
+            \, w_{\min}
+        \right)
+        $
+        \KwRet{$w$}
+    }
+
+    \BlankLine{}
+
+    \Fn{\texttt{PseudoLabel}\:($i,t,b,\mathcal{S},w,\lambda_{\text{debias}},\rho_0,\eta_0,\kappa$)}{
+
+        \textit{Debias toward anchor:}
+        \begin{equation*}
+            \gamma\!=\!1-\lambda_{\text{debias}}(1\!-\!w),
+            \quad
+            y^{(1)}\!=\!
+            \gamma a_{i,t}
+            +
+            (1\!-\!\gamma)\alpha^{(-i)}_a[b]
+        \end{equation*}
+
+        \textit{Direction choice:}
+        $t_{\mathrm{dir}}\in\{t_s[b],t_a[b]\}$
+
+        \textit{Sideways attenuation:}
+        \begin{equation*}
+            \begin{aligned}
+                y_\parallel&=(y^{(1)}\!\cdot\! \hat t)\hat t
+                &\quad
+                y_\perp&=y^{(1)}-y_\parallel
+                \\
+                y^{(2)}&=
+                y_\parallel+(1-\rho)y_\perp
+                &\quad
+                \rho&=\rho_0(1-w)\mathbf{1}\{t_s[b]\}
+            \end{aligned}
+        \end{equation*}
+
+        \textit{Speed blend:}
+        \begin{equation*}
+            \begin{aligned}
+                \eta=\eta_0(1-w),
+                &\qquad
+                s=
+                (1-\eta)\|y^{(2)}\|
+                +\eta\,\beta_a[b]
+                \\
+                & y^{(3)}=
+                s\,
+                \dfrac{y^{(2)}}{\|y^{(2)}\|+\varepsilon}
+            \end{aligned}
+        \end{equation*}
+
+        \textit{EMA smoothing:}
+        \begin{equation*}
+            y^*=
+            (1-\kappa)y^{(3)}
+            +\kappa y^*_{\text{prev}}
+        \end{equation*}
+        with $\kappa\uparrow$ when
+        $w,w_{\text{prev}}$ are low
+
+        \KwRet{$y^*$}
+    }
+
 \end{algorithm}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
