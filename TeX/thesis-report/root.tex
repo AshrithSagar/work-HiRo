@@ -334,7 +334,7 @@ All handling of corrupted demonstrations is encoded in the pseudo-label construc
 
 The full PACER pipeline is summarised in Algorithm~\ref{alg:pacer}.
 
-\begin{algorithm}[tbp]
+\begin{algorithm}[p]
     \caption{PACER:\@ Progress Aligned Curation for Error Resilient Imitation Learning}\label{alg:pacer}
     \small
 
@@ -518,9 +518,92 @@ The dataset contains multiple two-dimensional handwriting trajectories with natu
 Each trajectory provides planar positions and corresponding velocities, making the dataset suitable for evaluating temporal alignment and robustness to local deviations.
 We use the ``G Shape'' pattern, consisting of seven demonstrations, and additionally inject localized perturbations into selected trajectory segments to simulate corrupted demonstrations while preserving the overall task intent.
 
-See Table~\ref{tab:bc_vs_pacer} for the comparison of BC vs PACER + BC policies, compared over both original LASA ``G Shape'' and with corruptions added, as well as with and without using state labels in addition to the action pseudo-labels computed.
+\begin{figure}[htbp]
+    \centering
+    \subfloat[
+        Without corruptions
+    ]{
+        \includegraphics[width=0.95\linewidth]{figs/a1.jpeg}
+    }
+    \hfill
+    \subfloat[
+        With Segmented Gaussian corruptions added
+    ]{
+        \includegraphics[width=0.95\linewidth]{figs/b1.jpeg}
+    }
+    \caption{Demonstrations from LASA Dataset ``G Shape''.}
+\end{figure}
 
-\begin{table}[h]
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{figs/a2.jpeg}
+    \caption{
+        Estimated phases $\tau$ w.r.t.\@ the time index for all demonstrations.
+        The phase scorer tries to enforce the monotonicity of the phase, which ideally converges to a straight line.
+    }
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{figs/a3.jpeg}
+    \caption{
+        Ribbon median action field for every bin
+    }
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{figs/a6.jpeg}
+    \caption{
+        The ribbon median states along with the corresponding MAD deviations of the corresponding actions.
+        The higher (lower) MAD regions have lower (higher) trust values, which can be interpreted as uncertainty.
+    }
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \subfloat[
+        2D view
+    ]{
+        \includegraphics[width=0.95\linewidth]{figs/a4.jpeg}
+    }
+    \hfill
+    \subfloat[
+        Isometric view
+    ]{
+        \includegraphics[width=0.95\linewidth]{figs/a5.jpeg}
+    }
+    \caption{
+        The demonstrations colored by their corresponding trust values assigned by PACER for the original LASA dataset.
+        The red curve shows the phase-aligned median trajectory of all the demonstrations.
+        Samples aligning with the reference (after phase alignment) have higher trust values are colored in yellow, while the deviating ones are colored darker.
+    }
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \subfloat[
+        2D view
+    ]{
+        \includegraphics[width=0.95\linewidth]{figs/b2.jpeg}
+    }
+    \hfill
+    \subfloat[
+        Isometric view
+    ]{
+        \includegraphics[width=0.95\linewidth]{figs/b3.jpeg}
+    }
+    \caption{
+        The demonstrations colored by their corresponding trust values assigned by PACER for the segment-gaussian corrupted LASA dataset.
+        The red curve shows the phase-aligned median trajectory of all the demonstrations.
+        The corrupted segments can be seen to have lower trust values due to not aligning with their phase consensus.
+    }
+\end{figure}
+
+See Table~\ref{tab:bc_vs_pacer} for the comparison of BC vs PACER + BC policies, compared over both original LASA ``G Shape'' and with corruptions added, as well as with and without using state labels in addition to the action pseudo-labels computed.
+The states as well as actions were corrupted by adding deviations sampled from a gaussian distribution, limited to a particular segment.
+
+\begin{table}[htb]
     \caption{BC Policy vs.\ PACER + BC Policy}\label{tab:bc_vs_pacer}
     \centering
     \footnotesize
@@ -548,6 +631,7 @@ Together, these mechanisms enable precise, local detection of short deviations t
 
 The intermediate quantities produced by PACER---per-bin medians, MAD scales, trust weights---are interpretable and can serve as diagnostic tools during dataset inspection, exposing where demonstrations agree or conflict before any policy is trained.
 
+\newpage
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{LIMITATIONS \& FUTURE WORK}
 
@@ -603,57 +687,49 @@ The intermediate per-phase diagnostics produced by the framework---per-bin media
 
 I would like to thank my guide, Dr.~Ravi Prakash, for his guidance, insights, and sustained support throughout this project, and for providing me with the opportunity to pursue this line of research.
 I also thank my colleague, Mr.~Shreyas Kumar from HiRo Lab, for his support in helping me get started with the project.
-I would additionally like to thank Grok and Claude for helping me to proof-read portions of the writing.
+I would additionally like to thank Claude for helping me to proof-read portions of the writing.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \appendix
 
 \subsection{Hyperparameters}
 
-\begin{table*}[h]
+\begin{table}[htbp]
     \centering
     \small
-    \setlength{\tabcolsep}{10pt}
-    \begin{tabular}{llc}
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabular}{l l c}
         \toprule
-        \multicolumn{2}{l}{\textbf{Category / Parameter}} & \textbf{Value} \\
+        \textbf{Category} & \textbf{Parameter} & \textbf{Value} \\
         \midrule
 
-        \multicolumn{3}{l}{BC / PACER (Shared)} \\
-        \quad & Network width (MLP hidden size) & 128 \\
-        \quad & Optimizer / LR & Adam / $1\times10^{-3}$ \\
-        \quad & Epochs & 240 \\
-        \quad & Gradient clip (global norm) & 1.0 \\
+        \multicolumn{3}{l}{\textit{BC / PACER (shared)}} \\
+        & MLP hidden size & 128 \\
+        & Optimizer / LR & Adam, $1e^{-3}$ \\
+        & Epochs & 240 \\
+        & Grad clip & 1.0 \\
 
         \midrule
+        \multicolumn{3}{l}{\textit{PACER}} \\
+        & Phase bins $B$ & 96 \\
+        & Tukey cutoff $c$ & 4.685 \\
+        & Min weight $w_{\min}$ & 0.02 \\
 
-        \multicolumn{3}{l}{PACER} \\
-        \quad & Phase bins $B$ & 96 \\
-        \quad & Tukey cutoff $c$ & 4.685 \\
-        \quad & Min sample weight $w_{\min}$ & 0.02 \\
+        & LOO debias $(\lambda_{\text{debias}})$ &
+        S: 0.1, A: 0.5 \\
 
-        \quad & LOO debias $\lambda_{\text{debias}}$ &
-        \begin{tabular}[t]{@{}cc@{}}
-            \textbf{State} & \textbf{Action} \\
-            0.1 & 0.5
-        \end{tabular} \\
+        & Magnitude blend $(\eta_0)$ &
+        S: 0.1, A: 0.5 \\
 
-        \quad & Magnitude blend $\eta_0$ &
-        \begin{tabular}[t]{@{}cc@{}}
-            \textbf{State} & \textbf{Action} \\
-            0.1 & 0.5
-        \end{tabular} \\
-
-        \quad & EMA coefficient $\kappa$ &
-        \begin{tabular}[t]{@{}cc@{}}
-            \textbf{State} & \textbf{Action} \\
-            0.9 & 0.0
-        \end{tabular} \\
+        & EMA coefficient $(\kappa)$ &
+        S: 0.9, A: 0.0 \\
 
         \bottomrule
     \end{tabular}
-    \caption{\textbf{Hyperparameters.} Values used in all reported experiments unless otherwise noted.}\label{tab:hparams}
-\end{table*}
+    \caption{\textbf{Hyperparameters.} Values used in all experiments unless otherwise noted.
+    `S' denotes state-based, and `A' denotes action-based component.}
+    \label{tab:hparams}
+\end{table}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \bibliographystyle{ieeetr}

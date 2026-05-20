@@ -906,7 +906,7 @@ def plot_stacked_trust_colored_trajectories(
                 color="red",
                 linewidth=style.reference_linewidth,
                 alpha=0.5,
-                zorder=1,
+                zorder=100,
                 path_effects=[
                     pe.Stroke(linewidth=7, foreground="white"),
                     pe.Normal(),
