@@ -114,6 +114,7 @@ if __name__ == "__main__":
             phases=True,
             trust_values=True,
             states_before_after=True,
+            actions_before_after=True,
             action_comparison=True,
             state_comparison=True,
             ribbon_action_field=True,

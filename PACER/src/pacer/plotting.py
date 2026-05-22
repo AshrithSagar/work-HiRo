@@ -19,7 +19,9 @@ import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.collections import LineCollection
 from matplotlib.figure import Figure
-from mpl_toolkits.mplot3d import Axes3D  # type: ignore[import-untyped]  # pyright: ignore[reportMissingTypeStubs]
+from mpl_toolkits.mplot3d import (  # type: ignore[import-untyped]  # pyright: ignore[reportMissingTypeStubs]
+    Axes3D,
+)
 from mpl_toolkits.mplot3d.art3d import (  # type: ignore[import-untyped]  # pyright: ignore[reportMissingTypeStubs]
     Line3DCollection,
 )
@@ -233,6 +235,101 @@ def plot_states_before_after(
     ax.legend()
     ax.axis("equal")
     ax.margins(0.05)
+    fig.tight_layout()
+
+
+def plot_actions_before_after(
+    states: States[NumPoints, TWO],
+    original_actions: Actions[NumPoints, TWO],
+    pseudo_actions: Actions[NumPoints, TWO],
+    *,
+    fig: Figure | None = None,
+    ax: Axes | None = None,
+    title: str = "Actions Before vs After",
+    step: int = 1,
+    action_scale: float = 1.0,
+    show_corrections: bool = False,
+    original_color: str = "tab:blue",
+    pseudo_color: str = "tab:orange",
+    trajectory_color: str = "grey",
+) -> None:
+    """Overlay original and pseudo actions on top of trajectories."""
+    fig, ax = ensure_fig_ax(fig=fig, ax=ax, figsize=(7, 7))
+
+    xs = states.coord(0)
+    ys = states.coord(1)
+    ox = original_actions.coord(0)
+    oy = original_actions.coord(1)
+    px = pseudo_actions.coord(0)
+    py = pseudo_actions.coord(1)
+
+    # Subsample
+    xs_q = xs[::step]
+    ys_q = ys[::step]
+    ox_q = ox[::step]
+    oy_q = oy[::step]
+    px_q = px[::step]
+    py_q = py[::step]
+
+    # Background trajectories
+    ax.plot(xs, ys, color=trajectory_color, alpha=0.3, linewidth=2, zorder=0)
+
+    # Original actions
+    ax.quiver(
+        xs_q,
+        ys_q,
+        ox_q,
+        oy_q,
+        angles="xy",
+        scale_units="xy",
+        scale=1.0 / action_scale,
+        color=original_color,
+        alpha=0.65,
+        width=0.003,
+        label="Original",
+        zorder=2,
+    )
+
+    # Pseudo actions
+    ax.quiver(
+        xs_q,
+        ys_q,
+        px_q,
+        py_q,
+        angles="xy",
+        scale_units="xy",
+        scale=1.0 / action_scale,
+        color=pseudo_color,
+        alpha=0.65,
+        width=0.003,
+        label="Pseudo",
+        zorder=3,
+    )
+
+    # Correction vectors
+    if show_corrections:
+        dx = px_q - ox_q
+        dy = py_q - oy_q
+        ax.quiver(
+            xs_q,
+            ys_q,
+            dx,
+            dy,
+            angles="xy",
+            scale_units="xy",
+            scale=1.0 / action_scale,
+            color="red",
+            alpha=0.5,
+            width=0.002,
+            label="Correction",
+            zorder=4,
+        )
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_title(title)
+    ax.axis("equal")
+    ax.margins(0.05)
+    ax.legend()
     fig.tight_layout()
 
 
@@ -1024,6 +1121,7 @@ class PACERVisualisationConfig:
     trust_values: bool = False
 
     states_before_after: bool = False
+    actions_before_after: bool = False
     action_comparison: bool = False
     state_comparison: bool = False
 
@@ -1087,6 +1185,17 @@ class PACERVisualiser(RuntimeGeneric[NumBins, NumDemos, NumPoints]):
             if self.pacer_result.pseudo_labels.states is not None:
                 plot_states_before_after(
                     self.demonstrations.states, self.pacer_result.pseudo_labels.states
+                )
+
+        if self.config.actions_before_after:
+            for i, demo in enumerate(self.demonstrations):
+                plot_actions_before_after(
+                    demo.states,
+                    demo.actions,
+                    self.pacer_result.pseudo_labels.actions[i],
+                    title=f"Demo {i}: Actions Before vs After",
+                    step=2,
+                    show_corrections=True,
                 )
 
         if self.config.state_comparison:
