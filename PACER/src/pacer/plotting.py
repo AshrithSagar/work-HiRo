@@ -19,9 +19,7 @@ import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.collections import LineCollection
 from matplotlib.figure import Figure
-from mpl_toolkits.mplot3d import (
-    Axes3D,  # type: ignore[import-untyped]  # pyright: ignore[reportMissingTypeStubs]
-)
+from mpl_toolkits.mplot3d import Axes3D  # type: ignore[import-untyped]  # pyright: ignore[reportMissingTypeStubs]
 from mpl_toolkits.mplot3d.art3d import (  # type: ignore[import-untyped]  # pyright: ignore[reportMissingTypeStubs]
     Line3DCollection,
 )
@@ -217,9 +215,18 @@ def plot_states_before_after(
 ) -> None:
     """Overlay original and refined trajectories."""
     fig, ax = ensure_fig_ax(fig=fig, ax=ax, figsize=(7, 7))
+    colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
     for i, (orig, new) in enumerate(zip(original, pseudo)):
-        ax.plot(orig.coord(0), orig.coord(1), "--", alpha=0.5, label=f"Original {i}")
-        ax.plot(new.coord(0), new.coord(1), label=f"Refined {i}")
+        color = colors[i % len(colors)]
+        ax.plot(
+            orig.coord(0),
+            orig.coord(1),
+            "--",
+            alpha=0.5,
+            color=color,
+            label=f"Original {i}",
+        )
+        ax.plot(new.coord(0), new.coord(1), color=color, label=f"Refined {i}")
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     ax.set_title(title)
