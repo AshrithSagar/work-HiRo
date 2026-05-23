@@ -7,7 +7,7 @@ Joey Hejna, Suvir Mirchandani, et. al., RSS 2025:
 https://www.roboticsproceedings.org/rss21/p023.pdf
 https://arxiv.org/abs/2502.08623
 """
-# src/pacer/deminf.py
+# src/deminf/deminf.py
 
 # pyright: reportPrivateImportUsage = false
 
