@@ -112,14 +112,14 @@ wheels = [
 
 [[package]]
 name = "basedpyright"
-version = "1.39.5"
+version = "1.39.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "nodejs-wheel-binaries" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/bc/5d/68e9bd8a408011f820e74fdad1684cad553fce0acfd83fce0a1ec4e01d97/basedpyright-1.39.5.tar.gz", hash = "sha256:373e6999b9dc450c4af077cb76a758f5959eedf8d03f0aac144bc59227f47d33", size = 25508568, upload-time = "2026-05-17T10:56:08.126Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7a/1a/48296b4479ccc9051eb9617a6507a69a68f5b68693fb6a118cfe08199270/basedpyright-1.39.6.tar.gz", hash = "sha256:d00ec5f8ba4e1a67dfc2fa3a9474229c89f61f207d14c02d320db78f57aa16ef", size = 25504244, upload-time = "2026-05-24T07:44:41.864Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/cb/d1/fce034d7b840470bef067543deab51a28d87d1b866a1a4e88752047ef846/basedpyright-1.39.5-py3-none-any.whl", hash = "sha256:dda95954607e3a5e409b5a3083607b69976353cd56c05fdd77e32f6be27c9898", size = 12420680, upload-time = "2026-05-17T10:56:12.685Z" },
+    { url = "https://files.pythonhosted.org/packages/d4/07/6d1b3192715d42e8c9887876684a941eff28ec5d79c23a0f3758377e2182/basedpyright-1.39.6-py3-none-any.whl", hash = "sha256:5e0b9befbae6b26d0fbcc6645ac26923725e749d1224539e24f05ab07f9365ad", size = 13182122, upload-time = "2026-05-24T07:44:47.086Z" },
 ]
 
 [[package]]
@@ -324,13 +324,13 @@ wheels = [
 
 [[package]]
 name = "cython"
-version = "3.2.4"
+version = "3.2.5"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/91/85/7574c9cd44b69a27210444b6650f6477f56c75fee1b70d7672d3e4166167/cython-3.2.4.tar.gz", hash = "sha256:84226ecd313b233da27dc2eb3601b4f222b8209c3a7216d8733b031da1dc64e6", size = 3280291, upload-time = "2026-01-04T14:14:14.473Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3f/3b/ebd94c8b85f8e41b5015a9ed94ee3df866024d480d05cd08b774684fb81d/cython-3.2.5.tar.gz", hash = "sha256:3dd42e4cf36ad15f265bdfec2337cc00c688c8eb6d374ffd13bb19437c27bba1", size = 3286381, upload-time = "2026-05-23T19:34:08.439Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ee/d7/3bda3efce0c5c6ce79cc21285dbe6f60369c20364e112f5a506ee8a1b067/cython-3.2.4-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:d4b4fd5332ab093131fa6172e8362f16adef3eac3179fd24bbdc392531cb82fa", size = 2971496, upload-time = "2026-01-04T14:15:25.038Z" },
-    { url = "https://files.pythonhosted.org/packages/0a/8b/fd393f0923c82be4ec0db712fffb2ff0a7a131707b842c99bf24b549274d/cython-3.2.4-cp39-abi3-macosx_10_9_x86_64.whl", hash = "sha256:36bf3f5eb56d5281aafabecbaa6ed288bc11db87547bba4e1e52943ae6961ccf", size = 2875622, upload-time = "2026-01-04T14:15:39.749Z" },
-    { url = "https://files.pythonhosted.org/packages/ff/fa/d3c15189f7c52aaefbaea76fb012119b04b9013f4bf446cb4eb4c26c4e6b/cython-3.2.4-py3-none-any.whl", hash = "sha256:732fc93bc33ae4b14f6afaca663b916c2fdd5dcbfad7114e17fb2434eeaea45c", size = 1257078, upload-time = "2026-01-04T14:14:12.373Z" },
+    { url = "https://files.pythonhosted.org/packages/82/78/668ef887621f68255feddd482dbcdcf5788b6c91227dd35bd17f128f827b/cython-3.2.5-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:a636c8b7824f3cb587eb2fdde59d8f4a14d433565508081cc290198e37567910", size = 2981525, upload-time = "2026-05-23T19:34:58.445Z" },
+    { url = "https://files.pythonhosted.org/packages/a3/de/e3e0cf5704fe569d54b8cd5dc316c9fbf08b1b74728732f86e90168b7a3f/cython-3.2.5-cp39-abi3-macosx_10_9_x86_64.whl", hash = "sha256:224149d18d980e6ea5001b70fc7ce096c1891d59035dfa9cc5ede50f55804913", size = 2879054, upload-time = "2026-05-23T19:35:18.265Z" },
+    { url = "https://files.pythonhosted.org/packages/d4/5c/9cd909e6a8bb178e4e0f9a2a9227c8201a2be38abe45ada4a4c3e9154277/cython-3.2.5-py3-none-any.whl", hash = "sha256:dc1c8cebb7df5bce37f5f8dc1e5bf04313272a5973d50a55c0ec76c83812911b", size = 1257622, upload-time = "2026-05-23T19:34:05.163Z" },
 ]
 
 [[package]]
@@ -1183,7 +1183,7 @@ test = [
     { name = "pytest-memray", specifier = ">=1.8.0" },
 ]
 typecheck = [
-    { name = "basedpyright", specifier = ">=1.39.5" },
+    { name = "basedpyright", specifier = ">=1.39.6" },
     { name = "mypy", extras = ["mypyc"], specifier = ">=2.1.0" },
     { name = "pycroscope", specifier = ">=0.4.0" },
     { name = "pyrefly", specifier = ">=1.0.0" },
@@ -1377,7 +1377,7 @@ wheels = [
 [[package]]
 name = "pylasahandwritingdataset"
 version = "0.2.1"
-source = { git = "https://github.com/AshrithSagar/pyLASAHandwritingDataset.git?rev=main#0c25aea5144022da420b23c647c7e8b118fddd32" }
+source = { git = "https://github.com/AshrithSagar/pyLASAHandwritingDataset.git?rev=main#5d0ffe8e1e13b8ddf2f276f54a44e1bae3e2d0b8" }
 dependencies = [
     { name = "numpy" },
     { name = "platformdirs" },
@@ -1660,11 +1660,11 @@ wheels = [
 
 [[package]]
 name = "soupsieve"
-version = "2.8.3"
+version = "2.8.4"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/7b/ae/2d9c981590ed9999a0d91755b47fc74f74de286b0f5cee14c9269041e6c4/soupsieve-2.8.3.tar.gz", hash = "sha256:3267f1eeea4251fb42728b6dfb746edc9acaffc4a45b27e19450b676586e8349", size = 118627, upload-time = "2026-01-20T04:27:02.457Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/47/2c/0a5f6f8ee0d5589e48c7640213ed5175d52cf540a06725b628cc1a45d6ce/soupsieve-2.8.4.tar.gz", hash = "sha256:e121fd02e975c695e4e9e8774a5ee35d74714b59307868dcc5319ad2d9e3328e", size = 121110, upload-time = "2026-05-24T13:55:57.154Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/46/2c/1462b1d0a634697ae9e55b3cecdcb64788e8b7d63f54d923fcd0bb140aed/soupsieve-2.8.3-py3-none-any.whl", hash = "sha256:ed64f2ba4eebeab06cc4962affce381647455978ffc1e36bb79a545b91f45a95", size = 37016, upload-time = "2026-01-20T04:27:01.012Z" },
+    { url = "https://files.pythonhosted.org/packages/5e/f5/0c41cb68dcae6b7de4fac4188a3a9589e21fb31df21ea3a2e888db95e6c9/soupsieve-2.8.4-py3-none-any.whl", hash = "sha256:e7e6b0769c8f51ed59acab6e994b00621096cfb1c640a7509295987388fbaf65", size = 37304, upload-time = "2026-05-24T13:55:55.406Z" },
 ]
 
 [[package]]
@@ -2020,7 +2020,7 @@ wheels = [
 [[package]]
 name = "typingkit"
 version = "0.2.8"
-source = { git = "https://github.com/AshrithSagar/typingkit.git?rev=main#b31995faf95e8103b582ef14925d5b85d0e83422" }
+source = { git = "https://github.com/AshrithSagar/typingkit.git?rev=main#a06a1c72cebad1f976f597d4f14e25e83b70d7b5" }
 dependencies = [
     { name = "numpy" },
 ]
