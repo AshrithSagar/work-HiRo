@@ -589,9 +589,9 @@ def plot_ribbon_statistics(
     for bin in bins:
         token = bin.ribbon_token
         strengths.append(token.action_strength)
-        variability.append(token.MAD_action_residual)
-    ax.plot(strengths, label="Median action strength")
-    ax.plot(variability, label="MAD residual")
+        variability.append(token.action_residual_scale)
+    ax.plot(strengths, label="(Median) action strength")
+    ax.plot(variability, label="Action residual scale (MAD residual)")
     ax.set_xlabel("Bin index")
     ax.set_ylabel("Magnitude")
     ax.set_title(title)
@@ -816,7 +816,7 @@ def plot_ribbon_corridor(
         token = bin.ribbon_token
         anchor_xs.append(token.state_anchor[0])
         anchor_ys.append(token.state_anchor[1])
-        variability.append(token.MAD_action_residual)
+        variability.append(token.action_residual_scale)
     xs = np.asarray(anchor_xs, dtype=npDType)
     ys = np.asarray(anchor_ys, dtype=npDType)
     var = variability_scale * np.asarray(variability, dtype=npDType)

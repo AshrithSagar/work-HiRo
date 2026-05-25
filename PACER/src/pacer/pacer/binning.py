@@ -36,7 +36,6 @@ from pacer.typings import (
     NumPoints,
     SampleIndex,
 )
-from pacer.utils import MAD_SCALE, median
 
 ## ── Binning ──────────────────────────────────────────────────────────────────
 
@@ -110,7 +109,7 @@ class RibbonToken(RuntimeGeneric[DimState, DimAction]):  # z_b
     state_tangent: State[DimState] | None = field(init=False)
     # t_s[b] <- diff{ alpha_s[b] }
 
-    MAD_action_residual: Residual  # Median Absolute Deviation of action residuals
+    action_residual_scale: Residual  # (Median Absolute Deviation of action residuals)
 
 
 @dataclass(kw_only=True)
@@ -201,25 +200,24 @@ class RibbonTokenConsolidator(
     def consolidate_ribbon_tokens(
         self,
     ) -> Bins[NumBins, NumDemos, NumPoints, DimState, DimAction]:
-        bin_median_actions = Actions[NumBins, DimAction]()
-        bin_median_states = States[NumBins, DimState]()
+        bin_action_anchors = Actions[NumBins, DimAction]()
+        bin_state_anchors = States[NumBins, DimState]()
 
         for bin in self.bins:
             stats = ConsensusStatistics[DimState, DimAction].for_bin(
                 bin, consensus_config=self.consensus_config
             )
 
-            bin_median_action = stats.action_anchor  # alpha_a[b]
+            bin_action_anchor = stats.action_anchor  # alpha_a[b]
             bin_action_residuals = list[Residual]()
             for action in bin.actions():
-                residual = Residual(la.norm(action - bin_median_action))  # r_{i, t}
+                residual = Residual(la.norm(action - bin_action_anchor))  # r_{i, t}
                 bin_action_residuals.append(residual)
-            bin_median_action_residual = Residual(median(bin_action_residuals))
-            abs_deviations = list[Residual]()
-            for residual in bin_action_residuals:
-                abs_deviation = Residual(abs(residual - bin_median_action_residual))
-                abs_deviations.append(abs_deviation)
-            MAD_action_residual = Residual(MAD_SCALE * median(abs_deviations))
+            action_residual_scale: Residual = (
+                self.consensus_config.residual_scale_estimator.compute(
+                    bin_action_residuals
+                )
+            )
 
             bin.ribbon_token = RibbonToken(
                 action_anchor=stats.action_anchor,
@@ -227,10 +225,10 @@ class RibbonTokenConsolidator(
                 state_anchor=stats.state_anchor,
                 state_change=stats.state_change,
                 state_norm=stats.state_norm,
-                MAD_action_residual=MAD_action_residual,
+                action_residual_scale=action_residual_scale,
             )
-            bin_median_actions.append(stats.action_anchor)
-            bin_median_states.append(stats.state_anchor)
+            bin_action_anchors.append(stats.action_anchor)
+            bin_state_anchors.append(stats.state_anchor)
 
         for bin in self.bins:
             b = bin.index
@@ -241,10 +239,10 @@ class RibbonTokenConsolidator(
             else:
                 p, q, f = b, b - 1, 0.5
             action_tangent = Action[DimAction](
-                f * (bin_median_actions[p] - bin_median_actions[q])
+                f * (bin_action_anchors[p] - bin_action_anchors[q])
             )
             state_tangent = State[DimState](
-                f * (bin_median_states[p] - bin_median_states[q])
+                f * (bin_state_anchors[p] - bin_state_anchors[q])
             )
             bin.ribbon_token.action_tangent = action_tangent
             bin.ribbon_token.state_tangent = state_tangent
