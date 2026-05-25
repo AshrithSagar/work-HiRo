@@ -1,8 +1,8 @@
 """
-Plotting utils
+(Legacy) Plotting utils
 =======
 """
-# src/pacer/plotting.py
+# src/pacer/plotting/legacy.py
 
 # pyright: reportUnknownMemberType = false
 

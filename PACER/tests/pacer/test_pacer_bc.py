@@ -34,7 +34,7 @@ from pacer.pacer.trust import (
 )
 from pacer.phase import PhasePipelineConfig
 from pacer.phase.estimation import MLPPhaseEstimatorConfig
-from pacer.plotting import PACERVisualisationConfig, PACERVisualiser
+from pacer.plotting.legacy import PACERVisualisationConfig, PACERVisualiser
 from pacer.utils import MAD_SCALE
 
 set_global_default_runtime_options(RuntimeOptions(validate=True))

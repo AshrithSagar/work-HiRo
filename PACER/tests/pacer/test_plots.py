@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from typingkit.core import RuntimeOptions, set_global_default_runtime_options
 
 from pacer.datasets import DemonstrationLoader, DemonstrationLoaderConfig
-from pacer.plotting import plot_states_and_actions
+from pacer.plotting.legacy import plot_states_and_actions
 
 set_global_default_runtime_options(RuntimeOptions(validate=True))
 
