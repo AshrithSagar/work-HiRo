@@ -6,10 +6,11 @@ Trust Value Computation
 
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
-from dataclasses import dataclass, field
-import numpy as np
+from collections.abc import Sequence
+from dataclasses import KW_ONLY, dataclass, field
 from typing import Protocol
 
+import numpy as np
 import numpy.linalg as la
 from typingkit.core import RuntimeGeneric
 
@@ -21,7 +22,12 @@ from pacer.pacer.base import (
     ZScore,
     ZScoresCollection,
 )
-from pacer.pacer.binning import Bins, RobustStatistics
+from pacer.pacer.binning import Bins, ConsensusStatistics
+from pacer.pacer.consensus import (
+    ConsensusConfig,
+    MADResidualScaleEstimator,
+    ResidualScaleEstimator,
+)
 from pacer.pacer.mode import VectorMode
 from pacer.typings import (
     CollectionType,
@@ -33,7 +39,7 @@ from pacer.typings import (
     NumPoints,
     VectorType,
 )
-from pacer.utils import EPS, MAD_SCALE, median
+from pacer.utils import EPS
 
 ## ── Trust Value Computation ──────────────────────────────────────────────────
 
@@ -62,29 +68,6 @@ class EuclideanResidualComputer:
         self, vector: VectorType, *, ctx: TrustComputationContext[VectorType]
     ) -> Residual:
         return Residual(la.norm(vector - ctx.anchor))
-
-
-# ── Scale Estimation ──────────────────────────────────────────────────────────
-
-
-class ScaleEstimator(Protocol):
-    """Computes robust scale from residuals."""
-
-    def compute(self, residuals: list[Residual]) -> Residual: ...
-
-
-@dataclass(frozen=True, kw_only=True, slots=True)
-class MADScaleEstimator:
-    """Median absolute deviation scale estimator."""
-
-    consistency_scale: FloatLike = MAD_SCALE
-
-    def compute(self, residuals: list[Residual]) -> Residual:
-        median_residual: Residual = Residual(median(residuals))
-        abs_deviations: list[Residual] = [
-            Residual(abs(residual - median_residual)) for residual in residuals
-        ]
-        return Residual(self.consistency_scale * median(abs_deviations))
 
 
 # ── Trust Kernels ─────────────────────────────────────────────────────────────
@@ -246,13 +229,15 @@ class TrustPipeline:
     residual_computer: ResidualComputer = field(
         default_factory=EuclideanResidualComputer
     )
-    scale_estimator: ScaleEstimator = field(default_factory=MADScaleEstimator)
+    scale_estimator: ResidualScaleEstimator = field(
+        default_factory=MADResidualScaleEstimator
+    )
     kernel: TrustKernel = field(default_factory=TukeyBiweightKernel)
     transforms: tuple[TrustTransform, ...] = field(
         default_factory=lambda: (MinimumTrustFloor(),)
     )
 
-    def compute_scale(self, residuals: list[Residual]) -> Residual:
+    def compute_scale(self, residuals: Sequence[Residual]) -> Residual:
         return self.scale_estimator.compute(residuals)
 
     def compute_trust(
@@ -287,6 +272,8 @@ class TrustValueComputer(
 
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     bins: Bins[NumBins, NumDemos, NumPoints, DimState, DimAction]
+    _: KW_ONLY
+    consensus_config: ConsensusConfig = field(default_factory=ConsensusConfig)
 
     def compute(
         self,
@@ -306,8 +293,8 @@ class TrustValueComputer(
 
         for bin in self.bins:
             for i in self.demonstrations.demo_indices:
-                loo_stats = RobustStatistics[DimState, DimAction].for_bin(
-                    bin, LOO_demo_index=i
+                loo_stats = ConsensusStatistics[DimState, DimAction].for_bin(
+                    bin, consensus_config=self.consensus_config, LOO_demo_index=i
                 )
                 ctx = TrustComputationContext(anchor=mode.anchor_from_stats(loo_stats))
 

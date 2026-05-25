@@ -449,7 +449,7 @@ def plot_ribbon_action_field(
     pad: float = 0.05,
 ) -> None:
     """
-    Visualize median action vectors at each bin.
+    Visualize (median) action vectors at each bin.
     Assumes state_dim == 2 and action_dim == 2.
     """
     _xs: list[npDType] = []
@@ -459,8 +459,8 @@ def plot_ribbon_action_field(
 
     for bin in bins:
         token = bin.ribbon_token
-        state = token.median_state
-        action = token.median_action
+        state = token.state_anchor
+        action = token.action_anchor
 
         _xs.append(state[0])
         _ys.append(state[1])
@@ -588,7 +588,7 @@ def plot_ribbon_statistics(
     variability: list[Residual] = []
     for bin in bins:
         token = bin.ribbon_token
-        strengths.append(token.median_action_strength)
+        strengths.append(token.action_strength)
         variability.append(token.MAD_action_residual)
     ax.plot(strengths, label="Median action strength")
     ax.plot(variability, label="MAD residual")
@@ -806,24 +806,23 @@ def plot_ribbon_corridor(
     variability_scale: float = 1.0,
 ) -> None:
     """
-    Plot ribbon median trajectory with variability corridor.
+    Plot ribbon (median) trajectory with variability corridor.
     Corridor radius is derived from MAD residual.
     """
-    median_xs: list[npDType] = []
-    median_ys: list[npDType] = []
+    anchor_xs: list[npDType] = []
+    anchor_ys: list[npDType] = []
     variability: list[Residual] = []
     for bin in bins:
         token = bin.ribbon_token
-        median_state = token.median_state
-        median_xs.append(median_state[0])
-        median_ys.append(median_state[1])
+        anchor_xs.append(token.state_anchor[0])
+        anchor_ys.append(token.state_anchor[1])
         variability.append(token.MAD_action_residual)
-    xs = np.asarray(median_xs, dtype=npDType)
-    ys = np.asarray(median_ys, dtype=npDType)
+    xs = np.asarray(anchor_xs, dtype=npDType)
+    ys = np.asarray(anchor_ys, dtype=npDType)
     var = variability_scale * np.asarray(variability, dtype=npDType)
 
     fig, ax = ensure_fig_ax(fig=fig, ax=ax, figsize=(7, 7))
-    ax.plot(xs, ys, linewidth=3, label="Ribbon median")
+    ax.plot(xs, ys, linewidth=3, label="Ribbon anchor")
     ax.fill_between(xs, ys - var, ys + var, alpha=0.2, label="MAD corridor")
     ax.set_xlabel("x")
     ax.set_ylabel("y")
@@ -872,7 +871,7 @@ def plot_action_angle_deviation(
     title: str = "Action Angle Deviation",
 ) -> None:
     """
-    Plot angular deviation from ribbon median action.
+    Plot angular deviation from ribbon (median) action.
     Measures directional disagreement.
     """
     xs: list[npDType] = []
@@ -884,7 +883,7 @@ def plot_action_angle_deviation(
             action = demo_actions[t]
             phase = tau[t]
             bin_index = min(int(phase * len(bin_list)), len(bin_list) - 1)
-            reference = bin_list[bin_index].ribbon_token.median_action
+            reference = bin_list[bin_index].ribbon_token.action_anchor
             numerator = np.dot(action, reference)
             denominator = np.linalg.norm(action) * np.linalg.norm(reference) + 1e-8
             cosine = np.clip(numerator / denominator, -1.0, 1.0)

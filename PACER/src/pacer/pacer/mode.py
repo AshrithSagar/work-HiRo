@@ -21,7 +21,7 @@ from pacer.base import (
     StatesCollection,
 )
 from pacer.pacer.base import MetricValue
-from pacer.pacer.binning import RibbonToken, RobustStatistics
+from pacer.pacer.binning import ConsensusStatistics, RibbonToken
 from pacer.typings import (
     CollectionType,
     DemoIndex,
@@ -48,7 +48,7 @@ class VectorMode(
 
     # Field access
     vector_from_sample: Callable[[Sample[DimState, DimAction]], VectorType]
-    anchor_from_stats: Callable[[RobustStatistics[DimState, DimAction]], VectorType]
+    anchor_from_stats: Callable[[ConsensusStatistics[DimState, DimAction]], VectorType]
     strength_from_token: Callable[[RibbonToken[DimState, DimAction]], MetricValue]
 
     # Construction
@@ -74,8 +74,8 @@ def action_mode() -> VectorMode[
     """`VectorMode` configuration for actions."""
     return VectorMode(
         vector_from_sample=lambda sample: sample.action,
-        anchor_from_stats=lambda stats: stats.median_action,
-        strength_from_token=lambda token: token.median_action_strength,
+        anchor_from_stats=lambda stats: stats.action_anchor,
+        strength_from_token=lambda token: token.action_strength,
         wrap=Action[DimAction],
         make_collection=lambda demos: ActionsCollection[
             NumDemos, NumPoints, DimAction
@@ -97,8 +97,8 @@ def state_mode() -> VectorMode[
     """`VectorMode` configuration for states."""
     return VectorMode(
         vector_from_sample=lambda sample: sample.state,
-        anchor_from_stats=lambda stats: stats.median_state,
-        strength_from_token=lambda token: token.median_state_norm,
+        anchor_from_stats=lambda stats: stats.state_anchor,
+        strength_from_token=lambda token: token.state_norm,
         wrap=State[DimState],
         make_collection=lambda demos: StatesCollection[
             NumDemos, NumPoints, DimState

@@ -14,6 +14,7 @@ from typingkit.core import RuntimeGeneric
 from pacer.base import Demonstrations
 from pacer.pacer.base import TrustValuesCollection, ZScoresCollection
 from pacer.pacer.binning import Binner, Bins, RibbonTokenConsolidator
+from pacer.pacer.consensus import ConsensusConfig
 from pacer.pacer.mode import action_mode, state_mode
 from pacer.pacer.pseudolabel import PseudoLabelComputer, PseudoLabelParams, PseudoLabels
 from pacer.pacer.trust import (
@@ -33,6 +34,7 @@ class PACERConfig(RuntimeGeneric[NumBins]):
         default_factory=PhasePipelineConfig
     )
     n_bins: NumBins = cast(NumBins, 96)  # B
+    consensus_config: ConsensusConfig = field(default_factory=ConsensusConfig)
     action_trust_value_params: TrustValueParams = field(
         default_factory=TrustValueParams
     )
@@ -95,15 +97,15 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
         ).make_bins()
         bins = RibbonTokenConsolidator(bins).consolidate_ribbon_tokens()
 
-        action_trust_result = TrustValueComputer(self.demonstrations, bins).compute(
-            mode=action_mode(), params=self.config.action_trust_value_params
-        )
+        action_trust_result = TrustValueComputer(
+            self.demonstrations, bins, consensus_config=self.config.consensus_config
+        ).compute(mode=action_mode(), params=self.config.action_trust_value_params)
 
         state_trust_result = None
         if self.config.use_state_labels:
-            state_trust_result = TrustValueComputer(self.demonstrations, bins).compute(
-                mode=state_mode(), params=self.config.state_trust_value_params
-            )
+            state_trust_result = TrustValueComputer(
+                self.demonstrations, bins, consensus_config=self.config.consensus_config
+            ).compute(mode=state_mode(), params=self.config.state_trust_value_params)
 
         pseudo_labels = PseudoLabelComputer(
             self.demonstrations, bins

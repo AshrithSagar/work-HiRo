@@ -7,7 +7,7 @@ Pseudo-Label Refinement
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
 from collections.abc import Iterable
-from dataclasses import dataclass, field
+from dataclasses import KW_ONLY, dataclass, field
 from typing import Generic, Protocol
 
 import numpy.linalg as la
@@ -15,7 +15,8 @@ from typingkit.core import RuntimeGeneric
 
 from pacer.base import ActionsCollection, Demonstrations, StatesCollection
 from pacer.pacer.base import MetricValue, TrustValue, TrustValuesCollection
-from pacer.pacer.binning import Bins, RobustStatistics
+from pacer.pacer.binning import Bins, ConsensusStatistics
+from pacer.pacer.consensus import ConsensusConfig
 from pacer.pacer.mode import VectorMode, action_mode, state_mode
 from pacer.typings import (
     CollectionType,
@@ -167,6 +168,8 @@ class PseudoLabelComputer(
 
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     bins: Bins[NumBins, NumDemos, NumPoints, DimState, DimAction]
+    _: KW_ONLY
+    consensus_config: ConsensusConfig = field(default_factory=ConsensusConfig)
 
     def _compute_labels(
         self,
@@ -193,8 +196,8 @@ class PseudoLabelComputer(
             ) or has_state_tangent
 
             for j in self.demonstrations.demo_indices:
-                loo_stats = RobustStatistics[DimState, DimAction].for_bin(
-                    bin, LOO_demo_index=j
+                loo_stats = ConsensusStatistics[DimState, DimAction].for_bin(
+                    bin, consensus_config=self.consensus_config, LOO_demo_index=j
                 )
                 anchor = mode.anchor_from_stats(loo_stats)
                 median_strength = mode.strength_from_token(token)

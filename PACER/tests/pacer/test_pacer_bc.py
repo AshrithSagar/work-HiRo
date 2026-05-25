@@ -11,6 +11,12 @@ from pacer.bc import BCTrainConfig
 from pacer.datasets import DemonstrationLoader, DemonstrationLoaderConfig
 from pacer.experiments import BCvsPACERBCExperiment
 from pacer.pacer import PACERConfig
+from pacer.pacer.consensus import (
+    ConsensusConfig,
+    MADResidualScaleEstimator,
+    MedianScalarEstimator,
+    MedianVectorEstimator,
+)
 from pacer.pacer.pseudolabel import (
     DebiasTowardsAnchorStep,
     PseudoLabelParams,
@@ -21,7 +27,6 @@ from pacer.pacer.pseudolabel import (
 )
 from pacer.pacer.trust import (
     EuclideanResidualComputer,
-    MADScaleEstimator,
     MinimumTrustFloor,
     TrustPipeline,
     TrustValueParams,
@@ -59,10 +64,17 @@ if __name__ == "__main__":
                 evaluate_phases=False,
             ),
             n_bins=96,  # B
+            consensus_config=ConsensusConfig(
+                vector_estimator=MedianVectorEstimator(),
+                scalar_estimator=MedianScalarEstimator(),
+                residual_scale_estimator=MADResidualScaleEstimator(),
+            ),
             action_trust_value_params=TrustValueParams(
                 pipeline=TrustPipeline(
                     residual_computer=EuclideanResidualComputer(),
-                    scale_estimator=MADScaleEstimator(consistency_scale=MAD_SCALE),
+                    scale_estimator=MADResidualScaleEstimator(
+                        consistency_scale=MAD_SCALE
+                    ),
                     kernel=TukeyBiweightKernel(cutoff=4.685),  # c
                     transforms=(MinimumTrustFloor(minimum=0.02),),  # w_min
                 ),
@@ -81,7 +93,9 @@ if __name__ == "__main__":
             state_trust_value_params=TrustValueParams(
                 pipeline=TrustPipeline(
                     residual_computer=EuclideanResidualComputer(),
-                    scale_estimator=MADScaleEstimator(consistency_scale=MAD_SCALE),
+                    scale_estimator=MADResidualScaleEstimator(
+                        consistency_scale=MAD_SCALE
+                    ),
                     kernel=TukeyBiweightKernel(cutoff=4.685),  # c
                     transforms=(MinimumTrustFloor(minimum=0.02),),  # w_min
                 ),

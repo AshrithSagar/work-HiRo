@@ -70,6 +70,11 @@ def median(
     return cast(np.ndarray, np.median(arr, axis=axis))
 
 
+def mean(arr: npt.ArrayLike, /, axis: int | Sequence[int] | None = None) -> np.ndarray:
+    arr = np.asarray(arr)
+    return cast(np.ndarray, np.mean(arr, axis=axis))
+
+
 def normalise(
     vec: onp.ToArray1D, /, method: Literal["NORM", "MINMAX", "ZSCORE"]
 ) -> onp.Array1D[npDType]:

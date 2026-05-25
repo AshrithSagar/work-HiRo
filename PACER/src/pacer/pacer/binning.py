@@ -24,6 +24,7 @@ from pacer.base import (
     States,
 )
 from pacer.pacer.base import MetricValue, Residual
+from pacer.pacer.consensus import ConsensusConfig
 from pacer.phase import Phase, PhasesCollection
 from pacer.typings import (
     BinIndex,
@@ -41,22 +42,20 @@ from pacer.utils import MAD_SCALE, median
 
 
 @dataclass(kw_only=True)
-class RobustStatistics(RuntimeGeneric[DimState, DimAction]):
-    """Robust consensus statistics for a set of samples."""
+class ConsensusStatistics(RuntimeGeneric[DimState, DimAction]):
+    """Consensus statistics for a set of samples."""
 
     ## Stable anchors
-    median_action: Action[DimAction]  # alpha_a[b] = median{ a_{i, t} : (i, t) \in I_b }
-    median_state: State[DimState]  # alpha_s[b] = median{ x_{i, t} : (i, t) \in I_b }
+    action_anchor: Action[DimAction]  # alpha_a[b]
+    state_anchor: State[DimState]  # alpha_s[b]
 
     ## Pace
-    median_action_strength: MetricValue
-    # beta_a[b] = median{ ||a_{i, t}|| : (i, t) \in I_b }
+    action_strength: MetricValue  # beta_a[b]
     # Captures strength of actions
-    median_state_change: MetricValue
-    # beta_s[b] = median{ ||xdot_{i, t}|| : (i, t) \in I_b }
+    state_change: MetricValue  # beta_s[b]
     # Captures typical rate of state change
 
-    median_state_norm: MetricValue
+    state_norm: MetricValue
 
     ## Local task dynamics
     # NOTE: `action_tangent` and `state_tangent` are not stored here,
@@ -67,6 +66,7 @@ class RobustStatistics(RuntimeGeneric[DimState, DimAction]):
         cls,
         bin: Bin[NumDemos, NumPoints, DimState, DimAction],
         *,
+        consensus_config: ConsensusConfig,
         LOO_demo_index: DemoIndex | None = None,
     ) -> Self:
         states = States[Any, DimState]()
@@ -81,18 +81,12 @@ class RobustStatistics(RuntimeGeneric[DimState, DimAction]):
             la.norm(states[t + 1] - states[t]) for t in range(len(states) - 1)
         ]
 
-        median_action = Action[DimAction](median(actions, axis=0))
-        median_state = State[DimState](median(states, axis=0))
-        median_action_strength = MetricValue(median(action_norms, axis=0))
-        median_state_norm = MetricValue(median(state_norms, axis=0))
-        median_state_change = MetricValue(median(state_change_norms, axis=0))
-
         return cls(
-            median_action=median_action,
-            median_state=median_state,
-            median_action_strength=median_action_strength,
-            median_state_norm=median_state_norm,
-            median_state_change=median_state_change,
+            action_anchor=consensus_config.vector_estimator.compute_action(actions),
+            state_anchor=consensus_config.vector_estimator.compute_state(states),
+            action_strength=consensus_config.scalar_estimator.compute(action_norms),
+            state_norm=consensus_config.scalar_estimator.compute(state_norms),
+            state_change=consensus_config.scalar_estimator.compute(state_change_norms),
         )
 
 
@@ -103,12 +97,12 @@ class RibbonToken(RuntimeGeneric[DimState, DimAction]):  # z_b
     Encodes both consensus behaviour and degree of variability present at phase `b`.
     """
 
-    median_action: Action[DimAction]  # alpha_a[b]
-    median_action_strength: MetricValue  # beta_a[b]
-    median_state: State[DimState]  # alpha_s[b]
-    median_state_change: MetricValue  # beta_s[b]
+    action_anchor: Action[DimAction]  # alpha_a[b]
+    action_strength: MetricValue  # beta_a[b]
+    state_anchor: State[DimState]  # alpha_s[b]
+    state_change: MetricValue  # beta_s[b]
 
-    median_state_norm: MetricValue
+    state_norm: MetricValue
 
     ## Local task dynamics
     action_tangent: Action[DimAction] = field(init=False)
@@ -201,6 +195,8 @@ class RibbonTokenConsolidator(
     """Computes ribbon tokens from binned samples."""
 
     bins: Bins[NumBins, NumDemos, NumPoints, DimState, DimAction]
+    _: KW_ONLY
+    consensus_config: ConsensusConfig = field(default_factory=ConsensusConfig)
 
     def consolidate_ribbon_tokens(
         self,
@@ -209,9 +205,11 @@ class RibbonTokenConsolidator(
         bin_median_states = States[NumBins, DimState]()
 
         for bin in self.bins:
-            stats = RobustStatistics[DimState, DimAction].for_bin(bin)
+            stats = ConsensusStatistics[DimState, DimAction].for_bin(
+                bin, consensus_config=self.consensus_config
+            )
 
-            bin_median_action = stats.median_action  # alpha_a[b]
+            bin_median_action = stats.action_anchor  # alpha_a[b]
             bin_action_residuals = list[Residual]()
             for action in bin.actions():
                 residual = Residual(la.norm(action - bin_median_action))  # r_{i, t}
@@ -224,15 +222,15 @@ class RibbonTokenConsolidator(
             MAD_action_residual = Residual(MAD_SCALE * median(abs_deviations))
 
             bin.ribbon_token = RibbonToken(
-                median_action=stats.median_action,
-                median_action_strength=stats.median_action_strength,
-                median_state=stats.median_state,
-                median_state_change=stats.median_state_change,
-                median_state_norm=stats.median_state_norm,
+                action_anchor=stats.action_anchor,
+                action_strength=stats.action_strength,
+                state_anchor=stats.state_anchor,
+                state_change=stats.state_change,
+                state_norm=stats.state_norm,
                 MAD_action_residual=MAD_action_residual,
             )
-            bin_median_actions.append(stats.median_action)
-            bin_median_states.append(stats.median_state)
+            bin_median_actions.append(stats.action_anchor)
+            bin_median_states.append(stats.state_anchor)
 
         for bin in self.bins:
             b = bin.index
