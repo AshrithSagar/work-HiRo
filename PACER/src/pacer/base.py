@@ -136,6 +136,14 @@ class StateActionPair(RuntimeGeneric[DimState, DimAction]):
     action: Action[DimAction]  # a
 
 
+class StateActionPairs(TypedList[NumPoints, StateActionPair[DimState, DimAction]]):
+    def states(self) -> States[NumPoints, DimState]:
+        return States[NumPoints, DimState](pair.state for pair in self)
+
+    def actions(self) -> Actions[NumPoints, DimAction]:
+        return Actions[NumPoints, DimAction](pair.action for pair in self)
+
+
 # (x_{i, t}, a_{i, t})
 @dataclass
 class Sample(StateActionPair[DimState, DimAction]):

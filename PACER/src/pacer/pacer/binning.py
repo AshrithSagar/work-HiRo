@@ -8,7 +8,7 @@ Binning
 
 from collections.abc import Iterator
 from dataclasses import KW_ONLY, dataclass, field
-from typing import Any, Self, TypeAlias, cast
+from typing import Any, Self, cast
 
 import numpy.linalg as la
 from typingkit.core import RuntimeGeneric, TypedList
@@ -21,6 +21,8 @@ from pacer.base import (
     Samples,
     SamplesCollection,
     State,
+    StateActionPair,
+    StateActionPairs,
     States,
 )
 from pacer.pacer.base import MetricValue, Residual
@@ -144,8 +146,18 @@ class Bin(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
         return self.samples_collection.actions(LOO_demo_index=LOO_demo_index)
 
 
-Bins: TypeAlias = TypedList[NumBins, Bin[NumDemos, NumPoints, DimState, DimAction]]
-"""Ordered collection of phase bins."""
+class Bins(TypedList[NumBins, Bin[NumDemos, NumPoints, DimState, DimAction]]):
+    """Ordered collection of phase bins."""
+
+    @property
+    def consensus_trajectory(self) -> StateActionPairs[NumBins, DimState, DimAction]:
+        return StateActionPairs[NumBins, DimState, DimAction](
+            StateActionPair(
+                state=bin.ribbon_token.state_anchor,
+                action=bin.ribbon_token.action_anchor,
+            )
+            for bin in self
+        )
 
 
 @dataclass

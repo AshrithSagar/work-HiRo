@@ -33,6 +33,7 @@ from pacer.base import (
     Actions,
     ActionsCollection,
     Demonstrations,
+    StateActionPairs,
     States,
     StatesCollection,
 )
@@ -444,12 +445,12 @@ def plot_ribbon_action_field(
     *,
     fig: Figure | None = None,
     ax: Axes | None = None,
-    title: str = "Ribbon Median Action Field",
+    title: str = "Ribbon Reference Action Field",
     scale: float = 1.0,
     pad: float = 0.05,
 ) -> None:
     """
-    Visualize (median) action vectors at each bin.
+    Visualize reference action vectors at each bin.
     Assumes state_dim == 2 and action_dim == 2.
     """
     _xs: list[npDType] = []
@@ -806,24 +807,17 @@ def plot_ribbon_corridor(
     variability_scale: float = 1.0,
 ) -> None:
     """
-    Plot ribbon (median) trajectory with variability corridor.
+    Plot ribbon reference trajectory with variability corridor.
     Corridor radius is derived from MAD residual.
     """
-    anchor_xs: list[npDType] = []
-    anchor_ys: list[npDType] = []
-    variability: list[Residual] = []
-    for bin in bins:
-        token = bin.ribbon_token
-        anchor_xs.append(token.state_anchor[0])
-        anchor_ys.append(token.state_anchor[1])
-        variability.append(token.action_residual_scale)
-    xs = np.asarray(anchor_xs, dtype=npDType)
-    ys = np.asarray(anchor_ys, dtype=npDType)
+    ref_states = bins.consensus_trajectory.states()
+    xs, ys = ref_states.coord(0), ref_states.coord(1)
+    variability = [bin.ribbon_token.action_residual_scale for bin in bins]
     var = variability_scale * np.asarray(variability, dtype=npDType)
 
     fig, ax = ensure_fig_ax(fig=fig, ax=ax, figsize=(7, 7))
     ax.plot(xs, ys, linewidth=3, label="Ribbon anchor")
-    ax.fill_between(xs, ys - var, ys + var, alpha=0.2, label="MAD corridor")
+    ax.fill_between(xs, ys - var, ys + var, alpha=0.2, label="Residual corridor")
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     ax.set_title(title)
@@ -871,7 +865,7 @@ def plot_action_angle_deviation(
     title: str = "Action Angle Deviation",
 ) -> None:
     """
-    Plot angular deviation from ribbon (median) action.
+    Plot angular deviation from ribbon reference action.
     Measures directional disagreement.
     """
     xs: list[npDType] = []
@@ -945,6 +939,7 @@ def plot_stacked_trust_colored_trajectories(
     states_collection: StatesCollection[NumDemos, NumPoints, TWO],
     trust_values_collection: Mapping[int, MetricSeries[NumPoints]]
     | Iterable[MetricSeries[NumPoints]],
+    consensus_trajectory: StateActionPairs[NumBins, DimState, DimAction],
     *,
     fig: Figure | None = None,
     ax: Axes3D | None = None,
@@ -983,29 +978,23 @@ def plot_stacked_trust_colored_trajectories(
 
     # Global ribbon reference
     if style.show_reference:
-        stacked = np.stack(
-            [
-                np.column_stack([states.coord(0), states.coord(1)])
-                for states in states_collection
-            ],
-            axis=0,
-        )
-        median_traj = np.median(stacked, axis=0)
+        ref_states = consensus_trajectory.states()
+        xs_ref, ys_ref = ref_states.coord(0), ref_states.coord(1)
 
         if style.mode == "3d":
             ax.plot(
-                np.zeros(len(median_traj)),
-                median_traj[:, 0],
-                median_traj[:, 1],
+                np.zeros(len(xs_ref)),
+                xs_ref,
+                ys_ref,
                 color="red",
                 linewidth=style.reference_linewidth,
                 alpha=0.5,
-                label="Ribbon median",
+                label="Ribbon reference",
             )
         else:
             ax.plot(
-                median_traj[:, 0],
-                median_traj[:, 1],
+                xs_ref,
+                ys_ref,
                 color="red",
                 linewidth=style.reference_linewidth,
                 alpha=0.5,
@@ -1255,6 +1244,7 @@ class PACERVisualiser(RuntimeGeneric[NumBins, NumDemos, NumPoints]):
             plot_stacked_trust_colored_trajectories(
                 self.demonstrations.states,
                 self.pacer_result.action_trust_values,
+                self.pacer_result.bins.consensus_trajectory,
                 style=StackedTrajectoryStyle(
                     mode="isometric", spacing=10.0, offset_x=0, offset_y=0
                 ),
@@ -1262,6 +1252,7 @@ class PACERVisualiser(RuntimeGeneric[NumBins, NumDemos, NumPoints]):
             plot_stacked_trust_colored_trajectories(
                 self.demonstrations.states,
                 self.pacer_result.action_trust_values,
+                self.pacer_result.bins.consensus_trajectory,
                 style=StackedTrajectoryStyle(
                     mode="3d", spacing=10.0, offset_x=0, offset_y=0
                 ),
