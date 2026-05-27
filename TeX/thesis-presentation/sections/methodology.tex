@@ -1,1 +1,247 @@
 \section{Methodology}
+
+\begin{frame}
+    \frametitle{\textbf{PACER}}
+    \framesubtitle{\textbf{P}rogress \textbf{A}ligned \textbf{C}uration for \textbf{E}rror \textbf{R}esilient Imitation Learning}
+
+\end{frame}
+
+\begin{frame}{PACER Pipeline}
+
+    \begin{enumerate}
+        \item Learn latent phase
+        \item Align demonstrations by progress
+        \item Compute robust consensus statistics
+        \item Estimate trust weights
+        \item Generate pseudo-labels
+        \item Train weighted BC policy
+    \end{enumerate}
+
+\end{frame}
+
+\begin{frame}{Phase Alignment}
+
+    \textbf{Problem:}
+    Different demonstrations progress at different speeds.
+
+    \vspace{0.7em}
+
+    \textbf{Solution:}
+    Learn a state-dependent phase variable
+    \[
+        \tau \in [0,1]
+    \]
+
+    \vspace{0.7em}
+
+    \textbf{Ranking Objective}
+    \[
+        \mathcal{L}_{\mathrm{rank}}
+        =
+        \sum_{t>t'}
+        \log\left(
+            1+\exp\left(
+                m-(g(x_t)-g(x_{t'}))
+            \right)
+        \right)
+    \]
+
+    \vspace{0.7em}
+
+    \begin{itemize}
+        \item Later states should have higher phase
+        \item Independent of absolute time
+        \item Enables progress-based synchronization
+    \end{itemize}
+
+\end{frame}
+
+\begin{frame}{Robust Consensus Statistics}
+
+    \textbf{Phase Binning}
+    \begin{itemize}
+        \item Divide phase interval into bins
+        \item Samples with similar progress are grouped together
+    \end{itemize}
+
+    \vspace{0.7em}
+
+    \textbf{Per-bin Robust Statistics}
+    \[
+        \alpha_a[b] = \mathrm{median}(a_{i,t})
+    \]
+
+    \[
+        \beta_a[b] = \mathrm{median}(\|a_{i,t}\|)
+    \]
+
+    \vspace{0.7em}
+
+    \textbf{Why Median?}
+    \begin{itemize}
+        \item Resistant to outliers
+        \item Captures typical behavior
+    \end{itemize}
+
+    \vspace{0.7em}
+
+    \textbf{Tangents}
+    \begin{itemize}
+        \item Finite differences across bins
+        \item Capture canonical direction of motion
+    \end{itemize}
+
+\end{frame}
+
+\begin{frame}{Trust Estimation}
+
+    \textbf{Leave-One-Out Consensus}
+    \begin{itemize}
+        \item A demo cannot validate itself
+    \end{itemize}
+
+    \vspace{0.7em}
+
+    \textbf{Residual}
+    \[
+        r_{i,t} = \|a_{i,t} - \alpha_a^{(-i)}[b]\|
+    \]
+
+    \vspace{0.7em}
+
+    \textbf{Robust z-score}
+    \[
+        z_{i,t}
+        =
+        \frac{r_{i,t}}
+        {\mathrm{MAD}[b]+\varepsilon}
+    \]
+
+    \vspace{0.7em}
+
+    \textbf{Tukey Biweight}
+    \[
+        w_{i,t}
+        =
+        {\left(1-{(z/c)}^2\right)}^2
+    \]
+
+    \vspace{0.7em}
+
+    \begin{itemize}
+        \item High agreement $\rightarrow$ high trust
+        \item Outliers $\rightarrow$ low trust
+    \end{itemize}
+
+\end{frame}
+
+\begin{frame}{Pseudo-Label Refinement}
+
+    For each sample:
+
+    \vspace{0.5em}
+
+    \begin{enumerate}
+        \item \textbf{Debias toward median anchor}
+            \[
+                y^{(1)}
+                =
+                \gamma a
+                +(1-\gamma)\alpha_a
+            \]
+
+            \vspace{0.5em}
+
+        \item \textbf{Directional alignment}
+            \begin{itemize}
+                \item Align with ribbon tangent
+            \end{itemize}
+
+            \vspace{0.5em}
+
+        \item \textbf{Sideways attenuation}
+            \begin{itemize}
+                \item Suppress lateral deviations
+            \end{itemize}
+
+            \vspace{0.5em}
+
+        \item \textbf{Speed regularization}
+
+            \vspace{0.5em}
+
+        \item \textbf{Temporal smoothing}
+    \end{enumerate}
+
+\end{frame}
+
+\begin{frame}{Policy Training}
+
+    \textbf{Final Objective}
+    \[
+        \mathcal{L}
+        =
+        \mathbb{E}_{i,t}
+        \left[
+            w_{i,t}
+            \cdot
+            \mathrm{Huber}
+            \left(
+                f_\theta(x_{i,t}) - y^*_{i,t}
+            \right)
+        \right]
+    \]
+
+    \vspace{1em}
+
+    \textbf{Key Point}
+    \begin{itemize}
+        \item Training remains standard behavioral cloning
+        \item Robustness handled during preprocessing
+    \end{itemize}
+
+    \vspace{1em}
+
+    \begin{block}{Benefits}
+        \begin{itemize}
+            \item Stable training
+            \item Noise resilience
+            \item Interpretable diagnostics
+        \end{itemize}
+    \end{block}
+
+\end{frame}
+
+\begin{frame}{Experimental Setup}
+
+    \textbf{Dataset}
+    \begin{itemize}
+        \item LASA Handwriting Dataset
+        \item ``G Shape'' trajectories
+    \end{itemize}
+
+    \vspace{0.5em}
+
+    \textbf{Corruptions}
+    \begin{itemize}
+        \item Injected localized Gaussian perturbations
+        \item Affect states and actions
+    \end{itemize}
+
+    \vspace{0.5em}
+
+    \textbf{Baselines}
+    \begin{itemize}
+        \item Standard BC
+        \item PACER + BC
+    \end{itemize}
+
+    \vspace{0.5em}
+
+    \textbf{Metrics}
+    \begin{itemize}
+        \item Behavioral cloning loss
+        \item Trust visualization
+    \end{itemize}
+
+\end{frame}

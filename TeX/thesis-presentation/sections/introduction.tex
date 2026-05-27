@@ -1,1 +1,59 @@
 \section{Introduction}
+
+\begin{frame}{Motivation}
+
+    \textbf{Imitation Learning (IL)}
+    \begin{itemize}
+        \item Learn robot policies directly from demonstrations
+        \item Avoids hand-crafted rewards
+        \item Effective for manipulation and trajectory tasks
+    \end{itemize}
+
+    \vspace{0.5em}
+
+    \textbf{Practical Challenges}
+    \begin{itemize}
+        \item \textbf{Pace variability}
+            \begin{itemize}
+                \item Same task executed at different speeds
+            \end{itemize}
+
+        \item \textbf{Local corruptions}
+            \begin{itemize}
+                \item Brief unintended deviations
+                \item Fatigue, hesitation, over-corrections
+            \end{itemize}
+    \end{itemize}
+
+    \vspace{0.5em}
+
+    \textbf{Problem:}
+    Standard Behavioral Cloning treats all samples equally.
+
+\end{frame}
+
+\begin{frame}{Goals of PACER}
+
+    \begin{block}{Objective}
+        Learn robust policies from sparse and imperfect demonstrations.
+    \end{block}
+
+    \textbf{PACER Contributions}
+    \begin{enumerate}
+        \item Learn a latent \textbf{task phase} for alignment
+        \item Detect corrupted segments using:
+            \begin{itemize}
+                \item Median
+                \item MAD
+                \item Tukey Biweight
+            \end{itemize}
+        \item Construct refined pseudo-labels before policy training
+    \end{enumerate}
+
+    \vspace{0.5em}
+
+    \begin{alertblock}{Key Idea}
+        Move all robustness into a preprocessing stage while keeping policy training simple.
+    \end{alertblock}
+
+\end{frame}
