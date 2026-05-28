@@ -203,28 +203,62 @@
 
 % -----------------------------------------------------
 \begin{frame}{Related Work}
-
     \small
-
     \begin{center}
-        \begin{tabular}{lcc}
+        \begin{tabular}{p{2.5cm} p{6cm} cc}
             \toprule
-            Method & Alignment & Robustness \\
+            \textbf{Method} & \textbf{Core Idea} & Align & Robust \\
             \midrule
-            DMP / DTW & \checkmark & $\times$ \\
-            TCN / TACO & \checkmark & $\times$ \\
-            Robust IL Methods & $\times$ & \checkmark \\
-            PACER & \checkmark & \checkmark \\
+
+            DMP / ProMP
+            & Explicit phase variables synchronize trajectories across varying speeds
+            & \checkmark & $\times$ \\
+
+            DTW / soft-DTW
+            & Time-warping alignment between demonstrations
+            & \checkmark & $\times$ \\
+
+            TCN
+            & Learn progress representations from observations
+            & \checkmark & $\times$ \\
+
+            TACO
+            & Joint temporal alignment and policy learning from weak supervision
+            & \checkmark & $\times$ \\
+
+            2IWIL / IC-GAIL
+            & Confidence-weighted imitation from imperfect demonstrations
+            & $\times$ & \checkmark \\
+
+            ILEED
+            & Estimate demonstrator expertise during imitation learning
+            & $\times$ & \checkmark \\
+
+            VILD
+            & Learn rewards under noisy and diverse-quality demonstrations
+            & $\times$ & \checkmark \\
+
+            PACER
+            & Phase-aligned robust consensus with pseudo-label repair
+            & \checkmark & \checkmark \\
+
             \bottomrule
         \end{tabular}
     \end{center}
 
-    \vspace{1em}
+\end{frame}
 
-    \textbf{Observation}
+\begin{frame}{Related Work}
+
+    \small
+
+    \textbf{Observations}
     \begin{itemize}
-        \item Alignment methods assume clean demonstrations
-        \item Robust IL methods assume aligned data
+        \item Most methods assume trajectories are already temporally aligned or require large datasets to estimate expertise reliably.
+            \begin{itemize}
+                \item Alignment-only methods assume clean labels after synchronization
+                \item Robust IL methods often assume aligned trajectories
+            \end{itemize}
         \item PACER addresses both jointly
     \end{itemize}
 
