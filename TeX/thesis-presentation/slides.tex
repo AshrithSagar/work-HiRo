@@ -777,9 +777,9 @@
     \begin{block}{Interpretability}
         PACER also provides useful diagnostics:
         \begin{itemize}
-            \item trust maps
+            \item Trust maps
             \item MAD uncertainty regions
-            \item phase-aligned consensus trajectories
+            \item Phase-aligned consensus trajectories
         \end{itemize}
     \end{block}
 
@@ -793,10 +793,17 @@
 
     \begin{itemize}
         \item Requires meaningful phase estimation
+            \begin{itemize}
+                \item Benefits most when deviations are \textit{short}, relative to the trajectory
+                \item Breaks down under \textit{long-horizon tasks} or \textit{globally biased corruptions} or when progress is poorly estimated
+            \end{itemize}
         \item Assumes mostly local corruptions
-        \item Sensitive to hyperparameters
+        \item Sensitive to hyperparameters; Bias-Variance trade-offs
         \item Sparse bins reduce robustness
-        \item Very few demonstrations weaken LOO consensus
+            \begin{itemize}
+                \item Very few demonstrations weaken LOO consensus
+            \end{itemize}
+
     \end{itemize}
 
 \end{frame}
@@ -808,7 +815,7 @@
         \item Vision-based phase estimation
         \item Uncertainty-aware consensus models
         \item Integration with diffusion policies
-        \item Online refinement with environment interaction
+        \item Online/Iterative refinement with environment interaction
         \item Validation on real robot systems
     \end{itemize}
 
@@ -844,11 +851,11 @@
 
     \vspace{2em}
 
-    {\Huge Thank You}
+    {\Huge Thank You!}
 
     \vspace{2em}
 
-    {\Large Questions?}
+    {\large Open for any questions \ldots}
 
 \end{frame}
 
