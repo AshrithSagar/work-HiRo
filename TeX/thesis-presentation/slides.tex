@@ -748,18 +748,24 @@
 \begin{frame}{Results}
 
     \begin{center}
+        \begin{table}[htb]
+            \caption{BC Policy vs.\ PACER + BC Policy}\label{tab:bc_vs_pacer}
+            \centering
+            \footnotesize
+            \setlength{\tabcolsep}{4pt}
+            \begin{tabular}{llcccc}
+                \hline
+                \textbf{State} & \textbf{Data} & \textbf{BC} & \textbf{Phase} & \textbf{PACER+BC} & \textbf{Improvement} \\
+                \textbf{Labels} & \textbf{Condition} & \textbf{Loss} & \textbf{Loss} & \textbf{Loss} & \\
+                \hline
+                No  & Original  & 4.2973 & 0.0219 & \textbf{1.8111} & $57.9\%$ \\
+                No  & Corrupted & 4.2530 & 0.0517 & \textbf{1.7996} & $57.6\%$ \\
+                Yes & Original  & 4.2973 & 0.0219 & \textbf{1.7451} & $59.4\%$ \\
+                Yes & Corrupted & 4.2530 & 0.0517 & \textbf{1.7202} & $59.5\%$ \\
+                \hline
+            \end{tabular}
+        \end{table}
         \scriptsize{(\textit{lower is better})}
-    \end{center}
-    \begin{center}
-        \small
-        \begin{tabular}{lccc}
-            \toprule
-            Condition & BC & Phase & PACER+BC \\
-            \midrule
-            Original & 4.2973 & 0.0219 & 1.7451 \\
-            Corrupted & 4.2530 & 0.0517 & 1.7202 \\
-            \bottomrule
-        \end{tabular}
     \end{center}
 
     \vspace{1em}
