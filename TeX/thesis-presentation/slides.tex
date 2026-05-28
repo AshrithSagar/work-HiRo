@@ -699,6 +699,7 @@
 
 % -----------------------------------------------------
 \begin{frame}{Trust Values}
+    {Only action pseudo-labels}
 
     \centering
     \begin{columns}
@@ -718,6 +719,38 @@
                 height=0.65\textheight,
                 keepaspectratio
             ]{../thesis-report/figs/b2.jpeg}
+        \end{column}
+    \end{columns}
+
+    \small
+    High-consensus samples receive higher trust values.
+
+    Corrupted segments receive significantly lower trust values.
+
+\end{frame}
+
+% -----------------------------------------------------
+\begin{frame}{Trust Values}
+    {Both action + state pseudo-labels}
+
+    \centering
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \centering
+            \includegraphics[
+                width=\linewidth,
+                height=0.65\textheight,
+                keepaspectratio
+            ]{figs/5.jpeg}
+        \end{column}
+
+        \begin{column}{0.5\textwidth}
+            \centering
+            \includegraphics[
+                width=\linewidth,
+                height=0.65\textheight,
+                keepaspectratio
+            ]{figs/6.jpeg}
         \end{column}
     \end{columns}
 
