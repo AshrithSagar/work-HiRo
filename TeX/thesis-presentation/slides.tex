@@ -644,13 +644,11 @@
 \section{Experiments and Results}
 
 % -----------------------------------------------------
-\begin{frame}{Experimental Setup}
+\begin{frame}{Dataset}
 
-    \textbf{Dataset}
+    \textbf{LASA Handwriting Dataset}
     \begin{itemize}
-        \item LASA Handwriting Dataset
-        \item ``G Shape'' trajectories
-        \item Seven demonstrations
+        \item Library of 2D handwriting motions
     \end{itemize}
 
     \vspace{0.75em}
@@ -672,34 +670,32 @@
 \end{frame}
 
 % -----------------------------------------------------
-\begin{frame}{LASA Demonstrations}
+\begin{frame}{Demonstrations}
 
     \centering
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \centering
+            \includegraphics[
+                width=\linewidth,
+                height=0.65\textheight,
+                keepaspectratio
+            ]{../thesis-report/figs/a1.jpeg}
 
-    \includegraphics[
-        width=\linewidth,
-        height=0.75\textheight,
-        keepaspectratio
-    ]{../thesis-report/figs/a1.jpeg}
+            \small Clean demonstrations
+        \end{column}
 
-    \small
-    Original demonstrations from the LASA ``G Shape'' dataset.
+        \begin{column}{0.5\textwidth}
+            \centering
+            \includegraphics[
+                width=\linewidth,
+                height=0.65\textheight,
+                keepaspectratio
+            ]{../thesis-report/figs/b1.jpeg}
 
-\end{frame}
-
-% -----------------------------------------------------
-\begin{frame}{Corrupted Demonstrations}
-
-    \centering
-
-    \includegraphics[
-        width=\linewidth,
-        height=0.75\textheight,
-        keepaspectratio
-    ]{../thesis-report/figs/b1.jpeg}
-
-    \small
-    Localized Gaussian corruptions injected into selected trajectory segments.
+            \small Corrupted segments with Gaussian noise
+        \end{column}
+    \end{columns}
 
 \end{frame}
 
