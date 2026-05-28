@@ -15,15 +15,49 @@
 \setbeamercolor{title}{fg=internationalkleinblue}
 \usetikzlibrary{positioning}
 
-\input{sections/titlepage.tex}
+\titlegraphic{
+    \begin{tikzpicture}[overlay,remember picture]
+        \node[below=0.75em] at (current page.north){
+            \includegraphics[width=0.1\textwidth]
+            {../common/figures/logo/IISc_Master_Seal_Black.jpg}
+        };
+    \end{tikzpicture}
+}
+\vspace*{1.5em}
+\title[PACER]{
+    \textbf{PACER:\@ Progress Aligned Curation for Error Resilient Imitation Learning}
+}
+\subtitle[Thesis]{\textcolor{mediumpersianblue}{
+        \textbf{M.Tech.\! Thesis Presentation} \\
+        \vspace*{-0.75em}
+}}
+\author[Ashrith]{%
+    \texorpdfstring{
+        \textbf{Ashrith Sagar Yedlapalli} \\
+        \textbf{\scriptsize{10-01-02-10-51-24-1-24233}} \\  % chktex 8
+        \vspace{0.5em}
+        \small{\textit{Under the guidance of}} \\
+        \large{\textbf{Dr.\ Ravi Prakash}}
+    }{
+        Ashrith Sagar Yedlapalli, under the guidance of Dr.\ Ravi Prakash
+    }
+}
+\institute[IISc]{
+    \textbf{\color{Sepia}
+        Department of Cyber Physical Systems, \\
+        Indian Institute of Science, Bangalore, India
+}}
+\date{\today}
 
 \begin{document}
 
+% =========================================
 \section*{Titlepage}
 \begin{frame}
     \titlepage{}
 \end{frame}
 
+% =========================================
 \section*{Outline}
 \begin{frame}[allowframebreaks]
     \frametitle{\textbf{Outline}}
@@ -32,12 +66,435 @@
     \tableofcontents[sections={5,6,7,8}]
 \end{frame}
 
-\input{sections/introduction.tex}
-\input{sections/review.tex}
-\input{sections/methodology.tex}
-\input{sections/results.tex}
-\input{sections/conclusion.tex}
+% =========================================
+\section{Introduction}
 
+\begin{frame}{Motivation}
+
+    \textbf{Imitation Learning (IL)}
+    \begin{itemize}
+        \item Learn robot policies directly from demonstrations
+        \item Avoids hand-crafted rewards
+        \item Effective for manipulation and trajectory tasks
+    \end{itemize}
+
+    \vspace{0.5em}
+
+    \textbf{Practical Challenges}
+    \begin{itemize}
+        \item \textbf{Pace variability}
+            \begin{itemize}
+                \item Same task executed at different speeds
+            \end{itemize}
+
+        \item \textbf{Local corruptions}
+            \begin{itemize}
+                \item Brief unintended deviations
+                \item Fatigue, hesitation, over-corrections
+            \end{itemize}
+    \end{itemize}
+
+    \vspace{0.5em}
+
+    \textbf{Problem:}
+    Standard Behavioral Cloning treats all samples equally.
+
+\end{frame}
+
+\begin{frame}{Goals of PACER}
+
+    \begin{block}{Objective}
+        Learn robust policies from sparse and imperfect demonstrations.
+    \end{block}
+
+    \textbf{PACER Contributions}
+    \begin{enumerate}
+        \item Learn a latent \textbf{task phase} for alignment
+        \item Detect corrupted segments using:
+            \begin{itemize}
+                \item Median
+                \item MAD
+                \item Tukey Biweight
+            \end{itemize}
+        \item Construct refined pseudo-labels before policy training
+    \end{enumerate}
+
+    \vspace{0.5em}
+
+    \begin{alertblock}{Key Idea}
+        Move all robustness into a preprocessing stage while keeping policy training simple.
+    \end{alertblock}
+
+\end{frame}
+
+% =========================================
+\section{Methodology}
+
+\begin{frame}
+    \frametitle{\textbf{PACER}}
+    \framesubtitle{\textbf{P}rogress \textbf{A}ligned \textbf{C}uration for \textbf{E}rror \textbf{R}esilient Imitation Learning}
+
+\end{frame}
+
+\begin{frame}{PACER Pipeline}
+
+    \centering
+
+    \begin{tikzpicture}[
+            node distance=1.5cm and 1.2cm,
+            every node/.style={font=\small},
+            block/.style={
+                rectangle,
+                rounded corners,
+                draw=blue!60,
+                thick,
+                fill=blue!10,
+                minimum width=5cm,
+                minimum height=0.5cm,
+                align=center
+            },
+            arrow/.style={
+                ->,
+                thick,
+                blue!70
+            }
+        ]
+
+        % Nodes
+        \node[block] (latent) {1. Learn latent phase};
+
+        \node[block, right=of latent] (align)
+        {2. Align demonstrations by progress};
+
+        \node[block, below=of align] (consensus)
+        {3. Compute robust consensus statistics};
+
+        \node[block, left=of consensus] (trust)
+        {4. Estimate trust weights};
+
+        \node[block, below=of trust] (pseudo)
+        {5. Generate pseudo-labels};
+
+        \node[block, right=of pseudo, fill=green!12, draw=green!50!black] (bc)
+        {6. Train weighted BC policy};
+
+        % Arrows
+        \draw[arrow] (latent) -- (align);
+        \draw[arrow] (align) -- (consensus);
+        \draw[arrow] (consensus) -- (trust);
+        \draw[arrow] (trust) -- (pseudo);
+        \draw[arrow] (pseudo) -- (bc);
+
+    \end{tikzpicture}
+
+\end{frame}
+
+\begin{frame}{Phase Alignment}
+
+    \textbf{Problem:}
+    Different demonstrations progress at different speeds.
+
+    \vspace{0.7em}
+
+    \textbf{Solution:}
+    Learn a state-dependent phase variable
+    \[
+        \tau \in [0,1]
+    \]
+
+    \vspace{0.7em}
+
+    \textbf{Ranking Objective}
+    \[
+        \mathcal{L}_{\mathrm{rank}}
+        =
+        \sum_{t>t'}
+        \log\left(
+            1+\exp\left(
+                m-(g(x_t)-g(x_{t'}))
+            \right)
+        \right)
+    \]
+
+    \vspace{0.7em}
+
+    \begin{itemize}
+        \item Later states should have higher phase
+        \item Independent of absolute time
+        \item Enables progress-based synchronization
+    \end{itemize}
+
+\end{frame}
+
+\begin{frame}{Robust Consensus Statistics}
+
+    \textbf{Phase Binning}
+    \begin{itemize}
+        \item Divide phase interval into bins
+        \item Samples with similar progress are grouped together
+    \end{itemize}
+
+    \textbf{Per-bin Robust Statistics}
+    \[
+        \alpha_a[b] = \mathrm{median}(a_{i,t})
+    \]
+    \[
+        \beta_a[b] = \mathrm{median}(\|a_{i,t}\|)
+    \]
+
+    \textbf{Why Median?}
+    \begin{itemize}
+        \item Resistant to outliers
+        \item Captures typical behavior
+    \end{itemize}
+
+    \textbf{Tangents}
+    \begin{itemize}
+        \item Finite differences across bins
+        \item Capture canonical direction of motion
+    \end{itemize}
+
+\end{frame}
+
+\begin{frame}{Trust Estimation}
+
+    \textbf{Leave-One-Out Consensus}
+    \begin{itemize}
+        \item A demo cannot validate itself
+    \end{itemize}
+
+    \vspace{0.7em}
+
+    \textbf{Residual}
+    \[
+        r_{i,t} = \|a_{i,t} - \alpha_a^{(-i)}[b]\|
+    \]
+
+    \vspace{0.7em}
+
+    \textbf{Robust z-score}
+    \[
+        z_{i,t}
+        =
+        \frac{r_{i,t}}
+        {\mathrm{MAD}[b]+\varepsilon}
+    \]
+
+    \vspace{0.7em}
+
+    \textbf{Tukey Biweight}
+    \[
+        w_{i,t}
+        =
+        {\left(1-{(z/c)}^2\right)}^2
+    \]
+
+    \vspace{0.7em}
+
+    \begin{itemize}
+        \item High agreement $\rightarrow$ high trust
+        \item Outliers $\rightarrow$ low trust
+    \end{itemize}
+
+\end{frame}
+
+\begin{frame}{Pseudo-Label Refinement}
+
+    For each sample:
+
+    \vspace{0.5em}
+
+    \begin{enumerate}
+        \item \textbf{Debias toward median anchor}
+            \[
+                y^{(1)}
+                =
+                \gamma a
+                +(1-\gamma)\alpha_a
+            \]
+
+            \vspace{0.5em}
+
+        \item \textbf{Directional alignment}
+            \begin{itemize}
+                \item Align with ribbon tangent
+            \end{itemize}
+
+            \vspace{0.5em}
+
+        \item \textbf{Sideways attenuation}
+            \begin{itemize}
+                \item Suppress lateral deviations
+            \end{itemize}
+
+            \vspace{0.5em}
+
+        \item \textbf{Speed regularization}
+
+            \vspace{0.5em}
+
+        \item \textbf{Temporal smoothing}
+    \end{enumerate}
+
+\end{frame}
+
+\begin{frame}{Policy Training}
+
+    \textbf{Final Objective}
+    \[
+        \mathcal{L}
+        =
+        \mathbb{E}_{i,t}
+        \left[
+            w_{i,t}
+            \cdot
+            \mathrm{Huber}
+            \left(
+                f_\theta(x_{i,t}) - y^*_{i,t}
+            \right)
+        \right]
+    \]
+
+    \vspace{1em}
+
+    \textbf{Key Point}
+    \begin{itemize}
+        \item Training remains standard behavioral cloning
+        \item Robustness handled during preprocessing
+    \end{itemize}
+
+    \vspace{1em}
+
+    \begin{block}{Benefits}
+        \begin{itemize}
+            \item Stable training
+            \item Noise resilience
+            \item Interpretable diagnostics
+        \end{itemize}
+    \end{block}
+
+\end{frame}
+
+\begin{frame}{Experimental Setup}
+
+    \textbf{Dataset}
+    \begin{itemize}
+        \item LASA Handwriting Dataset
+        \item ``G Shape'' trajectories
+    \end{itemize}
+
+    \vspace{0.5em}
+
+    \textbf{Corruptions}
+    \begin{itemize}
+        \item Injected localized Gaussian perturbations
+        \item Affect states and actions
+    \end{itemize}
+
+    \vspace{0.5em}
+
+    \textbf{Baselines}
+    \begin{itemize}
+        \item Standard BC
+        \item PACER + BC
+    \end{itemize}
+
+    \vspace{0.5em}
+
+    \textbf{Metrics}
+    \begin{itemize}
+        \item Behavioral cloning loss
+        \item Trust visualization
+    \end{itemize}
+
+\end{frame}
+
+% =========================================
+\section{Results}
+
+\begin{frame}
+    \frametitle{\textbf{Results}}
+
+    \begin{table}[h]
+        \centering
+        \small
+        \begin{tabular}{lccc}
+            \toprule
+            Condition & BC & Phase & PACER+BC \\
+            \midrule
+            Original & 4.2973 & 0.0219 & 1.7451 \\
+            Corrupted & 4.2530 & 0.0517 & 1.7202 \\
+            \bottomrule
+        \end{tabular}
+    \end{table}
+
+    \vspace{1em}
+
+    \textbf{Observations}
+    \begin{itemize}
+        \item PACER assigns lower trust to corrupted regions
+        \item PACER+BC improves robustness
+        \item Better alignment across demonstrations
+    \end{itemize}
+
+\end{frame}
+
+\begin{frame}
+    \frametitle{\textbf{Limitations}}
+
+    \begin{block}
+        {\textbf{Limitations}}
+
+        \begin{itemize}
+            \item Requires meaningful phase estimation
+            \item Works best for local corruptions
+            \item Sensitive to hyperparameters
+            \item Sparse bins reduce robustness
+        \end{itemize}
+    \end{block}
+
+    \begin{block}
+        {\textbf{Future Work}}
+
+        \begin{itemize}
+            \item Uncertainty-aware consensus models
+            \item Vision-based phase estimation
+            \item Diffusion policies
+            \item Real robot deployment
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+% =========================================
+\section{Conclusion}
+
+\begin{frame}
+    \frametitle{\textbf{Conclusion}}
+    \framesubtitle{Summary}
+
+    \begin{block}{PACER}
+        A preprocessing framework for robust imitation learning from imperfect demonstrations.
+    \end{block}
+
+    \vspace{0.7em}
+
+    \textbf{Key Takeaways}
+    \begin{itemize}
+        \item Aligns demonstrations by latent phase
+        \item Detects corruptions with robust statistics
+        \item Repairs labels before policy training
+        \item Improves robustness with simple BC training
+    \end{itemize}
+
+    \vspace{1em}
+
+    \begin{center}
+        \Large Thank You
+    \end{center}
+
+\end{frame}
+
+% =========================================
 \section{References}
 \begin{frame}[allowframebreaks]
     \frametitle{\textbf{References}}
