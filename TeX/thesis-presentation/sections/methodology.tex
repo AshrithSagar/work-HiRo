@@ -8,14 +8,54 @@
 
 \begin{frame}{PACER Pipeline}
 
-    \begin{enumerate}
-        \item Learn latent phase
-        \item Align demonstrations by progress
-        \item Compute robust consensus statistics
-        \item Estimate trust weights
-        \item Generate pseudo-labels
-        \item Train weighted BC policy
-    \end{enumerate}
+    \centering
+
+    \begin{tikzpicture}[
+            node distance=1.5cm and 1.2cm,
+            every node/.style={font=\small},
+            block/.style={
+                rectangle,
+                rounded corners,
+                draw=blue!60,
+                thick,
+                fill=blue!10,
+                minimum width=5cm,
+                minimum height=0.5cm,
+                align=center
+            },
+            arrow/.style={
+                ->,
+                thick,
+                blue!70
+            }
+        ]
+
+        % Nodes
+        \node[block] (latent) {1. Learn latent phase};
+
+        \node[block, right=of latent] (align)
+        {2. Align demonstrations by progress};
+
+        \node[block, below=of align] (consensus)
+        {3. Compute robust consensus statistics};
+
+        \node[block, left=of consensus] (trust)
+        {4. Estimate trust weights};
+
+        \node[block, below=of trust] (pseudo)
+        {5. Generate pseudo-labels};
+
+        \node[block, right=of pseudo, fill=green!12, draw=green!50!black] (bc)
+        {6. Train weighted BC policy};
+
+        % Arrows
+        \draw[arrow] (latent) -- (align);
+        \draw[arrow] (align) -- (consensus);
+        \draw[arrow] (consensus) -- (trust);
+        \draw[arrow] (trust) -- (pseudo);
+        \draw[arrow] (pseudo) -- (bc);
+
+    \end{tikzpicture}
 
 \end{frame}
 
