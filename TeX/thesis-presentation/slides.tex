@@ -288,6 +288,110 @@
     \end{alertblock}
 \end{frame}
 
+\begin{frame}
+    \frametitle{\textbf{PACER}}
+    \framesubtitle{\textbf{P}rogress \textbf{A}ligned \textbf{C}uration for \textbf{E}rror \textbf{R}esilient Imitation Learning}
+
+    \centering
+
+    \begin{tikzpicture}[
+            node distance=1.5cm and 1.8cm,
+            every node/.style={font=\scriptsize},
+            block/.style={
+                rectangle,
+                rounded corners,
+                draw=black,
+                thick,
+                align=center,
+                minimum width=2cm,
+                minimum height=1cm,
+                fill=blue!8
+            },
+            robust/.style={
+                rectangle,
+                rounded corners,
+                draw=black,
+                thick,
+                align=center,
+                minimum width=2cm,
+                minimum height=1.1cm,
+                fill=red!8
+            },
+            output/.style={
+                rectangle,
+                rounded corners,
+                draw=black,
+                thick,
+                align=center,
+                minimum width=2cm,
+                minimum height=1.1cm,
+                fill=green!10
+            },
+            arrow/.style={
+                ->,
+                thick
+            }
+        ]
+
+        % Nodes
+        \node[block] (demo) {
+            Demonstrations \\
+            $(x_t, a_t)$
+        };
+
+        \node[block, right=of demo] (phase) {
+            Learned Phase \\
+            Alignment
+        };
+
+        \node[robust, right=of phase] (consensus) {
+            Robust Consensus \\
+            \& Trust Estimation
+        };
+
+        \node[robust, below=of consensus] (pseudo) {
+            Pseudo-label \\
+            Refinement
+        };
+
+        \node[output, left=of pseudo] (policy) {
+            Weighted Huber \\
+            Behavioral Cloning
+        };
+
+        % Arrows
+        \draw[arrow] (demo) -- (phase);
+        \draw[arrow] (phase) -- node[above] {\scriptsize phase bins} (consensus);
+        \draw[arrow] (consensus) -- node[left] {\scriptsize trust weights} (pseudo);
+        \draw[arrow] (pseudo) -- node[above] {\scriptsize repaired labels} (policy);
+
+        % Annotations
+        \node[above=0.15cm of phase, align=center] {
+            \scriptsize Pairwise ranking loss \\
+            \scriptsize Monotone task progress
+        };
+
+        \node[above=0.15cm of consensus, align=center] {
+            \scriptsize Median, MAD, Tukey \\
+            \scriptsize Leave-one-out residuals
+        };
+
+        \node[below=0.15cm of pseudo, align=center] {
+            \scriptsize Debiasing \\
+            \scriptsize Smoothing \& speed correction
+        };
+
+    \end{tikzpicture}
+
+    \vspace{0.75em}
+
+    \scriptsize{
+        Align demonstrations by task progress, detect local corruptions via robust phase-wise consensus,
+        then repair labels before standard behavioral cloning.
+    }
+
+\end{frame}
+
 % -----------------------------------------------------
 \begin{frame}{Problem Formulation}
 
