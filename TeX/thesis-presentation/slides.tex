@@ -574,6 +574,35 @@
 
 \end{frame}
 
+\begin{frame}
+    \frametitle{\textbf{Pseudo-label Refinement}}
+
+    \textbf{Alignment with the Ribbon Tangent}\\
+    A canonical forward direction $t_{\mathrm{dir}}[b]$ is selected.
+
+    \textbf{Sideways Attenuation}
+    \begin{equation}
+        \begin{aligned}
+            y^{(2)}_{i,t} &= y^{(1)}_\parallel + (1 - \rho_{i,t})\, y^{(1)}_\perp,\\
+            \rho_{i,t} &= \rho_0(1-w_{i,t})\;\mathbf{1}[t_s[b]\text{ available}].
+        \end{aligned}
+    \end{equation}
+
+    \textbf{Speed Regularisation}
+    \begin{equation}
+        s_{i,t} = (1-\eta_{i,t})\|y^{(2)}_{i,t}\| + \eta_{i,t}\,\beta_a[b],
+        \quad y^{(3)}_{i,t} = s_{i,t}\,\frac{y^{(2)}_{i,t}}{\|y^{(2)}_{i,t}\|+\varepsilon},
+    \end{equation}
+    where $\eta_{i,t} = \eta_0(1-w_{i,t})$.
+
+    \textbf{Temporal Smoothing}
+    An exponential moving average
+    \begin{equation}
+        y^*_{i,t} = (1-\kappa_{i,t})\, y^{(3)}_{i,t} + \kappa_{i,t}\, y^*_{i,t-1}.
+    \end{equation}
+
+\end{frame}
+
 % =====================================================
 % SLIDE 6 : FINAL OBJECTIVE
 % =====================================================
