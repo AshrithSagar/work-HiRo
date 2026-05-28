@@ -3,7 +3,7 @@
 \usecolortheme{default}
 
 \usepackage{amsmath, amssymb, amsthm}
-\usepackage{tabularx, booktabs, multirow}
+\usepackage{tabularx, booktabs, multirow, interval}
 \usepackage[ruled,vlined]{algorithm2e}
 \usepackage{cite, graphicx, latexcolors}
 \usepackage[dvipsnames]{xcolor}
@@ -14,6 +14,8 @@
 \hypersetup{colorlinks=true, linkcolor=blue,}
 \setbeamercolor{title}{fg=internationalkleinblue}
 \usetikzlibrary{positioning, arrows.meta}
+
+\intervalconfig{soft open fences}
 
 \setbeamersize{text margin left=0.5cm,text margin right=0.5cm}
 \setlength{\parskip}{0.3em}
@@ -392,174 +394,115 @@
 
 \end{frame}
 
-% -----------------------------------------------------
-\begin{frame}{Problem Formulation}
+\begin{frame}
+    \frametitle{\textbf{Phase Alignment}}
 
-    Given demonstrations:
-
+    \textbf{Idea:}
+    Learn a latent task phase $\tau$ using a scoring function $g_\psi$:
     \[
-        D_i = \{(x_{i,t}, a_{i,t})\}_{t=1}^{T_i}
+        \tau \leftarrow g_\psi(x)
     \]
-
-    where:
+    Represents task progress independent of time.
+    Depends only on state.
 
     \begin{itemize}
-        \item $x_{i,t}$ : robot state
-        \item $a_{i,t}$ : demonstrated action
-        \item demonstrations may contain corruptions
+        \item Align demonstrations running at different speeds
+        \item Compare equivalent task stages
+        \item Build phase-local consensus
     \end{itemize}
 
-\end{frame}
-
-% -----------------------------------------------------
-\begin{frame}{Phase Alignment}
-
-    \textbf{Solution}
-
-    Learn a latent phase variable:
-
+    We use a simple MLP with one hidden layer to score, and enfore monotonicity
     \[
-        \tau \in [0,1]
+        g_\psi(x_{i, t}) > g_\psi(x_{i, t'}), \quad \forall t > t'
     \]
 
-    representing task progress independently of time.
-
-    \vspace{1em}
-
-    \textbf{Benefits}
-    \begin{itemize}
-        \item Align demonstrations executed at different speeds
-        \item Compare samples at equivalent task stages
-        \item Build progress-based consensus
-    \end{itemize}
-
-\end{frame}
-
-% -----------------------------------------------------
-\begin{frame}{Pairwise Ranking Loss}
-
-    \textbf{Monotonicity Constraint}
-
-    Later states should receive larger phase scores.
-
-    \vspace{1em}
-
-    \[
-        \mathcal{L}_{\mathrm{rank}}
-        =
-        \sum_{t>t'}
-        \log\left(
-            1+
-            \exp\left(
-                m-(g(x_t)-g(x_{t'}))
+    \begin{block}{Monotone Ranking Loss}
+        \[
+            \mathcal{L}_{\mathrm{rank}}
+            =
+            \sum_{i}
+            \sum_{t>t'}
+            \log
+            \left(
+                1+
+                \exp{\left(m-(g_\psi(x_{i, t})-g_\psi(x_{i, t'}))\right)}
             \right)
-        \right)
-    \]
-
-    \vspace{1em}
-
-    \begin{itemize}
-        \item Enforces ordered progression
-        \item Independent of execution speed
-        \item Produces a smooth phase coordinate
-    \end{itemize}
-
-\end{frame}
-
-% -----------------------------------------------------
-\begin{frame}{Phase Binning}
-
-    \textbf{Idea}
-
-    Divide the phase interval into bins.
-
-    \[
-        \tau \in [0,1]
-    \]
-
-    \vspace{0.75em}
-
-    \begin{itemize}
-        \item Samples with similar progress are grouped together
-        \item Enables direct comparison across demonstrations
-        \item Removes dependence on time index
-    \end{itemize}
-
-    \vspace{1em}
-
-    \begin{block}{Within each bin}
-        Compute robust consensus statistics.
+        \]
+        \small
+        Later states should receive larger phase scores.
     \end{block}
 
 \end{frame}
 
-% -----------------------------------------------------
-\begin{frame}{Robust Consensus Statistics}
+\begin{frame}{Phase Bins}
 
-    \textbf{Per-bin Statistics}
-
-    \[
-        \alpha_a[b] = \mathrm{median}(a_{i,t})
-    \]
-
-    \[
-        \beta_a[b] = \mathrm{median}(\|a_{i,t}\|)
-    \]
-
-    \vspace{1em}
-
-    \textbf{Why Median?}
-
+    \textbf{Binning}
     \begin{itemize}
-        \item Robust to outliers
-        \item Resistant to corrupted segments
-        \item Captures typical behavior
+        \item Divide the phase interval $[0, 1]$ into $B$ equally-spaced bins.
+            \begin{itemize}
+                \item Samples with similar progress are grouped together
+                \item Enables direct comparison across demonstrations
+                \item Removes dependence on time index
+            \end{itemize}
+            \vspace{-0.5em}
+            \[
+                \mathcal{I}_b = \left\{(i, t) \Big| \tau_{i, t} \in \left[{\frac{b}{B}}, {\frac{b+1}{B}}\right) \right\}
+            \]
     \end{itemize}
+
+    \textbf{Robust consensus statistics}
+    \begin{itemize}
+        \item \small Within each bin, compute consensus statistics.
+            \vspace{-0.75em}
+            \begin{align}
+                \alpha_a[b] & = \mathrm{median}\{a_{i,t} : (i,t)\in\mathcal{I}_b\}, \\
+                \alpha_s[b] & = \mathrm{median}\{x_{i,t} : (i,t)\in\mathcal{I}_b\}, \\
+                \beta_a[b]  & = \mathrm{median}\{\|a_{i,t}\| : (i,t)\in\mathcal{I}_b\}, \\
+                \beta_s[b]  & = \mathrm{median}\{\|\dot{x}_{i,t}\| : (i,t)\in\mathcal{I}_b\}.
+            \end{align}
+            \vspace{-1.5em}
+        \item \small Finite differencing per-bin medians $\rightarrow$ Action, State tangents $t_a[b]$, $t_s[b]$
+        \item \small Capturing the canonical direction of motion at each task phase.
+    \end{itemize}
+
+\end{frame}
+
+\begin{frame}
+    \frametitle{\textbf{Robust Trust Estimation}}
+
+    \textbf{Leave-One-Out Residual}
+    \[
+        r_{i,t}
+        =
+        \|a_{i,t} - \alpha_a^{(-i)}[b]\|
+    \]
+
+    \small
+    Leave-one-out consensus prevents demonstrations from validating their own corruptions.
 
     \vspace{0.75em}
 
-    \begin{alertblock}{Observation}
-        Means shift heavily under corruptions, medians remain stable.
-    \end{alertblock}
-
-\end{frame}
-
-% -----------------------------------------------------
-\begin{frame}{Median Absolute Deviation (MAD)}
-
-    \textbf{Need}
-
-    Estimate spread robustly.
-
-    \vspace{1em}
-
+    \textbf{Robust z-score}
     \[
-        \mathrm{MAD}
+        z_{i,t}
         =
-        1.4826
-        \cdot
-        \mathrm{median}
-        |v_i - \mathrm{median}(v)|
+        \frac{
+            r_{i,t}
+        }{
+            \mathrm{MAD}[b] + \varepsilon
+        }
     \]
 
-    \vspace{1em}
+    \vspace{0.75em}
 
-    \textbf{Advantages}
-
-    \begin{itemize}
-        \item Robust alternative to variance
-        \item Stable under outliers
-        \item Enables robust z-scores
-    \end{itemize}
-
-\end{frame}
-
-% -----------------------------------------------------
-\begin{frame}{Leave-One-Out Consensus}
-
-    \textbf{Problem}
-
-    A corrupted trajectory should not validate itself.
+    \textbf{Tukey Trust Weight}
+    \[
+        w_{i,t}
+        =
+        \left(
+            1-(z/c)^2
+        \right)^2
+    \]
 
     \vspace{1em}
 
@@ -567,130 +510,38 @@
 
         \column{0.48\linewidth}
 
-        \textbf{Without LOO}
-        \begin{itemize}
-            \item Corrupted sample contributes to consensus
-            \item Outlier partially hides itself
-        \end{itemize}
+        \begin{block}{High Trust}
+            Small deviation from phase consensus
+        \end{block}
 
         \column{0.48\linewidth}
 
-        \textbf{With LOO}
-        \begin{itemize}
-            \item Remove current demonstration
-            \item Compare only against others
-        \end{itemize}
+        \begin{alertblock}{Low Trust}
+            Corrupted or inconsistent segment
+        \end{alertblock}
 
     \end{columns}
 
-    \vspace{1em}
-
-    \begin{block}{Result}
-        More reliable corruption detection.
-    \end{block}
-
 \end{frame}
 
-% -----------------------------------------------------
-\begin{frame}{Trust Estimation}
-
-    \textbf{Residual}
-
-    \[
-        r_{i,t}
-        =
-        \|a_{i,t} - \alpha_a^{(-i)}[b]\|
-    \]
-
-    \vspace{1em}
-
-    \textbf{Robust z-score}
-
-    \[
-        z_{i,t}
-        =
-        \frac{r_{i,t}}{\mathrm{MAD}[b]+\varepsilon}
-    \]
-
-    \vspace{1em}
-
-    \textbf{Interpretation}
-
-    \begin{itemize}
-        \item Small deviation $\rightarrow$ high trust
-        \item Large deviation $\rightarrow$ low trust
-    \end{itemize}
-
-\end{frame}
-
-% -----------------------------------------------------
-\begin{frame}{Tukey Biweight}
-
-    \[
-        w_{i,t}
-        =
-        \left(1-(z/c)^2\right)^2
-    \]
-
-    \vspace{1em}
-
-    \textbf{Behavior}
-
-    \begin{itemize}
-        \item Near consensus $\rightarrow$ weight close to 1
-        \item Moderate deviation $\rightarrow$ smoothly reduced weight
-        \item Large outlier $\rightarrow$ weight close to 0
-    \end{itemize}
-
-    \vspace{1em}
-
-    \begin{alertblock}{Why Tukey?}
-        Completely suppresses gross outliers while preserving smoothness.
-    \end{alertblock}
-
-\end{frame}
-
-% -----------------------------------------------------
-\begin{frame}{Estimated Task Phases}
+\begin{frame}
+    \frametitle{\textbf{Pseudo-label Refinement}}
 
     \centering
+    \vspace{-2em}
+    \[
+        a_{i,t}
+        \rightarrow
+        \text{debias}
+        \rightarrow
+        \text{align}
+        \rightarrow
+        \text{smooth}
+        \rightarrow
+        y^*_{i,t}
+    \]
 
-    \includegraphics[
-        width=\linewidth,
-        height=0.75\textheight,
-        keepaspectratio
-    ]{../thesis-report/figs/a2.jpeg}
-
-    \small
-    Learned phases remain approximately monotonic despite varying execution speeds.
-
-\end{frame}
-
-% -----------------------------------------------------
-\begin{frame}{Trust Visualization}
-
-    \centering
-
-    \includegraphics[
-        width=\linewidth,
-        height=0.75\textheight,
-        keepaspectratio
-    ]{../thesis-report/figs/b2.jpeg}
-
-    \small
-    Corrupted segments receive significantly lower trust values.
-
-\end{frame}
-
-% -----------------------------------------------------
-\begin{frame}{Pseudo-Label Refinement}
-
-    \textbf{Goal}
-
-    Repair corrupted labels before training.
-
-    \vspace{1em}
-
+    \vspace{-0.5em}
     \begin{enumerate}
         \item Debias toward median anchor
         \item Directional alignment
@@ -699,62 +550,35 @@
         \item Temporal smoothing
     \end{enumerate}
 
-\end{frame}
+    \begin{block}{Consensus Debiasing}
 
-% -----------------------------------------------------
-\begin{frame}{Debiasing and Directional Alignment}
+        \[
+            y^*
+            =
+            \gamma a
+            +
+            (1-\gamma)\alpha_a[b]
+        \]
 
-    \textbf{Debias Toward Consensus}
-
-    \[
-        y^{(1)}
-        =
-        \gamma a
-        +(1-\gamma)\alpha_a
-    \]
-
-    \vspace{1em}
-
-    \textbf{Directional Alignment}
-
-    \begin{itemize}
-        \item Compute canonical ribbon tangent
-        \item Align actions with dominant motion direction
-    \end{itemize}
-
-    \vspace{0.75em}
-
-    \begin{block}{Effect}
-        Suppresses spurious directional deviations.
     \end{block}
 
-\end{frame}
-
-% -----------------------------------------------------
-\begin{frame}{Speed Regularization and Smoothing}
-
-    \textbf{Speed Regularization}
-
-    \begin{itemize}
-        \item Blend action magnitude toward consensus speed
-        \item Remove anomalous spikes
-    \end{itemize}
-
     \vspace{1em}
 
-    \textbf{Temporal Smoothing}
-
     \begin{itemize}
-        \item Apply exponential moving average
-        \item Reduce abrupt transitions
-        \item Improve trajectory consistency
+        \item Pull low-trust actions toward phase consensus
+        \item Preserve dominant motion direction
+        \item Smooth uncertain trajectory regions
     \end{itemize}
 
 \end{frame}
 
-% -----------------------------------------------------
+% =====================================================
+% SLIDE 6 : FINAL OBJECTIVE
+% =====================================================
+
 \begin{frame}{Final Training Objective}
 
+    Train a simple weighted BC policy using the computed trusts and refined pseudo-labels.
     \[
         \mathcal{L}
         =
@@ -763,18 +587,17 @@
             w_{i,t}
             \cdot
             \mathrm{Huber}
-            (f_\theta(x_{i,t}) - y^*_{i,t})
+            (
+                f_\theta(x_{i,t})
+                -
+                y^*_{i,t}
+            )
         \right]
     \]
 
-    \vspace{1em}
+    \vspace{1.5em}
 
-    \textbf{Key Point}
-
-    \begin{itemize}
-        \item Policy training remains standard BC
-        \item Robustness handled during preprocessing
-    \end{itemize}
+    PACER modifies the supervision targets, not the policy architecture.
 
 \end{frame}
 
@@ -845,6 +668,53 @@
 \end{frame}
 
 % -----------------------------------------------------
+\begin{frame}{Estimated Task Phases}
+
+    \centering
+
+    \includegraphics[
+        width=\linewidth,
+        height=0.75\textheight,
+        keepaspectratio
+    ]{../thesis-report/figs/a2.jpeg}
+
+    \small
+    Learned phases remain approximately monotonic despite varying execution speeds.
+
+\end{frame}
+
+% -----------------------------------------------------
+\begin{frame}{Trust Values}
+
+    \centering
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \centering
+            \includegraphics[
+                width=\linewidth,
+                height=0.65\textheight,
+                keepaspectratio
+            ]{../thesis-report/figs/a4.jpeg}
+        \end{column}
+
+        \begin{column}{0.5\textwidth}
+            \centering
+            \includegraphics[
+                width=\linewidth,
+                height=0.65\textheight,
+                keepaspectratio
+            ]{../thesis-report/figs/b2.jpeg}
+        \end{column}
+    \end{columns}
+
+    \small
+    High-consensus samples receive higher trust values.
+
+    Corrupted segments receive significantly lower trust values.
+
+\end{frame}
+
+% -----------------------------------------------------
 \begin{frame}{Ribbon Consensus Statistics}
 
     \centering
@@ -857,22 +727,6 @@
 
     \small
     Ribbon medians and MAD scales across phase bins.
-
-\end{frame}
-
-% -----------------------------------------------------
-\begin{frame}{Trust Assignment Visualization}
-
-    \centering
-
-    \includegraphics[
-        width=\linewidth,
-        height=0.75\textheight,
-        keepaspectratio
-    ]{../thesis-report/figs/a4.jpeg}
-
-    \small
-    High-consensus samples receive higher trust values.
 
 \end{frame}
 
@@ -1099,6 +953,36 @@
         vol.~27, no.~5, pp.~943--957, 2011.
 
     \end{thebibliography}
+
+\end{frame}
+
+% -----------------------------------------------------
+\begin{frame}{Median Absolute Deviation (MAD)}
+
+    \textbf{Need}
+
+    Estimate spread robustly.
+
+    \vspace{1em}
+
+    \[
+        \mathrm{MAD}
+        =
+        1.4826
+        \cdot
+        \mathrm{median}
+        |v_i - \mathrm{median}(v)|
+    \]
+
+    \vspace{1em}
+
+    \textbf{Advantages}
+
+    \begin{itemize}
+        \item Robust alternative to variance
+        \item Stable under outliers
+        \item Enables robust z-scores
+    \end{itemize}
 
 \end{frame}
 
