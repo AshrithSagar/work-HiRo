@@ -80,13 +80,6 @@
 \end{frame}
 
 % =====================================================
-\section*{Outline}
-\begin{frame}[allowframebreaks]
-    \frametitle{\textbf{Outline}}
-    \tableofcontents
-\end{frame}
-
-% =====================================================
 \section{Introduction}
 
 % -----------------------------------------------------
@@ -168,11 +161,11 @@
 
         \draw[thick,->] (0,0) -- (9,0) node[right]{Time};
 
-        \draw[blue, thick] (0,1) -- (2,1) -- (5,1) -- (8,1);
-        \node[left] at (0,1) {Demo A};
-
         \draw[red, thick] (0,2) -- (4,2) -- (7,2) -- (9,2);
-        \node[left] at (0,2) {Demo B};
+        \node[left] at (0,2) {Demo A};
+
+        \draw[blue, thick] (0,1) -- (2,1) -- (5,1) -- (8,1);
+        \node[left] at (0,1) {Demo B};
 
         \draw[dashed] (2,0.5) -- (2,2.5);
         \draw[dashed] (4,0.5) -- (4,2.5);
@@ -197,16 +190,6 @@
         \item Short segments may contain unintended deviations
         \item Corruptions are local, not global
     \end{itemize}
-
-    \vspace{0.75em}
-
-    \begin{center}
-        \includegraphics[
-            width=\linewidth,
-            height=0.65\textheight,
-            keepaspectratio
-        ]{../thesis-report/figs/b1.jpeg}
-    \end{center}
 
     \vspace{0.5em}
 
