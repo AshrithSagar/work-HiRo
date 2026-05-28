@@ -83,69 +83,70 @@
 \section{Introduction}
 
 % -----------------------------------------------------
-\begin{frame}{Imitation Learning}
+\begin{frame}{Introduction}{Imitation Learning \& Behavioral Cloning}
 
-    \textbf{Goal}
-    \begin{itemize}
-        \item Learn robot behavior directly from demonstrations
-        \item Avoid manual reward engineering
-        \item Reduce task-specific controller design
-    \end{itemize}
+    \begin{columns}[T,onlytextwidth]
 
-    \vspace{0.5em}
+        % ---------------- LEFT COLUMN ----------------
+        \column{0.45\textwidth}
 
-    \textbf{Applications}
-    \begin{itemize}
-        \item Robotic manipulation
-        \item Autonomous driving
-        \item Human-robot collaboration
-    \end{itemize}
+        \textbf{Goal}
+        \begin{itemize}
+            \item Learning from demonstrations (LfD)
+            \item Avoid reward engineering
+        \end{itemize}
 
-    \vspace{0.75em}
+        \vspace{0.5em}
 
-    \begin{block}{Behavioral Cloning (BC)}
-        Model learns to imitate an expert by copying examples of behavior.
+        \textbf{Applications}
+        \begin{itemize}
+            \item Robotics
+            \item Autonomous driving
+            \item Human-robot interaction
+        \end{itemize}
 
-        Learn a policy mapping:
-        \[
-            f_\theta : x_t \rightarrow a_t
-        \]
-        using demonstrated state-action pairs.
-    \end{block}
+        \vspace{0.45em}
+
+        \begin{block}{Behavioral Cloning}
+            Imitates expert state-action pairs.
+            \[
+                f_\theta: x_t \rightarrow a_t
+            \]
+            \[
+                \pi(a \mid s) \approx \pi_E(a \mid s)
+            \]
+        \end{block}
+
+        % ---------------- RIGHT COLUMN ----------------
+        \column{0.5\textwidth}
+
+        \begin{alertblock}{Key Limitation}
+            Assumes all expert actions are correct
+        \end{alertblock}
+
+        \vspace{0.5em}
+
+        \textbf{Reality of Data}
+        \begin{itemize}
+            \item Fatigue / hesitation
+            \item Distractions
+            \item Over-corrections
+        \end{itemize}
+
+        \vspace{0.5em}
+
+        \textbf{Consequences}
+        \begin{itemize}
+            \item Learns noisy actions
+            \item Error compounding in policy
+        \end{itemize}
+
+    \end{columns}
 
 \end{frame}
 
 % -----------------------------------------------------
-\begin{frame}{Why Standard Behavioral Cloning Fails}
-
-    \textbf{Assumptions}
-    \begin{itemize}
-        \item Every demonstrated action is correct
-        \item All samples contribute equally
-    \end{itemize}
-
-    \begin{alertblock}{Reality}
-        Human demonstrations are imperfect.
-    \end{alertblock}
-
-    \textbf{Causes}
-    \begin{itemize}
-        \item Operator fatigue
-        \item Hesitation
-        \item Momentary distractions
-        \item Over-corrections
-    \end{itemize}
-
-    \textbf{Result}
-    \begin{itemize}
-        \item BC learns corrupted actions directly
-        \item Errors propagate into the learned policy
-    \end{itemize}
-
-\end{frame}
-
-% -----------------------------------------------------
-\begin{frame}{Challenge 1: Pace Variability}
+\begin{frame}{Challenges}{1. Pace Variability}
 
     \textbf{Problem}
     \begin{itemize}
@@ -183,49 +184,22 @@
 \end{frame}
 
 % -----------------------------------------------------
-\begin{frame}{Challenge 2: Local Corruptions}
+\begin{frame}{Challenges}{2. Local Corruptions}
 
     \textbf{Problem}
     \begin{itemize}
-        \item Short segments may contain unintended deviations
-        \item Corruptions are local, not global
+        \item \textit{Short segments} may contain unintended deviations
+        \item Operator bias / fatigue / hesitations / distractions / over-corrections
+        \item Corruptions are \textbf{local}, not global
     \end{itemize}
 
-    \vspace{0.5em}
+    \vspace{1em}
 
     \begin{itemize}
-        \item Standard BC treats corrupted and clean samples equally
-        \item Even brief corruptions can distort the learned policy
+        \item Becomes especially crucial, when data is sparse.
     \end{itemize}
 
 \end{frame}
-
-% -----------------------------------------------------
-\begin{frame}{Goals of PACER}
-
-    \begin{block}{Objective}
-        Learn robust policies from sparse and imperfect demonstrations.
-    \end{block}
-
-    \vspace{0.75em}
-
-    \textbf{PACER Contributions}
-    \begin{enumerate}
-        \item Learn a latent task phase for temporal alignment
-        \item Detect corrupted segments using robust statistics
-        \item Repair corrupted labels before policy training
-    \end{enumerate}
-
-    \vspace{0.75em}
-
-    \begin{alertblock}{Key Design Principle}
-        Move all robustness into preprocessing while keeping policy training simple.
-    \end{alertblock}
-
-\end{frame}
-
-% =====================================================
-\section{Related Work}
 
 % -----------------------------------------------------
 \begin{frame}{Related Work}
@@ -257,106 +231,27 @@
 \end{frame}
 
 % -----------------------------------------------------
-\begin{frame}{Positioning of PACER}
+\begin{frame}
+    \frametitle{\textbf{PACER}}
+    \framesubtitle{\textbf{P}rogress \textbf{A}ligned \textbf{C}uration for \textbf{E}rror \textbf{R}esilient Imitation Learning}
 
-    \begin{block}{PACER}
-        Progress-aligned robust curation for imitation learning.
+    \begin{block}{Objective}
+        Learn robust policies from sparse and imperfect demonstrations.
     \end{block}
 
     \vspace{0.75em}
 
-    \textbf{Core Idea}
+    \begin{enumerate}
+        \item Phase alignment: Learn a latent task phase for temporal alignment
+        \item Robust statistics: Detect corrupted segments
+        \item Repair corrupted labels before policy training
+    \end{enumerate}
 
-    \vspace{0.5em}
+    \vspace{0.75em}
 
-    \centering
-
-    \begin{tikzpicture}[
-            node distance=1.5cm,
-            every node/.style={font=\small},
-            block/.style={
-                rectangle,
-                rounded corners,
-                draw=blue!60,
-                fill=blue!10,
-                minimum width=3cm,
-                minimum height=0.8cm,
-                align=center
-            }
-        ]
-
-        \node[block] (a) {Align by progress};
-        \node[block, right=of a] (b) {Build consensus};
-        \node[block, below=of b] (c) {Detect outliers};
-        \node[block, left=of c] (d) {Repair labels};
-
-        \draw[->, thick] (a) -- (b);
-        \draw[->, thick] (b) -- (c);
-        \draw[->, thick] (c) -- (d);
-
-    \end{tikzpicture}
-
-\end{frame}
-
-% =====================================================
-\section{Methodology}
-
-% -----------------------------------------------------
-\begin{frame}
-    \frametitle{\textbf{PACER}}
-    \framesubtitle{\textbf{P}rogress \textbf{A}ligned \textbf{C}uration for \textbf{E}rror \textbf{R}esilient Imitation Learning}
-\end{frame}
-
-% -----------------------------------------------------
-\begin{frame}{PACER Pipeline}
-
-    \centering
-
-    \begin{tikzpicture}[
-            node distance=1.5cm and 1.2cm,
-            every node/.style={font=\small},
-            block/.style={
-                rectangle,
-                rounded corners,
-                draw=blue!60,
-                thick,
-                fill=blue!10,
-                minimum width=5cm,
-                minimum height=0.5cm,
-                align=center
-            },
-            arrow/.style={
-                ->,
-                thick,
-                blue!70
-            }
-        ]
-
-        \node[block] (latent) {1. Learn latent phase};
-
-        \node[block, right=of latent] (align)
-        {2. Align demonstrations by progress};
-
-        \node[block, below=of align] (consensus)
-        {3. Compute robust consensus statistics};
-
-        \node[block, left=of consensus] (trust)
-        {4. Estimate trust weights};
-
-        \node[block, below=of trust] (pseudo)
-        {5. Generate pseudo-labels};
-
-        \node[block, right=of pseudo, fill=green!12, draw=green!50!black] (bc)
-        {6. Train weighted BC policy};
-
-        \draw[arrow] (latent) -- (align);
-        \draw[arrow] (align) -- (consensus);
-        \draw[arrow] (consensus) -- (trust);
-        \draw[arrow] (trust) -- (pseudo);
-        \draw[arrow] (pseudo) -- (bc);
-
-    \end{tikzpicture}
-
+    \begin{alertblock}{Key Design Principle}
+        Move all robustness into \textbf{preprocessing} while keeping policy training \textit{simple}.
+    \end{alertblock}
 \end{frame}
 
 % -----------------------------------------------------
