@@ -30,9 +30,17 @@
 % =====================================================
 \titlegraphic{
     \begin{tikzpicture}[overlay,remember picture]
-        \node[below=0.75em] at (current page.north){
+        \node[below=0.75em, xshift=-3cm] at (current page.north){
             \includegraphics[width=0.1\textwidth]
             {../common/figures/logo/IISc_Master_Seal_Black.jpg}
+        };
+        \node[below=0.75em, xshift=0cm] at (current page.north){
+            \includegraphics[width=0.1\textwidth]
+            {../common/figures/logo/cps.png}
+        };
+        \node[below=0.75em, xshift=3cm] at (current page.north){
+            \includegraphics[width=0.25\textwidth]
+            {../common/figures/logo/hiro_lab.jpg}
         };
     \end{tikzpicture}
 }
