@@ -13,7 +13,7 @@
 
 \hypersetup{colorlinks=true, linkcolor=blue,}
 \setbeamercolor{title}{fg=internationalkleinblue}
-\usetikzlibrary{positioning}
+\usetikzlibrary{positioning, arrows.meta}
 
 \titlegraphic{
     \begin{tikzpicture}[overlay,remember picture]
@@ -51,91 +51,259 @@
 
 \begin{document}
 
-% =========================================
+% =====================================================
 \section*{Titlepage}
 \begin{frame}
     \titlepage{}
 \end{frame}
 
-% =========================================
+% =====================================================
 \section*{Outline}
 \begin{frame}[allowframebreaks]
     \frametitle{\textbf{Outline}}
-    \tableofcontents[sections={3,4}]
-    \framebreak{}
-    \tableofcontents[sections={5,6,7,8}]
+    \tableofcontents
 \end{frame}
 
-% =========================================
+% =====================================================
 \section{Introduction}
 
-\begin{frame}{Motivation}
+% -----------------------------------------------------
+\begin{frame}{Imitation Learning}
 
-    \textbf{Imitation Learning (IL)}
+    \textbf{Goal}
     \begin{itemize}
-        \item Learn robot policies directly from demonstrations
-        \item Avoids hand-crafted rewards
-        \item Effective for manipulation and trajectory tasks
+        \item Learn robot behavior directly from demonstrations
+        \item Avoid manual reward engineering
+        \item Reduce task-specific controller design
     \end{itemize}
 
     \vspace{0.5em}
 
-    \textbf{Practical Challenges}
+    \textbf{Applications}
     \begin{itemize}
-        \item \textbf{Pace variability}
-            \begin{itemize}
-                \item Same task executed at different speeds
-            \end{itemize}
-
-        \item \textbf{Local corruptions}
-            \begin{itemize}
-                \item Brief unintended deviations
-                \item Fatigue, hesitation, over-corrections
-            \end{itemize}
+        \item Robotic manipulation
+        \item Autonomous driving
+        \item Surgical robotics
+        \item Human-robot collaboration
     \end{itemize}
 
-    \vspace{0.5em}
+    \vspace{0.75em}
 
-    \textbf{Problem:}
-    Standard Behavioral Cloning treats all samples equally.
+    \begin{block}{Behavioral Cloning}
+        Learn a policy mapping:
+        \[
+            f_\theta : x_t \rightarrow a_t
+        \]
+        using demonstrated state-action pairs.
+    \end{block}
 
 \end{frame}
 
+% -----------------------------------------------------
+\begin{frame}{Why Standard Behavioral Cloning Fails}
+
+    \textbf{Behavioral Cloning Assumption}
+    \begin{itemize}
+        \item Every demonstrated action is correct
+        \item All samples contribute equally
+    \end{itemize}
+
+    \vspace{0.75em}
+
+    \begin{alertblock}{Reality}
+        Human demonstrations are imperfect.
+    \end{alertblock}
+
+    \vspace{0.5em}
+
+    \begin{itemize}
+        \item Operator fatigue
+        \item Hesitation
+        \item Momentary distractions
+        \item Over-corrections
+    \end{itemize}
+
+    \vspace{0.75em}
+
+    \textbf{Result}
+    \begin{itemize}
+        \item BC learns corrupted actions directly
+        \item Errors propagate into the learned policy
+    \end{itemize}
+
+\end{frame}
+
+% -----------------------------------------------------
+\begin{frame}{Challenge 1: Pace Variability}
+
+    \textbf{Problem}
+    \begin{itemize}
+        \item Different demonstrations execute at different speeds
+        \item Same task phase appears at different timestamps
+    \end{itemize}
+
+    \vspace{1em}
+
+    \centering
+
+    \begin{tikzpicture}[>=Stealth]
+
+        \draw[thick,->] (0,0) -- (10,0) node[right]{Time};
+
+        \draw[blue, thick] (0,1) -- (2,1) -- (5,1) -- (8,1);
+        \node[left] at (0,1) {Demo A};
+
+        \draw[red, thick] (0,2) -- (4,2) -- (7,2) -- (9,2);
+        \node[left] at (0,2) {Demo B};
+
+        \draw[dashed] (2,0.5) -- (2,2.5);
+        \draw[dashed] (4,0.5) -- (4,2.5);
+
+        \node at (2,2.7) {Same semantic stage};
+
+    \end{tikzpicture}
+
+    \vspace{1em}
+
+    \begin{alertblock}{Key Observation}
+        Time index is not a reliable measure of task progress.
+    \end{alertblock}
+
+\end{frame}
+
+% -----------------------------------------------------
+\begin{frame}{Challenge 2: Local Corruptions}
+
+    \textbf{Problem}
+    \begin{itemize}
+        \item Short segments may contain unintended deviations
+        \item Corruptions are local, not global
+    \end{itemize}
+
+    \vspace{0.75em}
+
+    \begin{center}
+        \includegraphics[width=0.8\linewidth]{../thesis-report/figs/b1.jpeg}
+    \end{center}
+
+    \vspace{0.5em}
+
+    \begin{itemize}
+        \item Standard BC treats corrupted and clean samples equally
+        \item Even brief corruptions can distort the learned policy
+    \end{itemize}
+
+\end{frame}
+
+% -----------------------------------------------------
 \begin{frame}{Goals of PACER}
 
     \begin{block}{Objective}
         Learn robust policies from sparse and imperfect demonstrations.
     \end{block}
 
+    \vspace{0.75em}
+
     \textbf{PACER Contributions}
     \begin{enumerate}
-        \item Learn a latent \textbf{task phase} for alignment
-        \item Detect corrupted segments using:
-            \begin{itemize}
-                \item Median
-                \item MAD
-                \item Tukey Biweight
-            \end{itemize}
-        \item Construct refined pseudo-labels before policy training
+        \item Learn a latent task phase for temporal alignment
+        \item Detect corrupted segments using robust statistics
+        \item Repair corrupted labels before policy training
     \end{enumerate}
 
-    \vspace{0.5em}
+    \vspace{0.75em}
 
-    \begin{alertblock}{Key Idea}
-        Move all robustness into a preprocessing stage while keeping policy training simple.
+    \begin{alertblock}{Key Design Principle}
+        Move all robustness into preprocessing while keeping policy training simple.
     \end{alertblock}
 
 \end{frame}
 
-% =========================================
-\section{Methodology}
+% =====================================================
+\section{Related Work}
 
-\begin{frame}
-    \frametitle{\textbf{PACER}}
-    \framesubtitle{\textbf{P}rogress \textbf{A}ligned \textbf{C}uration for \textbf{E}rror \textbf{R}esilient Imitation Learning}
+% -----------------------------------------------------
+\begin{frame}{Related Work}
+
+    \small
+
+    \begin{table}[h]
+        \centering
+        \begin{tabular}{lcc}
+            \toprule
+            Method & Alignment & Robustness \\
+            \midrule
+            DMP / DTW & \checkmark & $\times$ \\
+            TCN / TACO & \checkmark & $\times$ \\
+            Robust IL Methods & $\times$ & \checkmark \\
+            PACER & \checkmark & \checkmark \\
+            \bottomrule
+        \end{tabular}
+    \end{table}
+
+    \vspace{1em}
+
+    \textbf{Observation}
+    \begin{itemize}
+        \item Alignment methods assume clean demonstrations
+        \item Robust IL methods assume aligned data
+        \item PACER addresses both jointly
+    \end{itemize}
 
 \end{frame}
 
+% -----------------------------------------------------
+\begin{frame}{Positioning of PACER}
+
+    \begin{block}{PACER}
+        Progress-aligned robust curation for imitation learning.
+    \end{block}
+
+    \vspace{0.75em}
+
+    \textbf{Core Idea}
+
+    \vspace{0.5em}
+
+    \centering
+
+    \begin{tikzpicture}[
+            node distance=1.5cm,
+            every node/.style={font=\small},
+            block/.style={
+                rectangle,
+                rounded corners,
+                draw=blue!60,
+                fill=blue!10,
+                minimum width=3cm,
+                minimum height=0.8cm,
+                align=center
+            }
+        ]
+
+        \node[block] (a) {Align by progress};
+        \node[block, right=of a] (b) {Build consensus};
+        \node[block, right=of b] (c) {Detect outliers};
+        \node[block, right=of c] (d) {Repair labels};
+
+        \draw[->, thick] (a) -- (b);
+        \draw[->, thick] (b) -- (c);
+        \draw[->, thick] (c) -- (d);
+
+    \end{tikzpicture}
+
+\end{frame}
+
+% =====================================================
+\section{Methodology}
+
+% -----------------------------------------------------
+\begin{frame}
+    \frametitle{\textbf{PACER}}
+    \framesubtitle{\textbf{P}rogress \textbf{A}ligned \textbf{C}uration for \textbf{E}rror \textbf{R}esilient Imitation Learning}
+\end{frame}
+
+% -----------------------------------------------------
 \begin{frame}{PACER Pipeline}
 
     \centering
@@ -160,7 +328,6 @@
             }
         ]
 
-        % Nodes
         \node[block] (latent) {1. Learn latent phase};
 
         \node[block, right=of latent] (align)
@@ -178,7 +345,6 @@
         \node[block, right=of pseudo, fill=green!12, draw=green!50!black] (bc)
         {6. Train weighted BC policy};
 
-        % Arrows
         \draw[arrow] (latent) -- (align);
         \draw[arrow] (align) -- (consensus);
         \draw[arrow] (consensus) -- (trust);
@@ -189,158 +355,377 @@
 
 \end{frame}
 
+% -----------------------------------------------------
+\begin{frame}{Problem Formulation}
+
+    Given demonstrations:
+
+    \[
+        D_i = \{(x_{i,t}, a_{i,t})\}_{t=1}^{T_i}
+    \]
+
+    where:
+
+    \begin{itemize}
+        \item $x_{i,t}$ : robot state
+        \item $a_{i,t}$ : demonstrated action
+        \item demonstrations may contain corruptions
+    \end{itemize}
+
+    \vspace{0.75em}
+
+    \textbf{Goal}
+
+    \begin{block}{Learn}
+        A policy:
+        \[
+            f_\theta(x_t) \rightarrow a_t
+        \]
+        that reproduces intended behavior while ignoring corrupted segments.
+    \end{block}
+
+\end{frame}
+
+% -----------------------------------------------------
 \begin{frame}{Phase Alignment}
 
-    \textbf{Problem:}
-    Different demonstrations progress at different speeds.
+    \textbf{Solution}
 
-    \vspace{0.7em}
+    Learn a latent phase variable:
 
-    \textbf{Solution:}
-    Learn a state-dependent phase variable
     \[
         \tau \in [0,1]
     \]
 
-    \vspace{0.7em}
+    representing task progress independently of time.
 
-    \textbf{Ranking Objective}
+    \vspace{1em}
+
+    \textbf{Benefits}
+    \begin{itemize}
+        \item Align demonstrations executed at different speeds
+        \item Compare samples at equivalent task stages
+        \item Build progress-based consensus
+    \end{itemize}
+
+\end{frame}
+
+% -----------------------------------------------------
+\begin{frame}{Pairwise Ranking Loss}
+
+    \textbf{Monotonicity Constraint}
+
+    Later states should receive larger phase scores.
+
+    \vspace{1em}
+
     \[
         \mathcal{L}_{\mathrm{rank}}
         =
         \sum_{t>t'}
         \log\left(
-            1+\exp\left(
+            1+
+            \exp\left(
                 m-(g(x_t)-g(x_{t'}))
             \right)
         \right)
     \]
 
-    \vspace{0.7em}
+    \vspace{1em}
 
     \begin{itemize}
-        \item Later states should have higher phase
-        \item Independent of absolute time
-        \item Enables progress-based synchronization
+        \item Enforces ordered progression
+        \item Independent of execution speed
+        \item Produces a smooth phase coordinate
     \end{itemize}
 
 \end{frame}
 
-\begin{frame}{Robust Consensus Statistics}
+% -----------------------------------------------------
+\begin{frame}{Estimated Task Phases}
 
-    \textbf{Phase Binning}
+    \centering
+
+    \includegraphics[width=0.95\linewidth]{../thesis-report/figs/a2.jpeg}
+
+    \vspace{0.5em}
+
+    \small
+    Learned phases remain approximately monotonic despite varying execution speeds.
+
+\end{frame}
+
+% -----------------------------------------------------
+\begin{frame}{Phase Binning}
+
+    \textbf{Idea}
+
+    Divide the phase interval into bins.
+
+    \[
+        \tau \in [0,1]
+    \]
+
+    \vspace{0.75em}
+
     \begin{itemize}
-        \item Divide phase interval into bins
         \item Samples with similar progress are grouped together
+        \item Enables direct comparison across demonstrations
+        \item Removes dependence on time index
     \end{itemize}
 
-    \textbf{Per-bin Robust Statistics}
+    \vspace{1em}
+
+    \begin{block}{Within each bin}
+        Compute robust consensus statistics.
+    \end{block}
+
+\end{frame}
+
+% -----------------------------------------------------
+\begin{frame}{Robust Consensus Statistics}
+
+    \textbf{Per-bin Statistics}
+
     \[
         \alpha_a[b] = \mathrm{median}(a_{i,t})
     \]
+
     \[
         \beta_a[b] = \mathrm{median}(\|a_{i,t}\|)
     \]
 
+    \vspace{1em}
+
     \textbf{Why Median?}
+
     \begin{itemize}
-        \item Resistant to outliers
+        \item Robust to outliers
+        \item Resistant to corrupted segments
         \item Captures typical behavior
     \end{itemize}
 
-    \textbf{Tangents}
+    \vspace{0.75em}
+
+    \begin{alertblock}{Observation}
+        Means shift heavily under corruptions, medians remain stable.
+    \end{alertblock}
+
+\end{frame}
+
+% -----------------------------------------------------
+\begin{frame}{Median Absolute Deviation (MAD)}
+
+    \textbf{Need}
+
+    Estimate spread robustly.
+
+    \vspace{1em}
+
+    \[
+        \mathrm{MAD}
+        =
+        1.4826
+        \cdot
+        \mathrm{median}
+        |v_i - \mathrm{median}(v)|
+    \]
+
+    \vspace{1em}
+
+    \textbf{Advantages}
+
     \begin{itemize}
-        \item Finite differences across bins
-        \item Capture canonical direction of motion
+        \item Robust alternative to variance
+        \item Stable under outliers
+        \item Enables robust z-scores
     \end{itemize}
 
 \end{frame}
 
+% -----------------------------------------------------
+\begin{frame}{Leave-One-Out Consensus}
+
+    \textbf{Problem}
+
+    A corrupted trajectory should not validate itself.
+
+    \vspace{1em}
+
+    \begin{columns}
+
+        \column{0.48\linewidth}
+
+        \textbf{Without LOO}
+        \begin{itemize}
+            \item Corrupted sample contributes to consensus
+            \item Outlier partially hides itself
+        \end{itemize}
+
+        \column{0.48\linewidth}
+
+        \textbf{With LOO}
+        \begin{itemize}
+            \item Remove current demonstration
+            \item Compare only against others
+        \end{itemize}
+
+    \end{columns}
+
+    \vspace{1em}
+
+    \begin{block}{Result}
+        More reliable corruption detection.
+    \end{block}
+
+\end{frame}
+
+% -----------------------------------------------------
 \begin{frame}{Trust Estimation}
 
-    \textbf{Leave-One-Out Consensus}
-    \begin{itemize}
-        \item A demo cannot validate itself
-    \end{itemize}
-
-    \vspace{0.7em}
-
     \textbf{Residual}
+
     \[
-        r_{i,t} = \|a_{i,t} - \alpha_a^{(-i)}[b]\|
+        r_{i,t}
+        =
+        \|a_{i,t} - \alpha_a^{(-i)}[b]\|
     \]
 
-    \vspace{0.7em}
+    \vspace{1em}
 
     \textbf{Robust z-score}
+
     \[
         z_{i,t}
         =
-        \frac{r_{i,t}}
-        {\mathrm{MAD}[b]+\varepsilon}
+        \frac{r_{i,t}}{\mathrm{MAD}[b]+\varepsilon}
     \]
 
-    \vspace{0.7em}
+    \vspace{1em}
 
-    \textbf{Tukey Biweight}
-    \[
-        w_{i,t}
-        =
-        {\left(1-{(z/c)}^2\right)}^2
-    \]
-
-    \vspace{0.7em}
+    \textbf{Interpretation}
 
     \begin{itemize}
-        \item High agreement $\rightarrow$ high trust
-        \item Outliers $\rightarrow$ low trust
+        \item Small deviation $\rightarrow$ high trust
+        \item Large deviation $\rightarrow$ low trust
     \end{itemize}
 
 \end{frame}
 
-\begin{frame}{Pseudo-Label Refinement}
+% -----------------------------------------------------
+\begin{frame}{Tukey Biweight}
 
-    For each sample:
+    \[
+        w_{i,t}
+        =
+        \left(1-(z/c)^2\right)^2
+    \]
+
+    \vspace{1em}
+
+    \textbf{Behavior}
+
+    \begin{itemize}
+        \item Near consensus $\rightarrow$ weight close to 1
+        \item Moderate deviation $\rightarrow$ smoothly reduced weight
+        \item Large outlier $\rightarrow$ weight close to 0
+    \end{itemize}
+
+    \vspace{1em}
+
+    \begin{alertblock}{Why Tukey?}
+        Completely suppresses gross outliers while preserving smoothness.
+    \end{alertblock}
+
+\end{frame}
+
+% -----------------------------------------------------
+\begin{frame}{Trust Visualization}
+
+    \centering
+
+    \includegraphics[width=0.9\linewidth]{../thesis-report/figs/b2.jpeg}
 
     \vspace{0.5em}
 
+    \small
+    Corrupted segments receive significantly lower trust values.
+
+\end{frame}
+
+% -----------------------------------------------------
+\begin{frame}{Pseudo-Label Refinement}
+
+    \textbf{Goal}
+
+    Repair corrupted labels before training.
+
+    \vspace{1em}
+
     \begin{enumerate}
-        \item \textbf{Debias toward median anchor}
-            \[
-                y^{(1)}
-                =
-                \gamma a
-                +(1-\gamma)\alpha_a
-            \]
-
-            \vspace{0.5em}
-
-        \item \textbf{Directional alignment}
-            \begin{itemize}
-                \item Align with ribbon tangent
-            \end{itemize}
-
-            \vspace{0.5em}
-
-        \item \textbf{Sideways attenuation}
-            \begin{itemize}
-                \item Suppress lateral deviations
-            \end{itemize}
-
-            \vspace{0.5em}
-
-        \item \textbf{Speed regularization}
-
-            \vspace{0.5em}
-
-        \item \textbf{Temporal smoothing}
+        \item Debias toward median anchor
+        \item Directional alignment
+        \item Sideways attenuation
+        \item Speed regularization
+        \item Temporal smoothing
     \end{enumerate}
 
 \end{frame}
 
-\begin{frame}{Policy Training}
+% -----------------------------------------------------
+\begin{frame}{Debiasing and Directional Alignment}
 
-    \textbf{Final Objective}
+    \textbf{Debias Toward Consensus}
+
+    \[
+        y^{(1)}
+        =
+        \gamma a
+        +(1-\gamma)\alpha_a
+    \]
+
+    \vspace{1em}
+
+    \textbf{Directional Alignment}
+
+    \begin{itemize}
+        \item Compute canonical ribbon tangent
+        \item Align actions with dominant motion direction
+    \end{itemize}
+
+    \vspace{0.75em}
+
+    \begin{block}{Effect}
+        Suppresses spurious directional deviations.
+    \end{block}
+
+\end{frame}
+
+% -----------------------------------------------------
+\begin{frame}{Speed Regularization and Smoothing}
+
+    \textbf{Speed Regularization}
+
+    \begin{itemize}
+        \item Blend action magnitude toward consensus speed
+        \item Remove anomalous spikes
+    \end{itemize}
+
+    \vspace{1em}
+
+    \textbf{Temporal Smoothing}
+
+    \begin{itemize}
+        \item Apply exponential moving average
+        \item Reduce abrupt transitions
+        \item Improve trajectory consistency
+    \end{itemize}
+
+\end{frame}
+
+% -----------------------------------------------------
+\begin{frame}{Final Training Objective}
+
     \[
         \mathcal{L}
         =
@@ -349,49 +734,43 @@
             w_{i,t}
             \cdot
             \mathrm{Huber}
-            \left(
-                f_\theta(x_{i,t}) - y^*_{i,t}
-            \right)
+            (f_\theta(x_{i,t}) - y^*_{i,t})
         \right]
     \]
 
     \vspace{1em}
 
     \textbf{Key Point}
+
     \begin{itemize}
-        \item Training remains standard behavioral cloning
+        \item Policy training remains standard BC
         \item Robustness handled during preprocessing
     \end{itemize}
 
-    \vspace{1em}
-
-    \begin{block}{Benefits}
-        \begin{itemize}
-            \item Stable training
-            \item Noise resilience
-            \item Interpretable diagnostics
-        \end{itemize}
-    \end{block}
-
 \end{frame}
 
+% =====================================================
+\section{Experiments and Results}
+
+% -----------------------------------------------------
 \begin{frame}{Experimental Setup}
 
     \textbf{Dataset}
     \begin{itemize}
         \item LASA Handwriting Dataset
         \item ``G Shape'' trajectories
+        \item Seven demonstrations
     \end{itemize}
 
-    \vspace{0.5em}
+    \vspace{0.75em}
 
     \textbf{Corruptions}
     \begin{itemize}
         \item Injected localized Gaussian perturbations
-        \item Affect states and actions
+        \item Applied to states and actions
     \end{itemize}
 
-    \vspace{0.5em}
+    \vspace{0.75em}
 
     \textbf{Baselines}
     \begin{itemize}
@@ -399,21 +778,66 @@
         \item PACER + BC
     \end{itemize}
 
+\end{frame}
+
+% -----------------------------------------------------
+\begin{frame}{LASA Demonstrations}
+
+    \centering
+
+    \includegraphics[width=0.95\linewidth]{../thesis-report/figs/a1.jpeg}
+
     \vspace{0.5em}
 
-    \textbf{Metrics}
-    \begin{itemize}
-        \item Behavioral cloning loss
-        \item Trust visualization
-    \end{itemize}
+    \small
+    Original demonstrations from the LASA ``G Shape'' dataset.
 
 \end{frame}
 
-% =========================================
-\section{Results}
+% -----------------------------------------------------
+\begin{frame}{Corrupted Demonstrations}
 
-\begin{frame}
-    \frametitle{\textbf{Results}}
+    \centering
+
+    \includegraphics[width=0.95\linewidth]{../thesis-report/figs/b1.jpeg}
+
+    \vspace{0.5em}
+
+    \small
+    Localized Gaussian corruptions injected into selected trajectory segments.
+
+\end{frame}
+
+% -----------------------------------------------------
+\begin{frame}{Ribbon Consensus Statistics}
+
+    \centering
+
+    \includegraphics[width=0.9\linewidth]{../thesis-report/figs/a6.jpeg}
+
+    \vspace{0.5em}
+
+    \small
+    Ribbon medians and MAD scales across phase bins.
+
+\end{frame}
+
+% -----------------------------------------------------
+\begin{frame}{Trust Assignment Visualization}
+
+    \centering
+
+    \includegraphics[width=0.95\linewidth]{../thesis-report/figs/a4.jpeg}
+
+    \vspace{0.5em}
+
+    \small
+    High-consensus samples receive higher trust values.
+
+\end{frame}
+
+% -----------------------------------------------------
+\begin{frame}{Quantitative Results}
 
     \begin{table}[h]
         \centering
@@ -432,70 +856,108 @@
 
     \textbf{Observations}
     \begin{itemize}
-        \item PACER assigns lower trust to corrupted regions
-        \item PACER+BC improves robustness
-        \item Better alignment across demonstrations
+        \item PACER reduces behavioral cloning loss
+        \item Corrupted regions are successfully down-weighted
+        \item Alignment improves consistency across demonstrations
     \end{itemize}
 
 \end{frame}
 
-\begin{frame}
-    \frametitle{\textbf{Limitations}}
+% -----------------------------------------------------
+\begin{frame}{Discussion}
 
-    \begin{block}
-        {\textbf{Limitations}}
+    \textbf{Why PACER Works}
 
+    \begin{enumerate}
+        \item Progress alignment compares equivalent task stages
+        \item Robust statistics resist outliers
+        \item Leave-one-out prevents self-validation
+        \item Pseudo-label repair suppresses local corruptions
+    \end{enumerate}
+
+    \vspace{1em}
+
+    \begin{block}{Interpretability}
+        PACER also provides useful diagnostics:
         \begin{itemize}
-            \item Requires meaningful phase estimation
-            \item Works best for local corruptions
-            \item Sensitive to hyperparameters
-            \item Sparse bins reduce robustness
+            \item trust maps
+            \item MAD uncertainty regions
+            \item phase-aligned consensus trajectories
         \end{itemize}
     \end{block}
 
-    \begin{block}
-        {\textbf{Future Work}}
-
-        \begin{itemize}
-            \item Uncertainty-aware consensus models
-            \item Vision-based phase estimation
-            \item Diffusion policies
-            \item Real robot deployment
-        \end{itemize}
-    \end{block}
 \end{frame}
 
-% =========================================
+% =====================================================
+\section{Limitations and Future Work}
+
+% -----------------------------------------------------
+\begin{frame}{Limitations}
+
+    \begin{itemize}
+        \item Requires meaningful phase estimation
+        \item Assumes mostly local corruptions
+        \item Sensitive to hyperparameters
+        \item Sparse bins reduce robustness
+        \item Very few demonstrations weaken LOO consensus
+    \end{itemize}
+
+\end{frame}
+
+% -----------------------------------------------------
+\begin{frame}{Future Work}
+
+    \begin{itemize}
+        \item Vision-based phase estimation
+        \item Uncertainty-aware consensus models
+        \item Integration with diffusion policies
+        \item Online refinement with environment interaction
+        \item Validation on real robot systems
+    \end{itemize}
+
+\end{frame}
+
+% =====================================================
 \section{Conclusion}
 
-\begin{frame}
-    \frametitle{\textbf{Conclusion}}
-    \framesubtitle{Summary}
+% -----------------------------------------------------
+\begin{frame}{Conclusion}
 
     \begin{block}{PACER}
         A preprocessing framework for robust imitation learning from imperfect demonstrations.
     \end{block}
 
-    \vspace{0.7em}
-
-    \textbf{Key Takeaways}
-    \begin{itemize}
-        \item Aligns demonstrations by latent phase
-        \item Detects corruptions with robust statistics
-        \item Repairs labels before policy training
-        \item Improves robustness with simple BC training
-    \end{itemize}
-
     \vspace{1em}
 
-    \begin{center}
-        \Large Thank You
-    \end{center}
+    \textbf{Key Contributions}
+
+    \begin{itemize}
+        \item Learned latent phase alignment
+        \item Robust corruption detection using MAD and Tukey weighting
+        \item Pseudo-label refinement pipeline
+        \item Improved robustness with simple BC training
+    \end{itemize}
 
 \end{frame}
 
-% =========================================
+% -----------------------------------------------------
+\begin{frame}
+
+    \centering
+
+    \vspace{2em}
+
+    {\Huge Thank You}
+
+    \vspace{2em}
+
+    {\Large Questions?}
+
+\end{frame}
+
+% =====================================================
 \section{References}
+
 \begin{frame}[allowframebreaks]
     \frametitle{\textbf{References}}
     \scriptsize
