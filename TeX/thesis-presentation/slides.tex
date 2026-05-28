@@ -97,13 +97,14 @@
     \begin{itemize}
         \item Robotic manipulation
         \item Autonomous driving
-        \item Surgical robotics
         \item Human-robot collaboration
     \end{itemize}
 
     \vspace{0.75em}
 
-    \begin{block}{Behavioral Cloning}
+    \begin{block}{Behavioral Cloning (BC)}
+        Model learns to imitate an expert by copying examples of behavior.
+
         Learn a policy mapping:
         \[
             f_\theta : x_t \rightarrow a_t
@@ -116,28 +117,23 @@
 % -----------------------------------------------------
 \begin{frame}{Why Standard Behavioral Cloning Fails}
 
-    \textbf{Behavioral Cloning Assumption}
+    \textbf{Assumptions}
     \begin{itemize}
         \item Every demonstrated action is correct
         \item All samples contribute equally
     \end{itemize}
 
-    \vspace{0.75em}
-
     \begin{alertblock}{Reality}
         Human demonstrations are imperfect.
     \end{alertblock}
 
-    \vspace{0.5em}
-
+    \textbf{Causes}
     \begin{itemize}
         \item Operator fatigue
         \item Hesitation
         \item Momentary distractions
         \item Over-corrections
     \end{itemize}
-
-    \vspace{0.75em}
 
     \textbf{Result}
     \begin{itemize}
@@ -389,18 +385,6 @@
         \item demonstrations may contain corruptions
     \end{itemize}
 
-    \vspace{0.75em}
-
-    \textbf{Goal}
-
-    \begin{block}{Learn}
-        A policy:
-        \[
-            f_\theta(x_t) \rightarrow a_t
-        \]
-        that reproduces intended behavior while ignoring corrupted segments.
-    \end{block}
-
 \end{frame}
 
 % -----------------------------------------------------
@@ -455,22 +439,6 @@
         \item Independent of execution speed
         \item Produces a smooth phase coordinate
     \end{itemize}
-
-\end{frame}
-
-% -----------------------------------------------------
-\begin{frame}{Estimated Task Phases}
-
-    \centering
-
-    \includegraphics[
-        width=\linewidth,
-        height=0.75\textheight,
-        keepaspectratio
-    ]{../thesis-report/figs/a2.jpeg}
-
-    \small
-    Learned phases remain approximately monotonic despite varying execution speeds.
 
 \end{frame}
 
@@ -655,6 +623,22 @@
     \begin{alertblock}{Why Tukey?}
         Completely suppresses gross outliers while preserving smoothness.
     \end{alertblock}
+
+\end{frame}
+
+% -----------------------------------------------------
+\begin{frame}{Estimated Task Phases}
+
+    \centering
+
+    \includegraphics[
+        width=\linewidth,
+        height=0.75\textheight,
+        keepaspectratio
+    ]{../thesis-report/figs/a2.jpeg}
+
+    \small
+    Learned phases remain approximately monotonic despite varying execution speeds.
 
 \end{frame}
 
