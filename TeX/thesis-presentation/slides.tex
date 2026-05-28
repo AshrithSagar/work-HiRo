@@ -15,6 +15,19 @@
 \setbeamercolor{title}{fg=internationalkleinblue}
 \usetikzlibrary{positioning, arrows.meta}
 
+\setbeamersize{text margin left=0.5cm,text margin right=0.5cm}
+\setlength{\parskip}{0.3em}
+\setlength{\abovedisplayskip}{4pt}
+\setlength{\belowdisplayskip}{4pt}
+
+\AtBeginDocument{
+    \setlength{\abovedisplayskip}{4pt}
+    \setlength{\belowdisplayskip}{4pt}
+    \setlength{\abovedisplayshortskip}{2pt}
+    \setlength{\belowdisplayshortskip}{2pt}
+}
+
+% =====================================================
 \titlegraphic{
     \begin{tikzpicture}[overlay,remember picture]
         \node[below=0.75em] at (current page.north){
@@ -49,6 +62,7 @@
 }}
 \date{\today}
 
+% =====================================================
 \begin{document}
 
 % =====================================================
@@ -227,8 +241,7 @@
 
     \small
 
-    \begin{table}[h]
-        \centering
+    \begin{center}
         \begin{tabular}{lcc}
             \toprule
             Method & Alignment & Robustness \\
@@ -239,7 +252,7 @@
             PACER & \checkmark & \checkmark \\
             \bottomrule
         \end{tabular}
-    \end{table}
+    \end{center}
 
     \vspace{1em}
 
@@ -446,9 +459,11 @@
 
     \centering
 
-    \includegraphics[width=0.95\linewidth]{../thesis-report/figs/a2.jpeg}
-
-    \vspace{0.5em}
+    \includegraphics[
+        width=\linewidth,
+        height=0.75\textheight,
+        keepaspectratio
+    ]{../thesis-report/figs/a2.jpeg}
 
     \small
     Learned phases remain approximately monotonic despite varying execution speeds.
@@ -644,9 +659,11 @@
 
     \centering
 
-    \includegraphics[width=0.9\linewidth]{../thesis-report/figs/b2.jpeg}
-
-    \vspace{0.5em}
+    \includegraphics[
+        width=\linewidth,
+        height=0.75\textheight,
+        keepaspectratio
+    ]{../thesis-report/figs/b2.jpeg}
 
     \small
     Corrupted segments receive significantly lower trust values.
@@ -785,9 +802,11 @@
 
     \centering
 
-    \includegraphics[width=0.95\linewidth]{../thesis-report/figs/a1.jpeg}
-
-    \vspace{0.5em}
+    \includegraphics[
+        width=\linewidth,
+        height=0.75\textheight,
+        keepaspectratio
+    ]{../thesis-report/figs/a1.jpeg}
 
     \small
     Original demonstrations from the LASA ``G Shape'' dataset.
@@ -799,9 +818,11 @@
 
     \centering
 
-    \includegraphics[width=0.95\linewidth]{../thesis-report/figs/b1.jpeg}
-
-    \vspace{0.5em}
+    \includegraphics[
+        width=\linewidth,
+        height=0.75\textheight,
+        keepaspectratio
+    ]{../thesis-report/figs/b1.jpeg}
 
     \small
     Localized Gaussian corruptions injected into selected trajectory segments.
@@ -813,9 +834,11 @@
 
     \centering
 
-    \includegraphics[width=0.9\linewidth]{../thesis-report/figs/a6.jpeg}
-
-    \vspace{0.5em}
+    \includegraphics[
+        width=\linewidth,
+        height=0.75\textheight,
+        keepaspectratio
+    ]{../thesis-report/figs/a6.jpeg}
 
     \small
     Ribbon medians and MAD scales across phase bins.
@@ -827,9 +850,11 @@
 
     \centering
 
-    \includegraphics[width=0.95\linewidth]{../thesis-report/figs/a4.jpeg}
-
-    \vspace{0.5em}
+    \includegraphics[
+        width=\linewidth,
+        height=0.75\textheight,
+        keepaspectratio
+    ]{../thesis-report/figs/a4.jpeg}
 
     \small
     High-consensus samples receive higher trust values.
@@ -839,8 +864,7 @@
 % -----------------------------------------------------
 \begin{frame}{Quantitative Results}
 
-    \begin{table}[h]
-        \centering
+    \begin{center}
         \small
         \begin{tabular}{lccc}
             \toprule
@@ -850,7 +874,7 @@
             Corrupted & 4.2530 & 0.0517 & 1.7202 \\
             \bottomrule
         \end{tabular}
-    \end{table}
+    \end{center}
 
     \vspace{1em}
 
