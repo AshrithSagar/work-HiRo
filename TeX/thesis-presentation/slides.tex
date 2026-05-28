@@ -472,9 +472,7 @@
 
     \textbf{Leave-One-Out Residual}
     \[
-        r_{i,t}
-        =
-        \|a_{i,t} - \alpha_a^{(-i)}[b]\|
+        r_{i,t}^{(-i)} = \|a_{i,t} - \alpha_a^{(-i)}[b]\|.
     \]
 
     \small
@@ -484,24 +482,14 @@
 
     \textbf{Robust z-score}
     \[
-        z_{i,t}
-        =
-        \frac{
-            r_{i,t}
-        }{
-            \mathrm{MAD}[b] + \varepsilon
-        }
+        z_{i,t}^{(-i)} = \frac{r_{i,t}^{(-i)}}{\mathrm{MAD}_a^{(-i)}[b] + \varepsilon},
     \]
 
     \vspace{0.75em}
 
     \textbf{Tukey Trust Weight}
     \[
-        w_{i,t}
-        =
-        \left(
-            1-(z/c)^2
-        \right)^2
+        w_{i,t}^{(-i)} = \max\!\Bigl({\Bigl\{1-{\bigl(z_{i,t}^{(-i)}/c\bigr)}^2\Bigr\}}^2 \cdot \mathbf{1}[z_{i,t}^{(-i)}\leq c],\; w_{\min}\Bigr),
     \]
 
     \vspace{1em}
