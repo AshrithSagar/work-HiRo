@@ -233,8 +233,8 @@ class TrustPipeline:
         default_factory=MADResidualScaleEstimator
     )
     kernel: TrustKernel = field(default_factory=TukeyBiweightKernel)
-    transforms: tuple[TrustTransform, ...] = field(
-        default_factory=lambda: (MinimumTrustFloor(),)
+    transforms: Sequence[TrustTransform] = field(
+        default_factory=lambda: [MinimumTrustFloor()]
     )
 
     def compute_scale(self, residuals: Sequence[Residual]) -> Residual:

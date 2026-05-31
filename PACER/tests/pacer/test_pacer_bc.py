@@ -79,16 +79,18 @@ if __name__ == "__main__":
                         consistency_scale=MAD_SCALE
                     ),
                     kernel=TukeyBiweightKernel(cutoff=4.685),  # c
-                    transforms=(MinimumTrustFloor(minimum=0.02),),  # w_min
+                    transforms=[
+                        MinimumTrustFloor(minimum=0.02),  # w_min
+                    ],
                 ),
             ),
             action_pseudo_label_params=PseudoLabelParams(
                 pipeline=PseudoLabelRefinementPipeline(
-                    steps=(
+                    steps=[
                         DebiasTowardsAnchorStep(debias_weight=0.5),  # lambda_{debias}
                         SidewaysAttenuationStep(shrinkage=0.5),  # rho_0
                         SpeedRegularisationStep(influence=0.5),  # eta_0
-                    ),
+                    ],
                 ),
                 smoother=TemporalSmoother(smoothing_weight=0.0),  # kappa
             ),
@@ -100,7 +102,9 @@ if __name__ == "__main__":
                         consistency_scale=MAD_SCALE
                     ),
                     kernel=TukeyBiweightKernel(cutoff=4.685),  # c
-                    transforms=(MinimumTrustFloor(minimum=0.02),),  # w_min
+                    transforms=[
+                        MinimumTrustFloor(minimum=0.02),  # w_min
+                    ],
                 ),
             ),
             state_pseudo_label_params=PseudoLabelParams(

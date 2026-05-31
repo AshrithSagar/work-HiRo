@@ -6,7 +6,7 @@ Pseudo-Label Refinement
 
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import KW_ONLY, dataclass, field
 from typing import Generic, Protocol
 
@@ -65,7 +65,9 @@ class PseudoLabelRefinementStep(Protocol):
 class PseudoLabelRefinementPipeline:
     """Sequential pseudo-label refinement pipeline."""
 
-    steps: tuple[PseudoLabelRefinementStep, ...] = field(default_factory=tuple)
+    steps: Sequence[PseudoLabelRefinementStep] = field(
+        default_factory=list[PseudoLabelRefinementStep]
+    )
 
     def apply(
         self, y: VectorType, *, ctx: PseudoLabelContext[VectorType, DimState, DimAction]
