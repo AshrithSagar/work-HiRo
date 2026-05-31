@@ -6,6 +6,7 @@ readme = "README.md"
 authors = [{ name = "Ashrith Sagar", email = "ashrithy@iisc.ac.in" }]
 requires-python = ">=3.14"
 dependencies = [
+    "dtaidistance>=2.4.0",
     "matplotlib>=3.10.9",
     "numpy>=2.4.6",
     "optype[numpy]>=0.17.1",

@@ -343,6 +343,22 @@ wheels = [
 ]
 
 [[package]]
+name = "dtaidistance"
+version = "2.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/cd/01/aa26cc97b64d397ff03b9576b0a04cc79d0e3bae512eb087cfab7d98f4ec/dtaidistance-2.4.0.tar.gz", hash = "sha256:bd4066800254fbd5b620e6462bb759c9d85b79ac2080b354cedc901f446b6c82", size = 1316462, upload-time = "2026-02-12T22:23:56.35Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/05/72/ac72a2e196c66c627c1f51684ffa2fd782e9cb042baa29898206f79b0d86/dtaidistance-2.4.0-cp314-cp314-macosx_10_15_universal2.whl", hash = "sha256:bda9849cd22800cd8b3c6abf29574db241458823814cd37302d01df99474175a", size = 2136045, upload-time = "2026-02-12T22:23:50.1Z" },
+    { url = "https://files.pythonhosted.org/packages/30/30/60f941b3fed3d8b94e7315a71b8f87294f2e053c1f3c19e53f7b6cc33689/dtaidistance-2.4.0-cp314-cp314-macosx_26_0_arm64.whl", hash = "sha256:b5aa878c57f779cb9e141c0b4b1bc6b5be9c1721b349d153758112854a1b24cf", size = 1676822, upload-time = "2026-02-13T08:14:56.305Z" },
+    { url = "https://files.pythonhosted.org/packages/b9/82/b805e66d3b05e2cfc4e209b7d7f62ac31fb7e72615c3532c7edb0bf1943a/dtaidistance-2.4.0-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:a2d7d26b9023788f62e5f245db5b78b68aacde67e5aeaa75906ce7ddb251da7f", size = 4328390, upload-time = "2026-02-12T22:23:52.115Z" },
+    { url = "https://files.pythonhosted.org/packages/2c/89/da956340797c0ea022a35b6b0df9a118cc4427401d9a8119dc104d4b48de/dtaidistance-2.4.0-cp314-cp314-win_amd64.whl", hash = "sha256:3a35f2957bbf50b068b0b90f5cc9b442bf9b2a90b855e713811b8badf89a668d", size = 1462169, upload-time = "2026-02-12T22:23:53.598Z" },
+    { url = "https://files.pythonhosted.org/packages/a7/02/16088a7bd17340a4e600f49bf4da16a9741ddbb737202a91363407e993b2/dtaidistance-2.4.0-cp314-cp314t-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:e083a5163c780a5b711d970c190d3eca83ebc0ec86e453e6f56d63b1d6d78139", size = 4332943, upload-time = "2026-02-12T22:23:55.009Z" },
+]
+
+[[package]]
 name = "filelock"
 version = "3.29.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1077,6 +1093,7 @@ name = "pacer"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "dtaidistance" },
     { name = "matplotlib" },
     { name = "numpy" },
     { name = "optype", extra = ["numpy"] },
@@ -1138,6 +1155,7 @@ typecheck = [
 
 [package.metadata]
 requires-dist = [
+    { name = "dtaidistance", specifier = ">=2.4.0" },
     { name = "manim", marker = "extra == 'manim'", specifier = ">=0.20.1" },
     { name = "matplotlib", specifier = ">=3.10.9" },
     { name = "numpy", specifier = ">=2.4.6" },

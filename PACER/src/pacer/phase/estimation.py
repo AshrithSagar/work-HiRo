@@ -17,6 +17,9 @@ import optype.numpy as onp
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from dtaidistance import (  # type: ignore[import-untyped]  # pyright: ignore[reportMissingTypeStubs]
+    dtw_ndim,
+)
 from rich.progress import track
 from torch import Tensor
 from torch._prims_common import DeviceLikeType
@@ -24,7 +27,15 @@ from typingkit.core import RuntimeGeneric
 
 from pacer.base import Demonstrations
 from pacer.phase.base import Phase, Phases, PhasesCollection
-from pacer.typings import DimAction, DimState, NumDemos, NumPoints, Vector, npDType
+from pacer.typings import (
+    DemoIndex,
+    DimAction,
+    DimState,
+    NumDemos,
+    NumPoints,
+    Vector,
+    npDType,
+)
 from pacer.utils import EPS, SEED, TORCH_DEVICE, get_torch_device, normalise, set_seed
 
 ## ── Phase Alignment ──────────────────────────────────────────────────────────
@@ -69,7 +80,7 @@ class MLPPhaseScorer(nn.Module, RuntimeGeneric[DimState]):
         return forward.squeeze(-1)
 
 
-@dataclass
+@dataclass(kw_only=True)
 class MLPPhaseEstimatorConfig:
     hidden_dim: int = 128
     margin: float = 1.0  # m
@@ -193,6 +204,47 @@ class PathLengthPhaseEstimator(
             lengths = Vector[NumPoints](np.r_[0, np.cumsum(norms)])
             taus = Phases[NumPoints](lengths / (lengths[-1] + EPS))
             phases[demo.index] = taus
+        self.phases: PhasesCollection[NumDemos, NumPoints] = phases
+        return phases
+
+
+# ── DTW Phase Estimation ──────────────────────────────────────────────────────
+
+
+@dataclass(kw_only=True)
+class DTWPhaseEstimatorConfig:
+    reference_demo_index: DemoIndex = 0
+
+
+@dataclass
+class DTWPhaseEstimator(PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]):
+    config: DTWPhaseEstimatorConfig = field(default_factory=DTWPhaseEstimatorConfig)
+
+    @override
+    def estimate_phases(self) -> PhasesCollection[NumDemos, NumPoints]:
+        phases = PhasesCollection[NumDemos, NumPoints].zeros_like(self.demonstrations)
+        ref_demo = self.demonstrations[self.config.reference_demo_index]
+        T_ref = ref_demo.length
+        ref_phases = Phases[NumPoints](np.linspace(0.0, 1.0, T_ref, dtype=npDType))
+        phases[ref_demo.index] = ref_phases
+        ref_states = ref_demo.states.numpy()
+        for demo in self.demonstrations:
+            if demo.index == ref_demo.index:
+                continue
+            states = demo.states.numpy()
+            path = dtw_ndim.warping_path(ref_states, states)  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
+            aligned: list[list[Phase]] = [[] for _ in range(demo.length)]
+            ref_t: DemoIndex
+            demo_t: DemoIndex
+            for ref_t, demo_t in path:  # pyright: ignore[reportUnknownVariableType, reportGeneralTypeIssues]
+                aligned[demo_t].append(ref_phases[ref_t])
+            taus = np.zeros(demo.length, dtype=npDType)
+            for t in range(demo.length):
+                if aligned[t]:
+                    taus[t] = npDType(np.mean(aligned[t]))
+            taus = np.maximum.accumulate(taus)
+            taus = normalise(taus, method="MINMAX")
+            phases[demo.index] = Phases[NumPoints](taus)
         self.phases: PhasesCollection[NumDemos, NumPoints] = phases
         return phases
 

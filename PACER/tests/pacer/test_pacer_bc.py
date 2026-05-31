@@ -33,7 +33,7 @@ from pacer.pacer.trust import (
     TukeyBiweightKernel,
 )
 from pacer.phase import PhasePipelineConfig
-from pacer.phase.estimation import MLPPhaseEstimatorConfig
+from pacer.phase.estimation import DTWPhaseEstimatorConfig, MLPPhaseEstimatorConfig
 from pacer.plotting.legacy import PACERVisualisationConfig, PACERVisualiser
 from pacer.utils import MAD_SCALE
 
@@ -60,6 +60,9 @@ if __name__ == "__main__":
                     margin=1.0,  # m
                     lr=1e-3,
                     epochs=240,
+                ),
+                dtw_phase_estimator_config=DTWPhaseEstimatorConfig(
+                    reference_demo_index=1,
                 ),
                 evaluate_phases=False,
             ),

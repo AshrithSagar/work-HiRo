@@ -17,6 +17,8 @@ from pacer import console
 from pacer.base import Demonstrations
 from pacer.phase.base import PhasesCollection
 from pacer.phase.estimation import (
+    DTWPhaseEstimator,
+    DTWPhaseEstimatorConfig,
     MLPPhaseEstimator,
     MLPPhaseEstimatorConfig,
     NormalisedTimeIndexPhaseEstimator,
@@ -29,7 +31,9 @@ from pacer.utils import SEED, TORCH_DEVICE
 
 ## ── Phase Pipeline ───────────────────────────────────────────────────────────
 
-type PhaseEstimatorChoice = Literal["MLP", "NORMALISED_TIME_INDEX", "PATH_LENGTH"]
+type PhaseEstimatorChoice = Literal[
+    "MLP", "NORMALISED_TIME_INDEX", "PATH_LENGTH", "DTW"
+]
 
 
 @dataclass
@@ -40,6 +44,9 @@ class PhasePipelineConfig:
     phase_estimator_choice: PhaseEstimatorChoice = "MLP"
     mlp_phase_estimator_config: MLPPhaseEstimatorConfig = field(
         default_factory=MLPPhaseEstimatorConfig
+    )
+    dtw_phase_estimator_config: DTWPhaseEstimatorConfig = field(
+        default_factory=DTWPhaseEstimatorConfig
     )
     evaluate_phases: bool = False
 
@@ -67,6 +74,10 @@ class PhasePipeline(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
                 phase_estimator = NormalisedTimeIndexPhaseEstimator(self.demonstrations)
             case "PATH_LENGTH":
                 phase_estimator = PathLengthPhaseEstimator(self.demonstrations)
+            case "DTW":
+                phase_estimator = DTWPhaseEstimator(
+                    self.demonstrations, self.config.dtw_phase_estimator_config
+                )
 
         phases = phase_estimator.estimate_phases()
 
