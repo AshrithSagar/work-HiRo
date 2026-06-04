@@ -100,9 +100,8 @@ class BCTrainer(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
             )  # (T_i, action_dim)
             preds = cast(Tensor, self.policy(states))  # (T_i, action_dim)
 
-            diffs: Tensor = preds - targets  # (T_i, action_dim)
             demo_loss = F.huber_loss(
-                diffs, torch.zeros_like(diffs), reduction="sum"
+                preds, targets, reduction="sum"
             )  # (T_i, action_dim)
             loss += demo_loss
             total_samples += self.states[i].length  # T_i
@@ -185,9 +184,8 @@ class WeightedBCTrainer(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]
             )  # (T_i,)
             preds = cast(Tensor, self.policy(states))  # (T_i, action_dim)
 
-            diffs: Tensor = preds - targets  # (T_i, action_dim)
             huber_losses = F.huber_loss(
-                diffs, torch.zeros_like(diffs), reduction="none"
+                preds, targets, reduction="none"
             )  # (T_i, action_dim)
             huber_losses = huber_losses.mean(dim=1)  # (T_i,)
             weighted_losses = huber_losses * weights  # (T_i,)
