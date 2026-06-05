@@ -9,7 +9,7 @@ dependencies = []
 
 [dependency-groups]
 dev = ["jupyter>=1.1.1", "nbdime>=4.0.4", "nbstripout>=0.9.1"]
-lint = ["ruff>=0.15.15"]
+lint = ["ruff>=0.15.16"]
 
 [tool.basedpyright]
 reportAny = false
