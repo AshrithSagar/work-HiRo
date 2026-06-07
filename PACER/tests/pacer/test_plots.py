@@ -1,4 +1,4 @@
-# tests/test_plots.py
+# tests/pacer/test_plots.py
 
 import matplotlib.pyplot as plt
 from typingkit.core import RuntimeOptions, set_global_default_runtime_options

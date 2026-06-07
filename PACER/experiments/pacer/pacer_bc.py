@@ -1,7 +1,7 @@
 """
 Test BC Policy vs. PACER + BC Policy.
 """
-# tests/test_pacer_bc.py
+# experiments/pacer/test_pacer_bc.py
 
 from pathlib import Path
 

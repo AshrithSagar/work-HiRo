@@ -1,4 +1,4 @@
-# tests/test_draw_interactive.py
+# tests/pacer/test_draw_interactive.py
 
 import matplotlib.pyplot as plt
 from pyLASAHandwritingDataset import SinglePatternMotion

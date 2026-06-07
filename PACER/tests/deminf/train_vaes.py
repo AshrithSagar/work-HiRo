@@ -2,7 +2,7 @@
 Train tiny β-VAEs for DemInf (state and action encoders)
 Run this once before using DemInf.
 """
-# tests/train_vaes.py
+# tests/deminf/train_vaes.py
 
 # pyright: reportPrivateImportUsage = false
 

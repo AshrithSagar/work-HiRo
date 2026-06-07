@@ -1,7 +1,7 @@
 """
 Test DemInf
 """
-# tests/test_deminf.py
+# tests/deminf/test_deminf.py
 
 # pyright: reportPrivateImportUsage = false
 
