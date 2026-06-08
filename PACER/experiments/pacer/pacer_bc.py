@@ -12,6 +12,7 @@ from pacer.datasets import DemonstrationLoader, DemonstrationLoaderConfig
 from pacer.experiments import BCvsPACERBCExperiment
 from pacer.pacer import PACERConfig
 from pacer.pacer.consensus import (
+    CentralDifferenceTangentEstimator,
     ConsensusConfig,
     MADResidualScaleEstimator,
     MedianScalarEstimator,
@@ -71,6 +72,7 @@ if __name__ == "__main__":
                 vector_estimator=MedianVectorEstimator(),
                 scalar_estimator=MedianScalarEstimator(),
                 residual_scale_estimator=MADResidualScaleEstimator(),
+                tangent_estimator=CentralDifferenceTangentEstimator(),
             ),
             action_trust_value_params=TrustValueParams(
                 pipeline=TrustPipeline(

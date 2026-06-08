@@ -9,15 +9,16 @@ Consensus estimators for PACER.
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Literal, Protocol, override
 
 import numpy as np
 import numpy.typing as npt
+import scipy
 
 from pacer.base import Action, Actions, State, States
 from pacer.pacer.base import MetricValue, Residual
-from pacer.typings import DimAction, DimState, FloatLike, NumPoints
-from pacer.utils import MAD_SCALE, mean, median
+from pacer.typings import DimAction, DimState, FloatLike, NumPoints, VectorsType
+from pacer.utils import EPS, MAD_SCALE, mean, median
 
 ## ── Consensus ────────────────────────────────────────────────────────────────
 
@@ -111,6 +112,117 @@ class StandardDeviationScaleEstimator:
         return Residual(np.std(residuals, ddof=self.ddof))
 
 
+# ── Tangent Estimation ────────────────────────────────────────────────────────
+
+
+class TangentEstimator(Protocol):
+    def compute(self, vectors: VectorsType) -> VectorsType: ...
+
+
+@dataclass(frozen=True)
+class IdentityTangentEstimator(TangentEstimator):
+    @override
+    def compute(self, vectors: VectorsType) -> VectorsType:
+        return vectors
+
+
+@dataclass(frozen=True)
+class CentralDifferenceTangentEstimator(TangentEstimator):
+    edge_order: Literal[1, 2] = 2
+
+    @override
+    def compute(self, vectors: VectorsType) -> VectorsType:
+        tangents = np.gradient(vectors, axis=0, edge_order=self.edge_order)
+        return vectors.from_array(tangents)
+
+
+@dataclass(frozen=True)
+class ForwardDifferenceTangentEstimator(TangentEstimator):
+    @override
+    def compute(self, vectors: VectorsType) -> VectorsType:
+        arr = vectors.numpy()
+        tangents = np.empty_like(arr)
+        tangents[:-1] = arr[1:] - arr[:-1]
+        tangents[-1] = tangents[-2]
+        return vectors.from_array(tangents)
+
+
+@dataclass(frozen=True)
+class UnitTangentEstimator(TangentEstimator):
+    epsilon: float = EPS
+
+    @override
+    def compute(self, vectors: VectorsType) -> VectorsType:
+        tangents = np.gradient(vectors, axis=0)
+        norms = np.linalg.norm(tangents, axis=1, keepdims=True)
+        tangents = tangents / np.maximum(norms, self.epsilon)
+        return vectors.from_array(tangents)
+
+
+@dataclass(frozen=True)
+class ArcLengthTangentEstimator(TangentEstimator):
+    epsilon: float = EPS
+
+    @override
+    def compute(self, vectors: VectorsType) -> VectorsType:
+        arr = vectors.numpy()
+        ds = np.linalg.norm(np.diff(arr, axis=0), axis=1)
+        s = np.concatenate([[0.0], np.cumsum(ds)])
+        tangents = np.asarray(np.gradient(arr, s, axis=0))
+        return vectors.from_array(tangents)
+
+
+@dataclass(frozen=True)
+class GaussianTangentEstimator(TangentEstimator):
+    sigma: float = 1.0
+
+    @override
+    def compute(self, vectors: VectorsType) -> VectorsType:
+        arr = vectors.numpy()
+        smooth = scipy.ndimage.gaussian_filter1d(
+            arr, sigma=self.sigma, axis=0, mode="nearest"
+        )
+        tangents = np.asarray(np.gradient(smooth, axis=0))
+        return vectors.from_array(tangents)
+
+
+@dataclass(frozen=True)
+class SavitzkyGolayTangentEstimator(TangentEstimator):
+    window_length: int = 7
+    polyorder: int = 3
+
+    @override
+    def compute(self, vectors: VectorsType) -> VectorsType:
+        tangents = scipy.signal.savgol_filter(
+            vectors,
+            window_length=self.window_length,
+            polyorder=self.polyorder,
+            deriv=1,
+            axis=0,
+            mode="interp",
+        )
+        return vectors.from_array(tangents)
+
+
+@dataclass(frozen=True)
+class SavitzkyGolaySmoothedTangentEstimator(TangentEstimator):
+    window_length: int = 7
+    polyorder: int = 3
+
+    @override
+    def compute(self, vectors: VectorsType) -> VectorsType:
+        smooth = scipy.signal.savgol_filter(
+            vectors,
+            window_length=self.window_length,
+            polyorder=self.polyorder,
+            deriv=0,
+            axis=0,
+            mode="interp",
+        )
+        tangents = np.gradient(smooth, axis=0)
+        return vectors.from_array(tangents)
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 
 
@@ -119,6 +231,7 @@ class ConsensusConfig:
     vector_estimator: VectorLocationEstimator = MedianVectorEstimator()
     scalar_estimator: ScalarLocationEstimator = MedianScalarEstimator()
     residual_scale_estimator: ResidualScaleEstimator = MADResidualScaleEstimator()
+    tangent_estimator: TangentEstimator = CentralDifferenceTangentEstimator()
 
 
 ## ─────────────────────────────────────────────────────────────────────────────

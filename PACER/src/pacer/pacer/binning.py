@@ -91,6 +91,9 @@ class ConsensusStatistics(RuntimeGeneric[DimState, DimAction]):
         )
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+
+
 @dataclass(kw_only=True)
 class RibbonToken(RuntimeGeneric[DimState, DimAction]):  # z_b
     """
@@ -112,6 +115,9 @@ class RibbonToken(RuntimeGeneric[DimState, DimAction]):  # z_b
     # t_s[b] <- diff{ alpha_s[b] }
 
     action_residual_scale: Residual  # (Median Absolute Deviation of action residuals)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 
 
 @dataclass(kw_only=True)
@@ -160,6 +166,7 @@ class Bins(TypedList[NumBins, Bin[NumDemos, NumPoints, DimState, DimAction]]):
         )
 
 
+# ──────────────────────────────────────────────────────────────────────────────
 @dataclass
 class Binner(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
     """Assigns samples to bins based on phase."""
@@ -197,6 +204,9 @@ class Binner(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
             samples = bin.samples_collection[demo_idx]
             samples[time_idx] = sample
         return bins
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 
 
 @dataclass
@@ -242,22 +252,12 @@ class RibbonTokenConsolidator(
             bin_action_anchors.append(stats.action_anchor)
             bin_state_anchors.append(stats.state_anchor)
 
+        tangent_estimator = self.consensus_config.tangent_estimator
+        action_tangents = tangent_estimator.compute(bin_action_anchors)
+        state_tangents = tangent_estimator.compute(bin_state_anchors)
         for bin in self.bins:
-            b = bin.index
-            if b == 0:
-                p, q, f = b + 1, b, 1.0
-            elif b == self.bins.length - 1:
-                p, q, f = b, b - 1, 1.0
-            else:
-                p, q, f = b, b - 1, 0.5
-            action_tangent = Action[DimAction](
-                f * (bin_action_anchors[p] - bin_action_anchors[q])
-            )
-            state_tangent = State[DimState](
-                f * (bin_state_anchors[p] - bin_state_anchors[q])
-            )
-            bin.ribbon_token.action_tangent = action_tangent
-            bin.ribbon_token.state_tangent = state_tangent
+            bin.ribbon_token.action_tangent = action_tangents[bin.index]
+            bin.ribbon_token.state_tangent = state_tangents[bin.index]
 
         return self.bins
 
