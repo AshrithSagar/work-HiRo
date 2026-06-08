@@ -95,7 +95,9 @@ class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
         bins = Binner(
             self.demonstrations, phases, n_bins=self.config.n_bins
         ).make_bins()
-        bins = RibbonTokenConsolidator(bins).consolidate_ribbon_tokens()
+        bins = RibbonTokenConsolidator(
+            bins, consensus_config=self.config.consensus_config
+        ).consolidate_ribbon_tokens()
 
         action_trust_result = TrustValueComputer(
             self.demonstrations, bins, consensus_config=self.config.consensus_config
