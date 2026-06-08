@@ -9,9 +9,10 @@ Typing utils
 
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
-from typing import NamedTuple, TypeAlias, TypeVar
+from typing import Any, NamedTuple, Self, TypeAlias, TypeVar, cast
 
 import numpy as np
+import optype.numpy as onp
 import torch
 from typingkit.core import TypedList
 from typingkit.numpy._typed.helpers import Array1D, Array2D, Dim1, Dim2
@@ -43,14 +44,43 @@ npDType: TypeAlias = np.float32
 torchDType = torch.float32
 """The default PyTorch dtype."""
 
-Vector: TypeAlias = Array1D[Dim1, np.dtype[npDType]]
 Matrix: TypeAlias = Array2D[Dim1, Dim2, np.dtype[npDType]]
 
-VectorType = TypeVar("VectorType", bound=Vector, default=Vector)
+
+class Vector(Array1D[Dim1, np.dtype[npDType]]):
+    def __new__(cls, object: onp.ToArrayStrict1D) -> Self:
+        return cast(Self, super().__new__(cls, object, dtype=npDType))
+
+    @property
+    def dim(self) -> Dim1:
+        return self.shape[0]
+
+    @classmethod
+    def zeros(cls, dim: Dim1) -> Self:
+        return cls(np.zeros((dim,)))
+
+
+VectorType = TypeVar("VectorType", bound=Vector[Any], default=Vector)
 # Ideally, we'd want HKTs; To bound to `Vector[Dim1]` instead of `Vector[Any]`.
 
-Vectors: TypeAlias = TypedList[NumPoints, VectorType]
-VectorsType = TypeVar("VectorsType", bound=Vectors, default=Vectors)
+
+class Vectors(TypedList[NumPoints, VectorType]):
+    @property
+    def dim(self) -> Any:
+        return self[0].dim
+
+    def numpy(self) -> Matrix[NumPoints, Any]:
+        return Matrix[NumPoints, Any](self)
+
+    def coord(self, dim: int) -> Vector[NumPoints]:
+        return Vector[NumPoints](self.numpy()[:, dim])
+
+    @classmethod
+    def from_array(cls, arr: np.ndarray) -> Self:
+        return cls(arr)
+
+
+VectorsType = TypeVar("VectorsType", bound=Vectors[Any, Any], default=Vectors)
 
 CollectionType = TypeVar("CollectionType")
 

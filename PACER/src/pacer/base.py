@@ -9,10 +9,8 @@ Core data structures for representing demonstrations and samples.
 
 from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Any, Self, cast, overload, override
+from typing import Any, Self, overload, override
 
-import numpy as np
-import optype.numpy as onp
 from typingkit.core import RuntimeGeneric, TypedDict, TypedList
 
 from pacer.typings import (
@@ -28,36 +26,17 @@ from pacer.typings import (
     TimeIndices,
     Vector,
     Vectors,
-    npDType,
 )
 
 ## ── Base ─────────────────────────────────────────────────────────────────────
 
 
 class State(Vector[DimState]):  # x_{i, t} \in R^{d_x}
-    def __new__(cls, object: onp.ToArrayStrict1D) -> Self:
-        return cast(Self, super().__new__(cls, object, dtype=npDType))
-
-    @property
-    def dim(self) -> DimState:
-        return self.shape[0]
-
-    @classmethod
-    def zeros(cls, state_dim: DimState) -> Self:
-        return cls(np.zeros((state_dim,)))
+    pass
 
 
 class Action(Vector[DimAction]):  # a_{i, t} \in R^{d_a}
-    def __new__(cls, object: onp.ToArrayStrict1D) -> Self:
-        return cast(Self, super().__new__(cls, object, dtype=npDType))
-
-    @property
-    def dim(self) -> DimAction:
-        return self.shape[0]
-
-    @classmethod
-    def zeros(cls, action_dim: DimAction) -> Self:
-        return cls(np.zeros((action_dim,)))
+    pass
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -65,14 +44,13 @@ class Action(Vector[DimAction]):  # a_{i, t} \in R^{d_a}
 
 class States(Vectors[NumPoints, State[DimState]]):
     @property
+    @override
     def dim(self) -> DimState:
-        return self[0].dim
+        return super().dim
 
+    @override
     def numpy(self) -> Matrix[NumPoints, DimState]:
-        return Matrix[NumPoints, DimState](self)
-
-    def coord(self, dim: int) -> Vector[NumPoints]:
-        return Vector[NumPoints](self.numpy()[:, dim])
+        return super().numpy()
 
     @classmethod
     def zeros_like(cls, demo: Demonstration[NumPoints, DimState, DimAction]) -> Self:
@@ -83,14 +61,13 @@ class States(Vectors[NumPoints, State[DimState]]):
 
 class Actions(Vectors[NumPoints, Action[DimAction]]):
     @property
+    @override
     def dim(self) -> DimAction:
-        return self[0].dim
+        return super().dim
 
+    @override
     def numpy(self) -> Matrix[NumPoints, DimAction]:
-        return Matrix[NumPoints, DimAction](self)
-
-    def coord(self, dim: int) -> Vector[NumPoints]:
-        return Vector[NumPoints](self.numpy()[:, dim])
+        return super().numpy()
 
     @classmethod
     def zeros_like(cls, demo: Demonstration[NumPoints, DimState, DimAction]) -> Self:

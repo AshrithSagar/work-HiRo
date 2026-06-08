@@ -92,7 +92,7 @@ def normalise(
 
 def project_parallel(v: Vector[Dim1], /, unit_direction: Vector[Dim1]) -> Vector[Dim1]:
     """Parallel component of `v` along direction."""
-    return Vector[Dim1](np.dot(v, unit_direction) * unit_direction, dtype=npDType)
+    return Vector[Dim1](np.dot(v, unit_direction) * unit_direction)
 
 
 def project_perpendicular(
@@ -100,7 +100,7 @@ def project_perpendicular(
 ) -> Vector[Dim1]:
     """Orthogonal component of `v`."""
     v_parallel = project_parallel(v, unit_direction)
-    return Vector[Dim1](v - v_parallel, dtype=npDType)
+    return Vector[Dim1](v - v_parallel)
 
 
 def attenuate_perpendicular(
@@ -109,15 +109,13 @@ def attenuate_perpendicular(
     """Shrinks orthogonal components."""
     v_parallel = project_parallel(v, unit_direction)
     v_perpendicular = project_perpendicular(v, unit_direction)
-    return Vector[Dim1](
-        v_parallel + (1.0 - attenuation) * v_perpendicular, dtype=npDType
-    )
+    return Vector[Dim1](v_parallel + (1.0 - attenuation) * v_perpendicular)
 
 
 def rescale_norm(v: Vector[Dim1], /, *, target_norm: FloatLike) -> Vector[Dim1]:
     """Rescales vector magnitude while preserving direction."""
     norm = la.norm(v)
-    return Vector[Dim1](target_norm * (v / (norm + EPS)), dtype=npDType)
+    return Vector[Dim1](target_norm * (v / (norm + EPS)))
 
 
 ## ─────────────────────────────────────────────────────────────────────────────
