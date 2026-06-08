@@ -49,6 +49,9 @@ Matrix: TypeAlias = Array2D[Dim1, Dim2, np.dtype[npDType]]
 VectorType = TypeVar("VectorType", bound=Vector, default=Vector)
 # Ideally, we'd want HKTs; To bound to `Vector[Dim1]` instead of `Vector[Any]`.
 
+Vectors: TypeAlias = TypedList[NumPoints, VectorType]
+VectorsType = TypeVar("VectorsType", bound=Vectors, default=Vectors)
+
 CollectionType = TypeVar("CollectionType")
 
 # ──────────────────────────────────────────────────────────────────────────────

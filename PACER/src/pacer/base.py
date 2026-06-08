@@ -27,6 +27,7 @@ from pacer.typings import (
     TimeIndex,
     TimeIndices,
     Vector,
+    Vectors,
     npDType,
 )
 
@@ -46,7 +47,23 @@ class State(Vector[DimState]):  # x_{i, t} \in R^{d_x}
         return cls(np.zeros((state_dim,)))
 
 
-class States(TypedList[NumPoints, State[DimState]]):
+class Action(Vector[DimAction]):  # a_{i, t} \in R^{d_a}
+    def __new__(cls, object: onp.ToArrayStrict1D) -> Self:
+        return cast(Self, super().__new__(cls, object, dtype=npDType))
+
+    @property
+    def dim(self) -> DimAction:
+        return self.shape[0]
+
+    @classmethod
+    def zeros(cls, action_dim: DimAction) -> Self:
+        return cls(np.zeros((action_dim,)))
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+class States(Vectors[NumPoints, State[DimState]]):
     @property
     def dim(self) -> DimState:
         return self[0].dim
@@ -64,36 +81,7 @@ class States(TypedList[NumPoints, State[DimState]]):
         return cls.full(T_i, State[DimState].zeros(d_x))
 
 
-class StatesCollection(TypedList[NumDemos, States[NumPoints, DimState]]):
-    @property
-    def dim(self) -> DimState:
-        return self[0].dim
-
-    @classmethod
-    def zeros_like(
-        cls, demos: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
-    ) -> Self:
-        N = demos.count
-        return cls.full(N, lambda i: States[NumPoints, DimState].zeros_like(demos[i]))
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-
-
-class Action(Vector[DimAction]):  # a_{i, t} \in R^{d_a}
-    def __new__(cls, object: onp.ToArrayStrict1D) -> Self:
-        return cast(Self, super().__new__(cls, object, dtype=npDType))
-
-    @property
-    def dim(self) -> DimAction:
-        return self.shape[0]
-
-    @classmethod
-    def zeros(cls, action_dim: DimAction) -> Self:
-        return cls(np.zeros((action_dim,)))
-
-
-class Actions(TypedList[NumPoints, Action[DimAction]]):
+class Actions(Vectors[NumPoints, Action[DimAction]]):
     @property
     def dim(self) -> DimAction:
         return self[0].dim
@@ -109,6 +97,22 @@ class Actions(TypedList[NumPoints, Action[DimAction]]):
         T_i = demo.time_indices.length
         d_a = demo.action_dim
         return cls.full(T_i, Action[DimAction].zeros(d_a))
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+class StatesCollection(TypedList[NumDemos, States[NumPoints, DimState]]):
+    @property
+    def dim(self) -> DimState:
+        return self[0].dim
+
+    @classmethod
+    def zeros_like(
+        cls, demos: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
+    ) -> Self:
+        N = demos.count
+        return cls.full(N, lambda i: States[NumPoints, DimState].zeros_like(demos[i]))
 
 
 class ActionsCollection(TypedList[NumDemos, Actions[NumPoints, DimAction]]):
