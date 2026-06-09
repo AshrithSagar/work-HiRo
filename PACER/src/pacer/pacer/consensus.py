@@ -161,8 +161,6 @@ class UnitTangentEstimator(TangentEstimator):
 
 @dataclass(frozen=True)
 class ArcLengthTangentEstimator(TangentEstimator):
-    epsilon: float = EPS
-
     @override
     def compute(self, vectors: VectorsType) -> VectorsType:
         arr = vectors.numpy()
