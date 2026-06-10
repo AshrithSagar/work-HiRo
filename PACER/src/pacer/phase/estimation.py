@@ -228,7 +228,7 @@ class DTWPhaseEstimator(PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]
         ref_phases = Phases[NumPoints](np.linspace(0.0, 1.0, T_ref, dtype=npDType))
         phases[ref_demo.index] = ref_phases
         ref_states = ref_demo.states.numpy()
-        for demo in self.demonstrations:
+        for demo in track(self.demonstrations, description="[bold]DTW alignment[/]"):
             if demo.index == ref_demo.index:
                 continue
             states = demo.states.numpy()
