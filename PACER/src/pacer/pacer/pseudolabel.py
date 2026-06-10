@@ -17,7 +17,7 @@ from pacer.base import ActionsCollection, Demonstrations, StatesCollection
 from pacer.pacer.base import MetricValue, TrustValue, TrustValuesCollection
 from pacer.pacer.binning import Bins, ConsensusStatistics
 from pacer.pacer.consensus import ConsensusConfig
-from pacer.pacer.mode import VectorMode, action_mode, state_mode
+from pacer.pacer.mode import VectorMode, ACTION_MODE, STATE_MODE
 from pacer.typings import (
     CollectionType,
     DimAction,
@@ -240,10 +240,10 @@ class PseudoLabelComputer(
     ) -> PseudoLabels[NumDemos, NumPoints, DimState, DimAction]:
         """Produces final pseudo-labels for actions and optionally states."""
         actions = self._compute_labels(
-            action_trust_values, action_mode(), action_params
+            action_trust_values, ACTION_MODE(), action_params
         )
         states = (
-            self._compute_labels(state_trust_values, state_mode(), state_params)
+            self._compute_labels(state_trust_values, STATE_MODE(), state_params)
             if state_trust_values is not None and state_params is not None
             else None
         )

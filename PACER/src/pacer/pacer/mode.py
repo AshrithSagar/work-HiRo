@@ -63,7 +63,7 @@ class VectorMode(
     attenuation_requires_state_tangent: bool
 
 
-def action_mode() -> VectorMode[
+def ACTION_MODE() -> VectorMode[
     ActionsCollection[NumDemos, NumPoints, DimAction],
     Action[DimAction],
     NumDemos,
@@ -86,7 +86,7 @@ def action_mode() -> VectorMode[
     )
 
 
-def state_mode() -> VectorMode[
+def STATE_MODE() -> VectorMode[
     StatesCollection[NumDemos, NumPoints, DimState],
     State[DimState],
     NumDemos,
