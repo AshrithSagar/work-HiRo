@@ -8,8 +8,9 @@ Mostly HKT workarounds
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Callable
 
+import optype.numpy as onp
 from typingkit.core import RuntimeGeneric
 
 from pacer.base import (
@@ -52,7 +53,7 @@ class VectorMode(
     strength_from_token: Callable[[RibbonToken[DimState, DimAction]], MetricValue]
 
     # Construction
-    wrap: Callable[[Any], VectorType]
+    wrap: Callable[[onp.ToArrayStrict1D], VectorType]  # Matching Vector.__new__
     make_collection: Callable[
         [Demonstrations[NumDemos, NumPoints, DimState, DimAction]], CollectionType
     ]
