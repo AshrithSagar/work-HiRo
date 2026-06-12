@@ -36,7 +36,6 @@ from pacer.pacer.trust import (
 from pacer.phase import PhasePipelineConfig
 from pacer.phase.estimation import DTWPhaseEstimatorConfig, MLPPhaseEstimatorConfig
 from pacer.plotting.legacy import PACERVisualisationConfig, PACERVisualiser
-from pacer.utils import MAD_SCALE
 
 set_global_default_runtime_options(RuntimeOptions(validate=True))
 
@@ -77,9 +76,7 @@ if __name__ == "__main__":
             action_trust_value_params=TrustValueParams(
                 pipeline=TrustPipeline(
                     residual_computer=EuclideanResidualComputer(),
-                    scale_estimator=MADResidualScaleEstimator(
-                        consistency_scale=MAD_SCALE
-                    ),
+                    scale_estimator=MADResidualScaleEstimator(scale="normal"),
                     kernel=TukeyBiweightKernel(cutoff=4.685),  # c
                     transforms=[
                         MinimumTrustFloor(minimum=0.02),  # w_min
@@ -100,9 +97,7 @@ if __name__ == "__main__":
             state_trust_value_params=TrustValueParams(
                 pipeline=TrustPipeline(
                     residual_computer=EuclideanResidualComputer(),
-                    scale_estimator=MADResidualScaleEstimator(
-                        consistency_scale=MAD_SCALE
-                    ),
+                    scale_estimator=MADResidualScaleEstimator(scale="normal"),
                     kernel=TukeyBiweightKernel(cutoff=4.685),  # c
                     transforms=[
                         MinimumTrustFloor(minimum=0.02),  # w_min

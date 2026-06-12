@@ -17,8 +17,8 @@ import scipy
 
 from pacer.base import Action, Actions, State, States
 from pacer.pacer.base import MetricValue, Residual
-from pacer.typings import DimAction, DimState, FloatLike, NumPoints, VectorsType
-from pacer.utils import EPS, MAD_SCALE, mean, median
+from pacer.typings import DimAction, DimState, NumPoints, VectorsType
+from pacer.utils import EPS, mean, median
 
 ## ── Consensus ────────────────────────────────────────────────────────────────
 
@@ -94,14 +94,16 @@ class ResidualScaleEstimator(Protocol):
 class MADResidualScaleEstimator:
     """Median absolute deviation scale estimator."""
 
-    consistency_scale: FloatLike = MAD_SCALE
+    scale: float | Literal["normal"] = "normal"
+    """
+    Consistency scale.
+    The numerical value of scale will be divided out of the final result.\\
+    scale="normal" => scale=scipy.special.ndtri(0.75)
+    => Gaussian consistency factor for MAD ~= 1/0.67449 ~= 1.4826
+    """
 
     def compute(self, residuals: Sequence[Residual]) -> Residual:
-        median_residual: Residual = Residual(median(residuals))
-        abs_deviations: list[Residual] = [
-            Residual(abs(residual - median_residual)) for residual in residuals
-        ]
-        return Residual(self.consistency_scale * median(abs_deviations))
+        return Residual(scipy.stats.median_abs_deviation(residuals, scale=self.scale))
 
 
 @dataclass(frozen=True, slots=True)

@@ -27,7 +27,6 @@ from pacer.typings import FloatLike, Vector, npDType
 
 SEED: Final = 42
 EPS: float = 1e-8
-MAD_SCALE: float = 1.4826  # Gaussian consistency factor for MAD
 
 
 def set_seed(seed: int = SEED) -> None:
