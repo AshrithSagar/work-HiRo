@@ -7,7 +7,7 @@ authors = [{ name = "Ashrith Sagar", email = "ashrithy@iisc.ac.in" }]
 requires-python = ">=3.14"
 dependencies = [
     "dtaidistance>=2.4.0",
-    "matplotlib>=3.10.9",
+    "matplotlib>=3.11.0",
     "numpy>=2.4.6",
     "optype[numpy]>=0.17.1",
     "pygame>=2.6.1",
@@ -47,7 +47,7 @@ dev = [
     "types-webencodings>=0.5.0.20260408",
     "types-xlrd>=2.0.0.20260518",
 ]
-lint = ["ruff>=0.15.16"]
+lint = ["ruff>=0.15.17"]
 test = ["pytest>=9.0.3", "pytest-memray>=1.8.0"]
 typecheck = [
     "basedpyright>=1.39.7",
@@ -55,7 +55,7 @@ typecheck = [
     "pycroscope>=0.4.0",
     "pyrefly>=1.0.0",
     "pyright>=1.1.410",
-    "ty>=0.0.48",
+    "ty>=0.0.49",
     "zuban>=0.8.2",
 ]
 
