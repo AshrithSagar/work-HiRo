@@ -22,7 +22,7 @@ from pacer.pacer.base import (
     ZScore,
     ZScoresCollection,
 )
-from pacer.pacer.binning import Bins, ConsensusStatistics
+from pacer.pacer.binning import Bin, Bins, ConsensusStatistics
 from pacer.pacer.consensus import (
     ConsensusConfig,
     MADResidualScaleEstimator,
@@ -31,6 +31,7 @@ from pacer.pacer.consensus import (
 from pacer.pacer.mode import VectorMode
 from pacer.typings import (
     CollectionType,
+    DemoIndex,
     DimAction,
     DimState,
     FloatLike,
@@ -45,10 +46,11 @@ from pacer.utils import EPS
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)
-class TrustComputationContext(RuntimeGeneric[VectorType]):
-    """Shared immutable trust-computation context."""
+class ConsensusInfo(RuntimeGeneric[VectorType]):
+    """Consensus information required to evaluate a single sample."""
 
     anchor: VectorType
+    residual_scale: Residual
 
 
 # ── Residual Computation ──────────────────────────────────────────────────────
@@ -58,16 +60,16 @@ class ResidualComputer(Protocol):
     """Computes residual for a sample relative to consensus."""
 
     def compute(
-        self, vector: VectorType, *, ctx: TrustComputationContext[VectorType]
+        self, vector: VectorType, *, consensus: ConsensusInfo[VectorType]
     ) -> Residual: ...
 
 
 @dataclass(frozen=True, slots=True)
 class EuclideanResidualComputer:
     def compute(
-        self, vector: VectorType, *, ctx: TrustComputationContext[VectorType]
+        self, vector: VectorType, *, consensus: ConsensusInfo[VectorType]
     ) -> Residual:
-        return Residual(la.norm(vector - ctx.anchor))
+        return Residual(la.norm(vector - consensus.anchor))
 
 
 # ── Trust Kernels ─────────────────────────────────────────────────────────────
@@ -237,9 +239,6 @@ class TrustPipeline:
         default_factory=lambda: [MinimumTrustFloor()]
     )
 
-    def compute_scale(self, residuals: Sequence[Residual]) -> Residual:
-        return self.scale_estimator.compute(residuals)
-
     def compute_trust(
         self, residual: Residual, *, scale: Residual
     ) -> tuple[ZScore, TrustValue]:
@@ -248,6 +247,54 @@ class TrustPipeline:
         for transform in self.transforms:
             trust = transform.apply(trust)
         return z_score, trust
+
+
+# ── Consensus Builder ─────────────────────────────────────────────────────────
+
+
+@dataclass
+class LOOConsensusInfoBuilder(
+    RuntimeGeneric[CollectionType, VectorType, NumDemos, NumPoints, DimState, DimAction]
+):
+    mode: VectorMode[
+        CollectionType, VectorType, NumDemos, NumPoints, DimState, DimAction
+    ]
+    consensus_config: ConsensusConfig = field(default_factory=ConsensusConfig)
+    residual_computer: ResidualComputer = field(
+        default_factory=EuclideanResidualComputer
+    )
+    scale_estimator: ResidualScaleEstimator = field(
+        default_factory=MADResidualScaleEstimator
+    )
+
+    def build_for(
+        self,
+        *,
+        bin: Bin[NumDemos, NumPoints, DimState, DimAction],
+        demo_index: DemoIndex,
+    ) -> ConsensusInfo[VectorType]:
+        loo_stats = ConsensusStatistics[DimState, DimAction].for_bin(
+            bin, consensus_config=self.consensus_config, LOO_demo_index=demo_index
+        )
+        anchor = self.mode.anchor_from_stats(loo_stats)
+        consensus = ConsensusInfo(anchor=anchor, residual_scale=Residual(1))
+        reference_samples = [
+            sample
+            for j, samples in bin.samples_collection.items()
+            if j != demo_index
+            for sample in samples.values()
+        ]
+        residuals = [
+            self.residual_computer.compute(
+                self.mode.vector_from_sample(sample), consensus=consensus
+            )
+            for sample in reference_samples
+        ]
+        residual_scale = self.scale_estimator.compute(residuals)  # ~ MAD_{a}^{(-i)}[b]
+        return ConsensusInfo(
+            anchor=anchor,
+            residual_scale=residual_scale,
+        )
 
 
 # ── Trust Value Computation ───────────────────────────────────────────────────
@@ -283,41 +330,29 @@ class TrustValueComputer(
         ],
         params: TrustValueParams,
     ) -> TrustValueComputationResult[NumDemos, NumPoints]:
-        pipeline = params.pipeline
         z_scores = ZScoresCollection[NumDemos, NumPoints].zeros_like(
             self.demonstrations
         )  # (N x T_)
         trust_values = TrustValuesCollection[NumDemos, NumPoints].zeros_like(
             self.demonstrations
         )  # (N x T_)
+        consensus_builder = LOOConsensusInfoBuilder(
+            mode=mode,
+            consensus_config=self.consensus_config,
+            residual_computer=params.pipeline.residual_computer,
+            scale_estimator=params.pipeline.scale_estimator,
+        )
 
         for bin in self.bins:
             for i in self.demonstrations.demo_indices:
-                loo_stats = ConsensusStatistics[DimState, DimAction].for_bin(
-                    bin, consensus_config=self.consensus_config, LOO_demo_index=i
-                )
-                ctx = TrustComputationContext(anchor=mode.anchor_from_stats(loo_stats))
-
-                reference_samples = [
-                    sample
-                    for j, samples in bin.samples_collection.items()
-                    if j != i
-                    for sample in samples.values()
-                ]
-                residuals = [
-                    pipeline.residual_computer.compute(
-                        mode.vector_from_sample(sample), ctx=ctx
-                    )
-                    for sample in reference_samples
-                ]
-
-                scale = pipeline.compute_scale(residuals)  # MAD_{a}^{(-i)}[b]
-
+                consensus = consensus_builder.build_for(bin=bin, demo_index=i)
                 for t, sample in bin.samples_collection[i].items():
-                    residual = pipeline.residual_computer.compute(
-                        mode.vector_from_sample(sample), ctx=ctx
+                    residual = params.pipeline.residual_computer.compute(
+                        mode.vector_from_sample(sample), consensus=consensus
                     )
-                    z_score, trust = pipeline.compute_trust(residual, scale=scale)
+                    z_score, trust = params.pipeline.compute_trust(
+                        residual, scale=consensus.residual_scale
+                    )
                     z_scores[i][t] = z_score  # z_{i, t}
                     trust_values[i][t] = trust
 
