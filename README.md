@@ -1,6 +1,6 @@
 # work-HiRo
 
-Projectwork @ IISc
+Projectwork @ [HiRO Lab](https://hiro.cps.iisc.ac.in/), [IISc](https://iisc.ac.in/)
 
 ## Licenses
 
