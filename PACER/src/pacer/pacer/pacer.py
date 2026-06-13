@@ -12,12 +12,12 @@ from typing import cast
 from typingkit.core import RuntimeGeneric
 
 from pacer.base import Demonstrations
-from pacer.pacer.base import TrustValuesCollection, ZScoresCollection
 from pacer.pacer.binning import Binner, Bins, RibbonTokenConsolidator
 from pacer.pacer.consensus import ConsensusConfig
 from pacer.pacer.mode import ACTION_MODE, STATE_MODE
 from pacer.pacer.pseudolabel import PseudoLabelComputer, PseudoLabelParams, PseudoLabels
-from pacer.pacer.trust import (
+from pacer.pacer.trust.base import TrustValuesCollection, ZScoresCollection
+from pacer.pacer.trust.legacy import (
     TrustValueComputationResult,
     TrustValueComputer,
     TrustValueParams,

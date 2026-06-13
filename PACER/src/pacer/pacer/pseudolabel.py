@@ -14,10 +14,11 @@ import numpy.linalg as la
 from typingkit.core import RuntimeGeneric
 
 from pacer.base import ActionsCollection, Demonstrations, StatesCollection
-from pacer.pacer.base import MetricValue, TrustValue, TrustValuesCollection
+from pacer.pacer.base import MetricValue
 from pacer.pacer.binning import Bins, ConsensusStatistics
 from pacer.pacer.consensus import ConsensusConfig
-from pacer.pacer.mode import VectorMode, ACTION_MODE, STATE_MODE
+from pacer.pacer.mode import ACTION_MODE, STATE_MODE, VectorMode
+from pacer.pacer.trust import TrustValue, TrustValuesCollection
 from pacer.typings import (
     CollectionType,
     DimAction,

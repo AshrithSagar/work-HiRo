@@ -2,7 +2,7 @@
 Trust Value Computation
 =======
 """
-# src/pacer/pacer/trust.py
+# src/pacer/pacer/trust/legacy.py
 
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
@@ -15,13 +15,7 @@ import numpy.linalg as la
 from typingkit.core import RuntimeGeneric
 
 from pacer.base import Demonstrations
-from pacer.pacer.base import (
-    Residual,
-    TrustValue,
-    TrustValuesCollection,
-    ZScore,
-    ZScoresCollection,
-)
+from pacer.pacer.base import Residual
 from pacer.pacer.binning import Bin, Bins, ConsensusStatistics
 from pacer.pacer.consensus import (
     ConsensusConfig,
@@ -29,6 +23,8 @@ from pacer.pacer.consensus import (
     ResidualScaleEstimator,
 )
 from pacer.pacer.mode import VectorMode
+from pacer.pacer.trust import TrustValue, TrustValuesCollection
+from pacer.pacer.trust.base import ZScore, ZScoresCollection
 from pacer.typings import (
     CollectionType,
     DemoIndex,

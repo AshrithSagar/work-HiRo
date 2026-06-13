@@ -26,7 +26,7 @@ from pacer.pacer.pseudolabel import (
     SpeedRegularisationStep,
     TemporalSmoother,
 )
-from pacer.pacer.trust import (
+from pacer.pacer.trust.legacy import (
     EuclideanResidualComputer,
     MinimumTrustFloor,
     TrustPipeline,

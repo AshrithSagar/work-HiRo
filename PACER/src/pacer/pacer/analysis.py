@@ -22,8 +22,8 @@ from pacer.pacer.base import (
     Residual,
     Residuals,
     ResidualsCollection,
-    TrustValuesCollection,
 )
+from pacer.pacer.trust import TrustValuesCollection
 from pacer.typings import (
     DimAction,
     DimState,

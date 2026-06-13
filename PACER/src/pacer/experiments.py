@@ -26,7 +26,7 @@ from pacer.datasets.loader import (
 )
 from pacer.pacer import PACER, PACERConfig, PACERResult
 from pacer.pacer.pseudolabel import PseudoLabelParams
-from pacer.pacer.trust import TrustValueParams
+from pacer.pacer.trust.legacy import TrustValueParams
 from pacer.phase.estimation import MLPPhaseEstimatorConfig
 from pacer.phase.pipeline import PhaseEstimatorChoice, PhasePipelineConfig
 from pacer.plotting.legacy import PACERVisualisationConfig, PACERVisualiser

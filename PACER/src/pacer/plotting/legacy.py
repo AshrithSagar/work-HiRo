@@ -45,15 +45,9 @@ from pacer.pacer.analysis import (
     SmoothnessAnalyser,
     SmoothnessAnalysis,
 )
-from pacer.pacer.base import (
-    MetricSeries,
-    MetricValue,
-    Residual,
-    ResidualsCollection,
-    TrustValue,
-    TrustValuesCollection,
-)
+from pacer.pacer.base import MetricSeries, MetricValue, Residual, ResidualsCollection
 from pacer.pacer.binning import Bins
+from pacer.pacer.trust import TrustValue, TrustValuesCollection
 from pacer.phase import PhasesCollection
 from pacer.typings import (
     DemoIndex,
