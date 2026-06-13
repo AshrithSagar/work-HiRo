@@ -1,6 +1,9 @@
 [submodule "repos/ILoSA"]
 	path = repos/ILoSA
 	url = https://github.com/franzesegiovanni/ILoSA
+[submodule "repos/PACER"]
+	path = repos/PACER
+	url = https://github.com/shr-eyas/PACER.git
 [submodule "repos/pbdlib-matlab"]
 	path = repos/pbdlib-matlab
 	url = https://gitlab.idiap.ch/rli/pbdlib-matlab.git
