@@ -26,12 +26,11 @@ from pacer.pacer.pseudolabel import (
     SpeedRegularisationStep,
     TemporalSmoother,
 )
+from pacer.pacer.trust.kernels import MinimumTrustFloor, TukeyBiweightKernel
 from pacer.pacer.trust.legacy import (
     EuclideanResidualComputer,
-    MinimumTrustFloor,
     TrustPipeline,
     TrustValueParams,
-    TukeyBiweightKernel,
 )
 from pacer.phase import PhasePipelineConfig
 from pacer.phase.estimation import DTWPhaseEstimatorConfig, MLPPhaseEstimatorConfig
