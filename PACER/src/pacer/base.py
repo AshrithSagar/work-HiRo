@@ -2,6 +2,16 @@
 Base
 =======
 Core data structures for representing demonstrations and samples.
+
+Notes
+-------
+`Samples` stores trajectory data as: {`TimeIndex` -> `Sample`}.\\
+`Demonstration` stores the same information in a factorised form:
+states=[`State`], actions=[`Action`], while also keeping track of the demonstration index.
+
+Similarly for `SamplesCollection` and `Demonstrations`.
+
+Also, the mathematical notation uses one-based indexing mostly, while the implementation uses zero-based indexing.
 """
 # src/pacer/base.py
 
@@ -43,6 +53,12 @@ class Action(Vector[DimAction]):  # a_{i, t} \in R^{d_a}
 
 
 class States(Vectors[NumPoints, State[DimState]]):
+    """
+    Homogeneous collection of `State` vectors.
+
+    All contained states (must) share the same dimension `DimState`.
+    """
+
     @property
     @override
     def dim(self) -> DimState:
@@ -60,6 +76,12 @@ class States(Vectors[NumPoints, State[DimState]]):
 
 
 class Actions(Vectors[NumPoints, Action[DimAction]]):
+    """
+    Homogeneous collection of `Action` vectors.
+
+    All contained actions (must) share the same dimension `DimAction`.
+    """
+
     @property
     @override
     def dim(self) -> DimAction:
@@ -111,13 +133,18 @@ class ActionsCollection(TypedList[NumDemos, Actions[NumPoints, DimAction]]):
 # (x, a)
 @dataclass
 class StateActionPair(RuntimeGeneric[DimState, DimAction]):
-    """A container for a State-Action pair."""
+    """
+    A container for a State-Action pair.
+    For a demonstration-aware state-action pair, use `Sample`.
+    """
 
     state: State[DimState]  # x
     action: Action[DimAction]  # a
 
 
 class StateActionPairs(TypedList[NumPoints, StateActionPair[DimState, DimAction]]):
+    """A collection of State-Action pairs."""
+
     def states(self) -> States[NumPoints, DimState]:
         return States[NumPoints, DimState](pair.state for pair in self)
 
@@ -128,13 +155,23 @@ class StateActionPairs(TypedList[NumPoints, StateActionPair[DimState, DimAction]
 # (x_{i, t}, a_{i, t})
 @dataclass
 class Sample(StateActionPair[DimState, DimAction]):
-    """A State-Action pair in the context of Demonstrations."""
+    """
+    A State-Action pair in the context of Demonstrations, i.e.,
+    a state-action pair annotated with its originating demonstration index and time index.
+    """
 
     index: SampleIndex  # (i, t)
 
 
 # [(x_{t}, a_{t})]_{t = 1}^{T}
 class Samples(TypedDict[NumPoints, TimeIndex, Sample[DimState, DimAction]]):
+    """
+    A collection of time-ordered `Sample`s, i.e.,
+    a collection of `Sample`s, indexed by `TimeIndex`.
+
+    Conceptually: `Samples :: TimeIndex -> Sample`
+    """
+
     @property
     def time_indices(self) -> TimeIndices[NumPoints]:
         return TimeIndices[NumPoints](self.keys())
@@ -150,7 +187,16 @@ class Samples(TypedDict[NumPoints, TimeIndex, Sample[DimState, DimAction]]):
 class SamplesCollection(
     TypedDict[NumDemos, DemoIndex, Samples[NumPoints, DimState, DimAction]]
 ):
-    """A collection of state-action pairs (a sequence of state-action pair)."""
+    """
+    A collection of trajectory-wise `Samples`, i.e.,
+    a collection of `Samples`, indexed by `DemoIndex`.
+
+    Conceptually: `SamplesCollection :: DemoIndex -> Samples`
+
+    Indexing semantics:
+    - `samples[DemoIndex(i)] -> Samples`
+    - `samples[SampleIndex(i, t)] -> Sample`
+    """
 
     @overload
     def __getitem__(
@@ -215,10 +261,14 @@ class SamplesCollection(
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-# Behaves like Samples
+# Behaves like `Samples`
 @dataclass(kw_only=True)
 class Demonstration(RuntimeGeneric[NumPoints, DimState, DimAction]):  # D_i
-    """A single trajectory of states and actions."""
+    """
+    A single trajectory of states and actions.
+
+    Conceptually behaves like: `Demonstration :: Samples[TimeIndex -> Sample]`
+    """
 
     index: DemoIndex  # i
     states: States[NumPoints, DimState]  # [x_{i, t}]_{t = 1}^{T_i}
@@ -272,12 +322,20 @@ class Demonstration(RuntimeGeneric[NumPoints, DimState, DimAction]):  # D_i
         )
 
 
-# Behaves like SamplesCollection
+# Behaves like `SamplesCollection`
 @dataclass(slots=True)
 class Demonstrations(
     RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]
 ):  # [D_i]_{i = 1}^{N}
-    """A collection of multiple demonstrations."""
+    """
+    A collection of multiple `Demonstration`s.
+
+    Conceptually behaves like: `Demonstrations :: SamplesCollection[DemoIndex -> Samples]`
+
+    Indexing semantics:
+    - `demos[DemoIndex(i)] -> Demonstration i`
+    - `demos[SampleIndex(i, t)] -> Sample (i, t)`
+    """
 
     demos: TypedList[NumDemos, Demonstration[NumPoints, DimState, DimAction]]
 
