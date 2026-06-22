@@ -53,10 +53,10 @@ class InteractiveDataSet:
         self.controller.on_start()
 
         # Connect events
-        self.fig.canvas.mpl_connect("button_press_event", self.controller.on_press)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
-        self.fig.canvas.mpl_connect("motion_notify_event", self.controller.on_motion)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
-        self.fig.canvas.mpl_connect("button_release_event", self.controller.on_release)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
-        self.fig.canvas.mpl_connect("key_press_event", self.controller.on_key)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+        self.fig.canvas.mpl_connect("button_press_event", self.controller.on_press)
+        self.fig.canvas.mpl_connect("motion_notify_event", self.controller.on_motion)
+        self.fig.canvas.mpl_connect("button_release_event", self.controller.on_release)
+        self.fig.canvas.mpl_connect("key_press_event", self.controller.on_key)
 
     def to_demonstrations(self) -> Demonstrations[NumDemos, NumPoints, TWO, TWO]:
         demos = self.controller.store.demos

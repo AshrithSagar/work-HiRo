@@ -69,7 +69,7 @@ def median(
     return cast(np.ndarray, np.median(arr, axis=axis))
 
 
-def mean(arr: npt.ArrayLike, /, axis: int | Sequence[int] | None = None) -> np.ndarray:
+def mean(arr: npt.ArrayLike, /, axis: int | tuple[int] | None = None) -> np.ndarray:
     arr = np.asarray(arr)
     return cast(np.ndarray, np.mean(arr, axis=axis))
 

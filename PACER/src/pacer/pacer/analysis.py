@@ -194,7 +194,7 @@ class SmoothnessAnalyser(
                 scores.append(MetricValue(0))
                 continue
             acceleration = np.diff(arr, n=2, axis=0)
-            jerk_energy: Vector = np.sum(acceleration**2, axis=1)
+            jerk_energy = Vector(np.sum(acceleration**2, axis=1))
             scores.append(MetricValue(np.mean(jerk_energy)))
         return SmoothnessAnalysis(TypedList[NumDemos, MetricValue](scores))
 

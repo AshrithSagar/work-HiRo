@@ -68,15 +68,15 @@ class LegacyInteractiveDataSet(RuntimeGeneric[NumDemos, NumPoints]):
         self.demo_lines: list[Line2D] = []
         self.current_stroke: list[tuple[float, float]] = []
         self.current_artist: Line2D | None = None
-        self.colors: Any = plt.cm.tab10(np.linspace(0, 1, 10))  # type: ignore[attr-defined]  # pyright: ignore[reportAttributeAccessIssue]
+        self.colors: Any = plt.cm.tab10(np.linspace(0, 1, 10))
 
         self.finished: bool = False
 
         # Event connections
-        self.fig.canvas.mpl_connect("button_press_event", self._on_press)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
-        self.fig.canvas.mpl_connect("motion_notify_event", self._on_motion)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
-        self.fig.canvas.mpl_connect("button_release_event", self._on_release)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
-        self.fig.canvas.mpl_connect("key_press_event", self._on_key)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+        self.fig.canvas.mpl_connect("button_press_event", self._on_press)
+        self.fig.canvas.mpl_connect("motion_notify_event", self._on_motion)
+        self.fig.canvas.mpl_connect("button_release_event", self._on_release)
+        self.fig.canvas.mpl_connect("key_press_event", self._on_key)
 
     # ── Mouse handlers ───────────────────────────────────────────────────────
     def _on_press(self, event: MouseEvent) -> None:
