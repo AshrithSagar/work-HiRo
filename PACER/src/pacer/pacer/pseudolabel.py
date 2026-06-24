@@ -190,6 +190,7 @@ class PseudoLabelComputer(
             tangent = (
                 token.state_tangent
                 if token.state_tangent is not None
+                and token.state_tangent.shape == token.action_tangent.shape
                 else token.action_tangent
             )
             unit_tangent = mode.wrap(normalise(tangent, method="NORM"))
