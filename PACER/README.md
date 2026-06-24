@@ -51,6 +51,14 @@ uv sync --all-groups --all-extras
 pip install -e .
 ```
 
+## Usage
+
+The experiment runners are in the [`experiments/`](experiments/) directory.
+
+```shell
+uv run experiments/pacer/pacer_bc.py
+```
+
 ## License
 
 This project falls under the [MIT License](../../LICENSE).
