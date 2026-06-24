@@ -15,6 +15,7 @@ from pyLASAHandwritingDataset import SinglePatternMotion
 from typingkit.numpy._typed.helpers import TWO
 
 from pacer.base import Demonstrations
+from pacer.datasets import HopperDataset, LASADataSet
 from pacer.datasets.corruptions import (
     DemonstrationCorrupter,
     NoisyCorruptionConfig,
@@ -30,13 +31,13 @@ from pacer.datasets.interactive.plugins import (
     SavePlugin,
     default_plugins,
 )
-from pacer.datasets.lasa import LASADataSet
 from pacer.utils import SEED, set_seed
 
 ## ── Demonstration Loader ─────────────────────────────────────────────────────
 
 type DemonstrationsChoice = Literal[
     "FROM_LASA",
+    "HOPPER",
     "CUSTOM_FROM_LOAD",
     "CUSTOM_FROM_LASA",
     "CUSTOM_DRAW",
@@ -71,6 +72,8 @@ class DemonstrationLoader:
                 demonstrations = LASADataSet(
                     self.config.LASA_pattern
                 ).to_demonstrations()
+            case "HOPPER":
+                demonstrations = HopperDataset().to_demonstrations()  # TODO: Fix types
             case "CUSTOM_FROM_LOAD":
                 assert self.config.filepath is not None
                 ifig = InteractiveFigure.create()

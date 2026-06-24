@@ -212,6 +212,8 @@ class BCvsPACERBCExperimentLegacy(RuntimeGeneric[NumBins]):
                         characters="\u2501",
                         style="gold3",
                     )
+                case _:
+                    pass
 
             demonstrations = DemonstrationLoader(
                 config=DemonstrationLoaderConfig(
