@@ -6,7 +6,6 @@ Hopper
 
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
-import os
 from functools import cached_property
 from pathlib import Path
 from typing import Any, Literal, TypeAlias
@@ -35,13 +34,13 @@ class HopperDataset:
         self.path: Path = Path(path)
 
     @cached_property
-    def filenames(self) -> TypedList[SIXTEEN, str]:
-        return TypedList[SIXTEEN, str](sorted(os.listdir(self.path)))
+    def _files(self) -> TypedList[SIXTEEN, Path]:
+        return TypedList[SIXTEEN, Path](sorted(self.path.glob("*.npz")))
 
     def _load_demo(
-        self, demo_index: DemoIndex, filename: str
+        self, demo_index: DemoIndex, file: Path
     ) -> Demonstration[Any, ELEVEN, THREE]:
-        data = np.load(self.path / filename, allow_pickle=True)
+        data = np.load(file, allow_pickle=True)
         return Demonstration(
             index=demo_index,
             states=States[Any, ELEVEN](
@@ -53,10 +52,10 @@ class HopperDataset:
         )
 
     def preview(self) -> None:
-        for filename in self.filenames:
-            data = np.load(self.path / filename, allow_pickle=True)
+        for file in self._files:
+            data = np.load(file, allow_pickle=True)
 
-            table = Table(title=filename, show_header=True)
+            table = Table(title=file.name, show_header=True)
             table.add_column("key", style="magenta")
             table.add_column("shape", style="green")
             table.add_column("dtype", style="yellow")
@@ -74,15 +73,15 @@ class HopperDataset:
             console.rule()
 
     def __len__(self) -> SIXTEEN:
-        assert len(self.filenames) == 16
+        assert self._files.length == 16
         return 16
 
     def to_demonstrations(self) -> Demonstrations[SIXTEEN, Any, ELEVEN, THREE]:
         return Demonstrations(
             TypedList[SIXTEEN, Demonstration[Any, ELEVEN, THREE]](
                 [
-                    self._load_demo(demo_index, filename)
-                    for demo_index, filename in enumerate(self.filenames)
+                    self._load_demo(demo_index, file)
+                    for demo_index, file in enumerate(self._files)
                 ]
             )
         )
