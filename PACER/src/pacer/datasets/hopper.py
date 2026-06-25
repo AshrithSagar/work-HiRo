@@ -18,6 +18,7 @@ from typingkit.numpy._typed.helpers import THREE
 
 from pacer import console
 from pacer.base import Action, Actions, Demonstration, Demonstrations, State, States
+from pacer.typings import DemoIndex
 
 ## ── Typings ──────────────────────────────────────────────────────────────────
 
@@ -37,10 +38,23 @@ class HopperDataset:
     def filenames(self) -> TypedList[SIXTEEN, str]:
         return TypedList[SIXTEEN, str](sorted(os.listdir(self.path)))
 
+    def _load_demo(
+        self, demo_index: DemoIndex, filename: str
+    ) -> Demonstration[Any, ELEVEN, THREE]:
+        data = np.load(self.path / filename, allow_pickle=True)
+        return Demonstration(
+            index=demo_index,
+            states=States[Any, ELEVEN](
+                State[ELEVEN](state) for state in data["states"]
+            ),
+            actions=Actions[Any, THREE](
+                Action[THREE](action) for action in data["actions_exec"]
+            ),
+        )
+
     def preview(self) -> None:
         for filename in self.filenames:
-            path = self.path / filename
-            data = np.load(path, allow_pickle=True)
+            data = np.load(self.path / filename, allow_pickle=True)
 
             table = Table(title=filename, show_header=True)
             table.add_column("key", style="magenta")
@@ -59,22 +73,18 @@ class HopperDataset:
             console.print(table)
             console.rule()
 
-    def __len__(self) -> int:
-        return len(self.filenames)
+    def __len__(self) -> SIXTEEN:
+        assert len(self.filenames) == 16
+        return 16
 
     def to_demonstrations(self) -> Demonstrations[SIXTEEN, Any, ELEVEN, THREE]:
-        demos: list[Demonstration[Any, ELEVEN, THREE]] = []
-        for demo_index, filename in enumerate(self.filenames):
-            data = np.load(self.path / filename, allow_pickle=True)
-            demos.append(
-                Demonstration(
-                    index=demo_index,
-                    states=States(State(state) for state in data["states"]),
-                    actions=Actions(Action(action) for action in data["actions_exec"]),
-                )
-            )
         return Demonstrations(
-            TypedList[SIXTEEN, Demonstration[Any, ELEVEN, THREE]](demos)
+            TypedList[SIXTEEN, Demonstration[Any, ELEVEN, THREE]](
+                [
+                    self._load_demo(demo_index, filename)
+                    for demo_index, filename in enumerate(self.filenames)
+                ]
+            )
         )
 
 
