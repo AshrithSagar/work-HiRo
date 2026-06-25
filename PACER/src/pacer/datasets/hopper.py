@@ -51,6 +51,15 @@ class HopperDataset:
             ),
         )
 
+    def _preview_value(self, arr: np.ndarray, max_items: int = 5) -> str:
+        if np.ndim(arr) == 0:
+            return repr(arr.item())
+        flat = arr.ravel()
+        if flat.size <= max_items:
+            return np.array2string(flat, precision=3)
+        head = np.array2string(flat[:max_items], precision=3)
+        return f"{head[:-1]}, ...]"
+
     def preview(self) -> None:
         for file in self._files:
             data = np.load(file, allow_pickle=True)
@@ -60,15 +69,11 @@ class HopperDataset:
             table.add_column("shape", style="green")
             table.add_column("dtype", style="yellow")
             table.add_column("value", style="cyan")
-            for key in data.keys():
+            for key in data.files:
                 arr = data[key]
-                shape = str(arr.shape) if hasattr(arr, "shape") else "-"
-                dtype = str(arr.dtype) if hasattr(arr, "dtype") else "-"
-                if np.ndim(arr) == 0:
-                    preview = repr(arr.item())
-                else:
-                    preview = " ..."
-                table.add_row(key, shape, dtype, preview)
+                table.add_row(
+                    key, str(arr.shape), str(arr.dtype), self._preview_value(arr)
+                )
             console.print(table)
             console.rule()
 
