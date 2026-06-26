@@ -10,6 +10,7 @@ from collections.abc import Sequence
 from dataclasses import KW_ONLY, dataclass, field
 from typing import Protocol
 
+import numpy as np
 import numpy.linalg as la
 from typingkit.core import RuntimeGeneric
 
@@ -66,10 +67,118 @@ class ResidualComputer(Protocol):
 
 @dataclass(frozen=True, slots=True)
 class EuclideanResidualComputer:
+    """Computes the Euclidean residual, `r = ||x - a||_2`."""
+
     def compute(
         self, vector: VectorType, *, consensus: ConsensusInfo[VectorType]
     ) -> Residual:
         return Residual(la.norm(vector - consensus.anchor))
+
+
+@dataclass(frozen=True, slots=True)
+class ManhattanResidualComputer:
+    """Computes the Manhattan residual, `r = ||x - a||_1`."""
+
+    def compute(
+        self, vector: VectorType, *, consensus: ConsensusInfo[VectorType]
+    ) -> Residual:
+        return Residual(abs(vector - consensus.anchor).sum())
+
+
+@dataclass(frozen=True, slots=True)
+class LpResidualComputer:
+    """Computes the `L^p` residual, `r = ||x - a||_p`."""
+
+    p: float = 2.0
+
+    def __post_init__(self) -> None:
+        assert self.p >= 1
+
+    def compute(
+        self, vector: VectorType, *, consensus: ConsensusInfo[VectorType]
+    ) -> Residual:
+        return Residual(la.norm(vector - consensus.anchor, ord=self.p))
+
+
+@dataclass(frozen=True, slots=True)
+class AngularResidualComputer:
+    """
+    Computes the angular residual, `r = arccos( (x^T a) / (||x|| ||a||) )`.
+    Returns an angle in radians.
+    """
+
+    def compute(
+        self, vector: VectorType, *, consensus: ConsensusInfo[VectorType]
+    ) -> Residual:
+        anchor = consensus.anchor
+        cosine = vector @ anchor / ((la.norm(vector) + EPS) * (la.norm(anchor) + EPS))
+        cosine = cosine.clip(-1.0, 1.0)
+        return Residual(np.arccos(cosine))
+
+
+@dataclass(frozen=True, slots=True)
+class CosineResidualComputer:
+    """Computes the cosine residual, `r = 1 - cos(x, a)`, where `cos(x,a) = (x^T a) / (||x|| ||a||)`."""
+
+    def compute(
+        self, vector: VectorType, *, consensus: ConsensusInfo[VectorType]
+    ) -> Residual:
+        anchor = consensus.anchor
+        cosine = vector @ anchor / ((la.norm(vector) + EPS) * (la.norm(anchor) + EPS))
+        cosine = cosine.clip(-1.0, 1.0)
+        return Residual(1.0 - cosine)
+
+
+@dataclass(frozen=True, slots=True)
+class EuclideanAngularResidualComputer:
+    r"""
+    Computes the hybrid residual, `r = \sqrt{ ||x-a||_2^2 + \lambda \theta^2 }`,
+    where `\theta = arccos( (x^T a) / (||x|| ||a||) )`.
+    """
+
+    lambda_angle: float = 1.0
+    """Weight of the angular component."""
+
+    def compute(
+        self, vector: VectorType, *, consensus: ConsensusInfo[VectorType]
+    ) -> Residual:
+        anchor = consensus.anchor
+        distance = la.norm(vector - anchor)
+        cosine = vector @ anchor / ((la.norm(vector) + EPS) * (la.norm(anchor) + EPS))
+        cosine = cosine.clip(-1.0, 1.0)
+        theta = np.arccos(cosine)
+        return Residual(np.sqrt(distance**2 + self.lambda_angle * theta**2))
+
+
+@dataclass(frozen=True, slots=True)
+class ProjectionResidualComputer:
+    r"""
+    Computes the orthogonal projection residual, `r = ||x - proj_a(x)||_2`, where `proj_a(x) = (x^T a / a^T a) a`.
+    Measures deviation from the consensus direction while ignoring displacement along the anchor.
+    """
+
+    def compute(
+        self, vector: VectorType, *, consensus: ConsensusInfo[VectorType]
+    ) -> Residual:
+        anchor = consensus.anchor
+        scale = (vector @ anchor) / (anchor @ anchor + EPS)
+        projection = scale * anchor
+        return Residual(la.norm(vector - projection))
+
+
+@dataclass(frozen=True, slots=True)
+class RelativeMagnitudeResidualComputer:
+    r"""
+    Computes the relative magnitude residual, `r = |log(||x|| / ||a||)|`.
+    Penalises differences in magnitude while ignoring direction.
+    """
+
+    def compute(
+        self, vector: VectorType, *, consensus: ConsensusInfo[VectorType]
+    ) -> Residual:
+        return Residual(
+            abs(np.log((la.norm(vector) + EPS) / (la.norm(consensus.anchor) + EPS)))
+        )
 
 
 # ── Trust Pipeline ────────────────────────────────────────────────────────────
