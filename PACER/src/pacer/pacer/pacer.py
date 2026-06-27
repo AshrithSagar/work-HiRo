@@ -30,6 +30,8 @@ from pacer.typings import DimAction, DimState, NumBins, NumDemos, NumPoints
 
 @dataclass(kw_only=True)
 class PACERConfig(RuntimeGeneric[NumBins]):
+    """Configuration for the PACER pipeline."""
+
     phase_pipeline_config: PhasePipelineConfig = field(
         default_factory=PhasePipelineConfig
     )
@@ -50,6 +52,8 @@ class PACERConfig(RuntimeGeneric[NumBins]):
 
 @dataclass(kw_only=True)
 class PACERResult(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
+    """Outputs produced by a PACER run."""
+
     phases: PhasesCollection[NumDemos, NumPoints]
     bins: Bins[NumBins, NumDemos, NumPoints, DimState, DimAction]
     action_trust_result: TrustValueComputationResult[NumDemos, NumPoints]
@@ -83,6 +87,11 @@ class PACERResult(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimActi
 
 @dataclass
 class PACER(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
+    """
+    Orchestrates the complete PACER pipeline:
+    Phase estimation -> Binning -> Trust estimation -> Pseudo-label refinement.
+    """
+
     demonstrations: Demonstrations[NumDemos, NumPoints, DimState, DimAction]
     _: KW_ONLY
     config: PACERConfig[NumBins] = field(default_factory=PACERConfig[NumBins])

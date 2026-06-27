@@ -84,7 +84,7 @@ VectorsType = TypeVar("VectorsType", bound=Vectors[Any, Any], default=Vectors)
 
 CollectionType = TypeVar("CollectionType")
 
-# ──────────────────────────────────────────────────────────────────────────────
+# ── Indices ───────────────────────────────────────────────────────────────────
 
 DemoIndex: TypeAlias = int  # i \in {0, 1, ..., N-1}
 DemoIndices: TypeAlias = TypedList[NumPoints, DemoIndex]

@@ -167,6 +167,8 @@ class Bins(TypedList[NumBins, Bin[NumDemos, NumPoints, DimState, DimAction]]):
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+
+
 @dataclass
 class Binner(RuntimeGeneric[NumBins, NumDemos, NumPoints, DimState, DimAction]):
     """Assigns samples to bins based on phase."""
