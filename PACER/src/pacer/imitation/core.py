@@ -66,10 +66,10 @@ class Streamer(Generic[RawDataT], ABC):
 
 
 class Collator(Generic[RawDataT, BatchT], ABC):
-    """Converts raw items or sequence groups into processed tensor batches."""
+    """Converts raw data into processed tensor batches."""
 
     @abstractmethod
-    def __call__(self, raw_data: RawDataT, device: torch.device) -> BatchT: ...
+    def __call__(self, raw: RawDataT, device: torch.device) -> BatchT: ...
 
 
 class Evaluator(Generic[PolicyT, BatchT, PredictionT], ABC):

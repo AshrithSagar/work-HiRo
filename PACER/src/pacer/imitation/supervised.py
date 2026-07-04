@@ -154,12 +154,12 @@ class ImitationBatchCollator(Collator[RawTrajectory, ImitationBatch]):
     """Processes extracted raw trajectory bundles directly into target device tensors."""
 
     @override
-    def __call__(self, raw_data: RawTrajectory, device: torch.device) -> ImitationBatch:
-        states = torch.tensor(raw_data.states, dtype=torchDType, device=device)
-        targets = torch.tensor(raw_data.targets, dtype=torchDType, device=device)
+    def __call__(self, raw: RawTrajectory, device: torch.device) -> ImitationBatch:
+        states = torch.tensor(raw.states, dtype=torchDType, device=device)
+        targets = torch.tensor(raw.targets, dtype=torchDType, device=device)
 
-        if raw_data.weights is not None:
-            weights = torch.tensor(raw_data.weights, dtype=torchDType, device=device)
+        if raw.weights is not None:
+            weights = torch.tensor(raw.weights, dtype=torchDType, device=device)
         else:
             weights = torch.ones(states.size(0), dtype=torchDType, device=device)
 
@@ -202,10 +202,10 @@ class WeightDecayScheduler(Hook[PolicyT]):
                 group["weight_decay"] *= self.factor
 
 
-# ── Losses ────────────────────────────────────────────────────────────────────
+# ── Losses / Criterions ───────────────────────────────────────────────────────
 
 
-class WeightedHuberLoss(Criterion[Tensor, ImitationBatch]):
+class WeightedHuberCriterion(Criterion[Tensor, ImitationBatch]):
     """Computes a sample-weighted Huber loss function."""
 
     @override
@@ -217,7 +217,7 @@ class WeightedHuberLoss(Criterion[Tensor, ImitationBatch]):
         return huber_per_sample.sum(), batch.weights.sum()
 
 
-class GaussianMixtureNLLLoss(Criterion[GMMOutputs, ImitationBatch]):
+class GaussianMixtureNLLCriterion(Criterion[GMMOutputs, ImitationBatch]):
     """Computes sample-weighted multi-modal Gaussian Mixture Negative Log-Likelihood."""
 
     @override
