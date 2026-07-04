@@ -83,7 +83,7 @@ class ImitationExperiment(Generic[NumDemos, NumPoints, DimState, DimAction]):
             self.config.hidden_dim,
         )
 
-    def streamer(self) -> Streamer[RawTrajectory]:
+    def streamer(self) -> Streamer[RawTrajectory[DimState, DimAction]]:
         return RawTrajectoryStreamer(
             self.demonstrations.states, self.demonstrations.actions
         )

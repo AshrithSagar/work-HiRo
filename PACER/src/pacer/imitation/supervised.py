@@ -17,7 +17,7 @@ from rich.progress import track
 from torch import Tensor
 from typingkit.core import RuntimeGeneric
 
-from pacer.base import ActionsCollection, StatesCollection
+from pacer.base import Action, ActionsCollection, State, StatesCollection
 from pacer.imitation.core import (
     BatchT,
     Collator,
@@ -32,7 +32,14 @@ from pacer.imitation.core import (
     Workflow,
 )
 from pacer.pacer.trust import TrustValuesCollection
-from pacer.typings import DimAction, DimState, NumDemos, NumPoints, torchDType
+from pacer.typings import (
+    DimAction,
+    DimState,
+    FloatLike,
+    NumDemos,
+    NumPoints,
+    torchDType,
+)
 from pacer.utils import EPS, SEED, set_seed
 
 ## ── Supervised Learning ──────────────────────────────────────────────────────
@@ -108,15 +115,16 @@ class SupervisedStepExecutor(Generic[PolicyT, RawDataT, BatchT], StepExecutor[Po
 
 
 @dataclass(frozen=True)
-class RawTrajectory:
-    states: Any
-    targets: Any
-    weights: Any | None = None
+class RawTrajectory(Generic[DimState, DimAction]):
+    states: State[DimState]
+    targets: Action[DimAction]
+    weights: FloatLike | None = None
 
 
 @dataclass
 class RawTrajectoryStreamer(
-    Generic[NumDemos, NumPoints, DimState, DimAction], Streamer[RawTrajectory]
+    Generic[NumDemos, NumPoints, DimState, DimAction],
+    Streamer[RawTrajectory[DimState, DimAction]],
 ):
     """Extracts raw trajectories sequentially."""
 
@@ -134,7 +142,7 @@ class RawTrajectoryStreamer(
         return self.states.length
 
     @override
-    def __iter__(self) -> Iterator[RawTrajectory]:
+    def __iter__(self) -> Iterator[RawTrajectory[DimState, DimAction]]:
         for i in range(self.n_demos):
             states = self.states[i]
             targets = self.targets[i]
