@@ -71,7 +71,7 @@ class GMMPolicy(nn.Module, RuntimeGeneric[DimState, DimAction]):
         batch_size = states.size(0)
 
         pi = torch.softmax(self.pi_head(features), dim=-1)  # (batch, n_components)
-        mu = Tensor(self.mu_head(features)).view(
+        mu = torch.as_tensor(self.mu_head(features)).view(
             batch_size, self.n_components, self.action_dim
         )  # (batch, n_components, action_dim)
         sigma = torch.exp(self.sigma_head(features)).view(
@@ -179,7 +179,7 @@ class WeightedGMMTrainer(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction
         """Predicts actions by taking the mean of the most probable mixture component."""
         self.policy.eval()
         with torch.no_grad():
-            states_tensor = Tensor(states.numpy()).float().to(self.device_)
+            states_tensor = torch.as_tensor(states.numpy()).float().to(self.device_)
             pi, mu, _ = self.policy(states_tensor)
             # Component index with the highest mixing weight (pi)
             best_component = torch.argmax(pi, dim=-1)  # (T,)

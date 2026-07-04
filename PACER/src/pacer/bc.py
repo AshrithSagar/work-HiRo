@@ -137,7 +137,7 @@ class BCTrainer(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
     ) -> Actions[NumPoints, DimAction]:
         self.policy.eval()
         with torch.no_grad():
-            states_tensor = Tensor(states.numpy()).float().to(self.device_)
+            states_tensor = torch.as_tensor(states.numpy()).float().to(self.device_)
             actions_tensor = cast(Tensor, self.policy(states_tensor))
             actions_np = actions_tensor.cpu().numpy()
         actions = Actions[NumPoints, DimAction](
@@ -225,7 +225,7 @@ class WeightedBCTrainer(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]
     ) -> Actions[NumPoints, DimAction]:
         self.policy.eval()
         with torch.no_grad():
-            states_tensor = Tensor(states.numpy()).float().to(self.device_)
+            states_tensor = torch.as_tensor(states.numpy()).float().to(self.device_)
             actions_tensor = cast(Tensor, self.policy(states_tensor))
             actions_np = actions_tensor.cpu().numpy()
         actions = Actions[NumPoints, DimAction](

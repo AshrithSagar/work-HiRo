@@ -110,7 +110,7 @@ class MLPPhaseEstimator(PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]
     def compute_ranking_loss(self, margin: float = 1.0) -> Tensor:  # L_rank
         loss = torch.tensor(0.0, device=self.device_)
         for demo in self.demonstrations:
-            states = Tensor(demo.states.numpy()).float().to(self.device_)
+            states = torch.as_tensor(demo.states.numpy()).float().to(self.device_)
             scores: Tensor = self.scorer(states)  # (T_i,)
             diff = scores.unsqueeze(0) - scores.unsqueeze(1)  # (T_i, T_i)
             mask = torch.ones_like(diff).triu(diagonal=1)  # Enforces `t > t'`
@@ -147,7 +147,7 @@ class MLPPhaseEstimator(PhaseEstimator[NumDemos, NumPoints, DimState, DimAction]
         phases = PhasesCollection[NumDemos, NumPoints].zeros_like(self.demonstrations)
         with torch.no_grad():
             for demo in self.demonstrations:
-                states = Tensor(demo.states.numpy()).float().to(self.device_)
+                states = torch.as_tensor(demo.states.numpy()).float().to(self.device_)
                 scores: Tensor = self.scorer(states)
                 _scores = scores.cpu().numpy()
                 taus = Phases[NumPoints](normalise(_scores, method="MINMAX"))
