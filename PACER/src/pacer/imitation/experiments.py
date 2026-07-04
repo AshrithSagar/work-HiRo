@@ -12,7 +12,7 @@ from typing import Any, Generic, Self, override
 import torch
 from torch import Tensor
 
-from pacer.base import Demonstrations, States
+from pacer.base import Demonstrations, StatesCollection
 from pacer.imitation.core import Collator, Criterion, Evaluator, Hook, Streamer
 from pacer.imitation.supervised import (
     BCPolicy,
@@ -26,7 +26,7 @@ from pacer.imitation.supervised import (
     WeightedHuberCriterion,
 )
 from pacer.pacer import PACER, PACERConfig, PACERResult
-from pacer.typings import DimAction, DimState, NumBins, NumDemos, NumPoints, Vector
+from pacer.typings import DimAction, DimState, NumBins, NumDemos, NumPoints
 
 ## ── Experiments ──────────────────────────────────────────────────────────────
 
@@ -85,7 +85,7 @@ class ImitationExperiment(Generic[NumDemos, NumPoints, DimState, DimAction]):
 
     def streamer(self) -> Streamer[RawTrajectory]:
         return RawTrajectoryStreamer(
-            self.demonstrations.states[0], self.demonstrations.actions[0]
+            self.demonstrations.states, self.demonstrations.actions
         )
 
     def collator(self) -> Collator[Any, Any]:
@@ -153,10 +153,10 @@ class PACERImitationExperiment(
         self.pacer_result: PACERResult[
             NumBins, NumDemos, NumPoints, DimState, DimAction
         ] = PACER(demonstrations, config=pacer_config).run()
-        self.target_states: States[NumPoints, DimState] = (
-            self.pacer_result.pseudo_labels.states[0]
+        self.target_states: StatesCollection[NumDemos, NumPoints, DimState] = (
+            self.pacer_result.pseudo_labels.states
             if self.pacer_result.pseudo_labels.states is not None
-            else demonstrations.states[0]
+            else demonstrations.states
         )
         super().__init__(demonstrations, config or TrainingConfig())
 
@@ -164,8 +164,8 @@ class PACERImitationExperiment(
     def streamer(self) -> Streamer[Any]:
         return RawTrajectoryStreamer(
             states=self.target_states,
-            targets=self.pacer_result.pseudo_labels.actions[0],
-            weights=Vector[NumPoints](self.pacer_result.action_trust_values[0]),
+            targets=self.pacer_result.pseudo_labels.actions,
+            weights=self.pacer_result.action_trust_values,
         )
 
 

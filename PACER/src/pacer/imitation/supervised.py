@@ -17,7 +17,7 @@ from rich.progress import track
 from torch import Tensor
 from typingkit.core import RuntimeGeneric
 
-from pacer.base import Actions, States
+from pacer.base import ActionsCollection, StatesCollection
 from pacer.imitation.core import (
     BatchT,
     Collator,
@@ -31,7 +31,8 @@ from pacer.imitation.core import (
     Streamer,
     Workflow,
 )
-from pacer.typings import DimAction, DimState, NumPoints, Vector, torchDType
+from pacer.pacer.trust import TrustValuesCollection
+from pacer.typings import DimAction, DimState, NumDemos, NumPoints, torchDType
 from pacer.utils import EPS, SEED, set_seed
 
 ## ── Supervised Learning ──────────────────────────────────────────────────────
@@ -59,7 +60,7 @@ class SupervisedWorkflow(Workflow):
     @override
     def run(self) -> Tensor:
         set_seed(self.seed)
-        final_loss = Tensor(0.0)
+        final_loss = torch.tensor(0.0)
         for _epoch in track(
             range(self.epochs), description=f"[bold]{self.description}[/]"
         ):
@@ -115,29 +116,36 @@ class RawTrajectory:
 
 @dataclass
 class RawTrajectoryStreamer(
-    Generic[NumPoints, DimState, DimAction], Streamer[RawTrajectory]
+    Generic[NumDemos, NumPoints, DimState, DimAction], Streamer[RawTrajectory]
 ):
     """Extracts raw trajectories sequentially."""
 
-    states: States[NumPoints, DimState]
-    targets: Actions[NumPoints, DimAction]
-    weights: Vector[NumPoints] | None = None
+    states: StatesCollection[NumDemos, NumPoints, DimState]
+    targets: ActionsCollection[NumDemos, NumPoints, DimAction]
+    weights: TrustValuesCollection[NumDemos, NumPoints] | None = None
 
-    @property
-    def length(self) -> NumPoints:
+    def __post_init__(self) -> None:
         assert self.states.length == self.targets.length
         if self.weights is not None:
-            assert self.states.length == len(self.weights)
+            assert self.states.length == self.weights.length
+
+    @property
+    def n_demos(self) -> NumDemos:
         return self.states.length
 
     @override
     def __iter__(self) -> Iterator[RawTrajectory]:
-        for i in range(self.length):
-            yield RawTrajectory(
-                states=self.states[i],
-                targets=self.targets[i],
-                weights=self.weights[i] if self.weights is not None else None,
-            )
+        for i in range(self.n_demos):
+            states = self.states[i]
+            targets = self.targets[i]
+            weights = self.weights[i] if self.weights is not None else None
+            assert states.length == targets.length
+            for t in range(states.length):
+                yield RawTrajectory(
+                    states=states[t],
+                    targets=targets[t],
+                    weights=weights[t] if weights is not None else None,
+                )
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -300,7 +308,7 @@ class GMMPolicy(nn.Module, RuntimeGeneric[DimState, DimAction]):
         batch_size = states.size(0)
 
         pi = torch.softmax(self.pi_head(features), dim=-1)  # (batch, n_components)
-        mu = Tensor(self.mu_head(features)).view(
+        mu = torch.as_tensor(self.mu_head(features)).view(
             batch_size, self.n_components, self.action_dim
         )  # (batch, n_components, action_dim)
         sigma = torch.exp(self.sigma_head(features)).view(
