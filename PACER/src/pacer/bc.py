@@ -101,9 +101,10 @@ class BCTrainer(RuntimeGeneric[NumDemos, NumPoints, DimState, DimAction]):
             preds = cast(Tensor, self.policy(states))  # (T_i, action_dim)
 
             demo_loss = F.huber_loss(
-                preds, targets, reduction="sum"
+                preds, targets, reduction="none"
             )  # (T_i, action_dim)
-            loss += demo_loss
+            demo_loss = demo_loss.mean(dim=1)  # (T_i,)
+            loss += demo_loss.sum()
             total_samples += self.states[i].length  # T_i
         if total_samples > 0:
             loss /= total_samples  # Normalise over samples
