@@ -9,8 +9,10 @@ Experiments
 from dataclasses import dataclass, field
 from typing import Any, Generic, Self, override
 
+from pacer.utils import SEED, set_seed
 import torch
 from torch import Tensor
+from torch._prims_common import DeviceLikeType
 
 from pacer.base import Demonstrations, StatesCollection
 from pacer.imitation.core import Collator, Criterion, Evaluator, Hook, Streamer
@@ -52,6 +54,8 @@ class TrainingConfig:
     hidden_dim: int = 128
     lr: float = 1e-3
     max_norm: float = 1.0
+    device: DeviceLikeType = "cpu"
+    seed: int = SEED
 
 
 @dataclass
@@ -67,6 +71,7 @@ class ImitationExperiment(Generic[NumDemos, NumPoints, DimState, DimAction]):
     _hooks: list[Hook[Any]] = field(init=False)
 
     def __post_init__(self) -> None:
+        set_seed(self.config.seed)
         self._policy = self.policy()
         self._streamer = self.streamer()
         self._collator = self.collator()
@@ -83,7 +88,7 @@ class ImitationExperiment(Generic[NumDemos, NumPoints, DimState, DimAction]):
             self.config.hidden_dim,
         )
 
-    def streamer(self) -> Streamer[RawTrajectory[DimState, DimAction]]:
+    def streamer(self) -> Streamer[RawTrajectory[NumPoints, DimState, DimAction]]:
         return RawTrajectoryStreamer(
             self.demonstrations.states, self.demonstrations.actions
         )
@@ -131,6 +136,7 @@ class ImitationExperiment(Generic[NumDemos, NumPoints, DimState, DimAction]):
                 criterion=self._criterion,
                 hooks=self._hooks,
                 lr=self.config.lr,
+                device=self.config.device,
             ),
             epochs=self.config.epochs,
             description="Imitation Run",

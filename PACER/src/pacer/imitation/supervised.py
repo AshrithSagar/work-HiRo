@@ -17,7 +17,7 @@ from rich.progress import track
 from torch import Tensor
 from typingkit.core import RuntimeGeneric
 
-from pacer.base import Action, ActionsCollection, State, StatesCollection
+from pacer.base import Actions, ActionsCollection, States, StatesCollection
 from pacer.imitation.core import (
     BatchT,
     Collator,
@@ -31,15 +31,8 @@ from pacer.imitation.core import (
     Streamer,
     Workflow,
 )
-from pacer.pacer.trust import TrustValuesCollection
-from pacer.typings import (
-    DimAction,
-    DimState,
-    FloatLike,
-    NumDemos,
-    NumPoints,
-    torchDType,
-)
+from pacer.pacer.trust import TrustValues, TrustValuesCollection
+from pacer.typings import DimAction, DimState, NumDemos, NumPoints, torchDType
 from pacer.utils import EPS, SEED, set_seed
 
 ## ── Supervised Learning ──────────────────────────────────────────────────────
@@ -115,16 +108,16 @@ class SupervisedStepExecutor(Generic[PolicyT, RawDataT, BatchT], StepExecutor[Po
 
 
 @dataclass(frozen=True)
-class RawTrajectory(Generic[DimState, DimAction]):
-    states: State[DimState]
-    targets: Action[DimAction]
-    weights: FloatLike | None = None
+class RawTrajectory(Generic[NumPoints, DimState, DimAction]):
+    states: States[NumPoints, DimState]
+    targets: Actions[NumPoints, DimAction]
+    weights: TrustValues[NumPoints] | None = None
 
 
 @dataclass
 class RawTrajectoryStreamer(
     Generic[NumDemos, NumPoints, DimState, DimAction],
-    Streamer[RawTrajectory[DimState, DimAction]],
+    Streamer[RawTrajectory[NumPoints, DimState, DimAction]],
 ):
     """Extracts raw trajectories sequentially."""
 
@@ -142,18 +135,13 @@ class RawTrajectoryStreamer(
         return self.states.length
 
     @override
-    def __iter__(self) -> Iterator[RawTrajectory[DimState, DimAction]]:
+    def __iter__(self) -> Iterator[RawTrajectory[NumPoints, DimState, DimAction]]:
         for i in range(self.n_demos):
-            states = self.states[i]
-            targets = self.targets[i]
-            weights = self.weights[i] if self.weights is not None else None
-            assert states.length == targets.length
-            for t in range(states.length):
-                yield RawTrajectory(
-                    states=states[t],
-                    targets=targets[t],
-                    weights=weights[t] if weights is not None else None,
-                )
+            yield RawTrajectory(
+                states=self.states[i],
+                targets=self.targets[i],
+                weights=self.weights[i] if self.weights is not None else None,
+            )
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -171,14 +159,12 @@ class ImitationBatchCollator(Collator[RawTrajectory, ImitationBatch]):
 
     @override
     def __call__(self, raw: RawTrajectory, device: torch.device) -> ImitationBatch:
-        states = torch.tensor(raw.states, dtype=torchDType, device=device)
-        targets = torch.tensor(raw.targets, dtype=torchDType, device=device)
-
+        states = torch.tensor(raw.states.numpy(), dtype=torchDType, device=device)
+        targets = torch.tensor(raw.targets.numpy(), dtype=torchDType, device=device)
         if raw.weights is not None:
             weights = torch.tensor(raw.weights, dtype=torchDType, device=device)
         else:
             weights = torch.ones(states.size(0), dtype=torchDType, device=device)
-
         return ImitationBatch(states=states, targets=targets, weights=weights)
 
 
