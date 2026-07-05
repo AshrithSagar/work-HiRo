@@ -13,6 +13,7 @@ from dataclasses import KW_ONLY, dataclass, field
 from pathlib import Path
 from typing import Literal
 
+import matplotlib as mpl
 import matplotlib.patheffects as pe
 import matplotlib.pyplot as plt
 import numpy as np
@@ -59,6 +60,8 @@ from pacer.typings import (
     Vector,
     npDType,
 )
+
+mpl.rcParams["figure.max_open_warning"] = 100
 
 ## ── Plotting ─────────────────────────────────────────────────────────────────
 
@@ -1086,8 +1089,6 @@ def plot_stacked_trust_colored_trajectories(
     sm = plt.cm.ScalarMappable(cmap=style.cmap)
     sm.set_array([0.0, 1.0])
     fig.colorbar(sm, ax=ax, label="Trust")
-
-    fig.tight_layout()
 
 
 ## ── PACER Visualisation ──────────────────────────────────────────────────────
