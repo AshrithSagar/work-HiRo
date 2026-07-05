@@ -15,6 +15,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 from rich.progress import track
 from torch import Tensor
+from torch.distributions import (
+    Categorical,
+    Distribution,
+    Independent,
+    MixtureSameFamily,
+    Normal,
+)
 from typingkit.core import RuntimeGeneric
 
 from pacer.base import Actions, ActionsCollection, States, StatesCollection
@@ -36,16 +43,6 @@ from pacer.typings import DimAction, DimState, NumDemos, NumPoints, torchDType
 from pacer.utils import EPS, SEED, set_seed
 
 ## ── Supervised Learning ──────────────────────────────────────────────────────
-
-
-@dataclass(frozen=True)
-class GMMOutputs:
-    pi: Tensor  # (batch, n_components)
-    mu: Tensor  # (batch, n_components, action_dim)
-    sigma: Tensor  # (batch, n_components, action_dim)
-
-
-# ──────────────────────────────────────────────────────────────────────────────
 
 
 @dataclass
@@ -219,27 +216,14 @@ class WeightedHuberCriterion(Criterion[Tensor, ImitationBatch]):
         return huber_per_sample.sum(), batch.weights.sum()
 
 
-class GaussianMixtureNLLCriterion(Criterion[GMMOutputs, ImitationBatch]):
-    """Computes sample-weighted multi-modal Gaussian Mixture Negative Log-Likelihood."""
-
+class NLLCriterion(Criterion[Distribution, ImitationBatch]):
     @override
     def __call__(
-        self, predictions: GMMOutputs, batch: ImitationBatch
+        self, dist: Distribution, batch: ImitationBatch
     ) -> tuple[Tensor, Tensor]:
-        targets_exp = batch.targets.unsqueeze(1)  # (batch, 1, action_dim)
-
-        variance = predictions.sigma**2
-        exponent = -0.5 * ((targets_exp - predictions.mu) ** 2) / (variance + EPS)
-        normaliser = torch.sqrt(2.0 * torch.pi * variance + EPS)
-
-        prob_per_dim = torch.exp(exponent) / normaliser
-        prob_components = torch.prod(prob_per_dim, dim=-1)  # (batch, n_components)
-        prob_mixture = torch.sum(predictions.pi * prob_components, dim=-1)  # (batch,)
-
-        nll = -torch.log(prob_mixture + EPS)
-        weighted_nll = nll * batch.weights
-
-        return weighted_nll.sum(), batch.weights.sum()
+        nll = -dist.log_prob(batch.targets)
+        weighted = nll * batch.weights
+        return weighted.sum(), batch.weights.sum()
 
 
 # ── Model Policies ────────────────────────────────────────────────────────────
@@ -297,7 +281,7 @@ class GMMPolicy(nn.Module, RuntimeGeneric[DimState, DimAction]):
     def forward(
         self,
         states: Tensor,  # (batch, state_dim)
-    ) -> GMMOutputs:
+    ) -> Distribution:
         features = self.backbone(states)
         batch_size = states.size(0)
 
@@ -309,7 +293,10 @@ class GMMPolicy(nn.Module, RuntimeGeneric[DimState, DimAction]):
             batch_size, self.n_components, self.action_dim
         )  # (batch, n_components, action_dim)
 
-        return GMMOutputs(pi=pi, mu=mu, sigma=sigma)
+        return MixtureSameFamily(
+            mixture_distribution=Categorical(probs=pi),
+            component_distribution=Independent(Normal(mu, sigma), 1),
+        )
 
 
 ## ─────────────────────────────────────────────────────────────────────────────
