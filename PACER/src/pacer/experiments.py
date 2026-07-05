@@ -7,30 +7,16 @@ Experiment runs
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
 from dataclasses import KW_ONLY, dataclass, field
-from typing import Any, Literal, cast
-from warnings import deprecated
+from typing import Any
 
-import matplotlib.pyplot as plt
-from pyLASAHandwritingDataset import ALL_SINGLE_PATTERN_MOTIONS, SinglePatternMotion
 from torch import Tensor
 from typingkit.core import RuntimeGeneric
 
 from pacer import console
 from pacer.base import Demonstrations
 from pacer.bc import BCTrainConfig, BCTrainer, WeightedBCTrainer
-from pacer.datasets.loader import (
-    CorruptionsChoice,
-    DemonstrationLoader,
-    DemonstrationLoaderConfig,
-    DemonstrationsChoice,
-)
 from pacer.gmm import GMMTrainConfig, WeightedGMMTrainer
 from pacer.pacer import PACER, PACERConfig, PACERResult
-from pacer.pacer.pseudolabel import PseudoLabelParams
-from pacer.pacer.trust.legacy import TrustValueParams
-from pacer.phase.estimation import MLPPhaseEstimatorConfig
-from pacer.phase.pipeline import PhaseEstimatorChoice, PhasePipelineConfig
-from pacer.plotting.legacy import PACERVisualisationConfig, PACERVisualiser
 from pacer.typings import DimAction, DimState, NumBins, NumDemos, NumPoints
 
 ## ── Experiments ──────────────────────────────────────────────────────────────
@@ -117,145 +103,6 @@ class PACERBCExperiment(
             pacer_result=pacer_result,
             bc_policy_loss=policy_loss,
         )
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-
-
-@deprecated(
-    "Use BCvsPACERBCExperiment instead, till an improved sweep variation refactor is done."
-)
-@dataclass(kw_only=True)
-class BCvsPACERBCExperimentLegacy(RuntimeGeneric[NumBins]):
-    """BC Policy vs. PACER + BC Policy."""
-
-    show_plots: bool = True
-    demonstrations_choice: DemonstrationsChoice = "FROM_LASA"
-    LASA_pattern: (
-        list[SinglePatternMotion] | SinglePatternMotion | Literal["ALL"] | None
-    ) = None
-    filepath: str | None = None
-    corruptions_choice: CorruptionsChoice | None = None
-    phase_estimator_choice: (
-        list[PhaseEstimatorChoice] | PhaseEstimatorChoice | Literal["ALL"]
-    ) = "MLP"
-    mlp_phase_estimator_config: MLPPhaseEstimatorConfig = field(
-        default_factory=MLPPhaseEstimatorConfig
-    )
-    evaluate_phases: bool = False
-    n_bins: NumBins = cast(NumBins, 96)  # B
-    action_trust_value_params: TrustValueParams = field(
-        default_factory=TrustValueParams
-    )
-    action_pseudo_label_params: PseudoLabelParams = field(
-        default_factory=PseudoLabelParams
-    )
-    use_state_labels: bool = False
-    state_trust_value_params: TrustValueParams = field(default_factory=TrustValueParams)
-    state_pseudo_label_params: PseudoLabelParams = field(
-        default_factory=PseudoLabelParams
-    )
-    bc_train_config: BCTrainConfig = field(default_factory=BCTrainConfig)
-    pacer_visualisation_config: PACERVisualisationConfig = field(
-        default_factory=PACERVisualisationConfig
-    )
-
-    def run(self) -> None:
-        # Resolve LASA patterns
-        LASA_patterns: list[SinglePatternMotion | None]
-        match self.LASA_pattern:
-            case list():
-                LASA_patterns = list(self.LASA_pattern)
-            case str():
-                match self.LASA_pattern:
-                    case "ALL":
-                        LASA_patterns = list(ALL_SINGLE_PATTERN_MOTIONS)
-                    case _:
-                        LASA_patterns = [self.LASA_pattern]
-            case None:
-                LASA_patterns = [None]
-
-        # Resolve phase estimator choices
-        phase_estimator_choices: list[PhaseEstimatorChoice]
-        match self.phase_estimator_choice:
-            case list():
-                phase_estimator_choices = self.phase_estimator_choice
-            case str():
-                match self.phase_estimator_choice:
-                    case "ALL":
-                        phase_estimator_choices = [
-                            "MLP",
-                            "NORMALISED_TIME_INDEX",
-                            "PATH_LENGTH",
-                        ]
-                    case _:
-                        phase_estimator_choices = [self.phase_estimator_choice]
-
-        for LASA_pattern in LASA_patterns:
-            match self.demonstrations_choice:
-                case "FROM_LASA" | "CUSTOM_FROM_LASA" | "LEGACY_CUSTOM_FROM_LASA":
-                    assert LASA_pattern is not None
-                    console.rule(
-                        f"[bold gold3]LASA Pattern: {LASA_pattern}[/bold gold3]",
-                        characters="\u2501",
-                        style="gold3",
-                    )
-                case "CUSTOM_FROM_LOAD" | "LEGACY_CUSTOM_FROM_LOAD":
-                    assert self.filepath is not None
-                    console.rule(
-                        f"[bold gold3]File: {self.filepath}[/bold gold3]",
-                        characters="\u2501",
-                        style="bold gold3",
-                    )
-                case "CUSTOM_DRAW" | "LEGACY_CUSTOM_DRAW":
-                    console.rule(
-                        "[bold gold3]Custom demonstrations[/bold gold3]",
-                        characters="\u2501",
-                        style="gold3",
-                    )
-                case _:
-                    pass
-
-            demonstrations = DemonstrationLoader(
-                config=DemonstrationLoaderConfig(
-                    choice=self.demonstrations_choice,
-                    LASA_pattern=LASA_pattern,
-                    filepath=self.filepath,
-                    corruptions_choice=self.corruptions_choice,
-                )
-            ).load()
-
-            BCExperiment(demonstrations, bc_train_config=self.bc_train_config).run()
-            for phase_estimator_choice in phase_estimator_choices:
-                pacer_bc_result = PACERBCExperiment(
-                    demonstrations,
-                    pacer_config=PACERConfig(
-                        phase_pipeline_config=PhasePipelineConfig(
-                            phase_estimator_choice=phase_estimator_choice,
-                            mlp_phase_estimator_config=self.mlp_phase_estimator_config,
-                            evaluate_phases=self.evaluate_phases,
-                        ),
-                        n_bins=self.n_bins,
-                        action_trust_value_params=self.action_trust_value_params,
-                        action_pseudo_label_params=self.action_pseudo_label_params,
-                        use_state_labels=self.use_state_labels,
-                        state_trust_value_params=self.state_trust_value_params,
-                        state_pseudo_label_params=self.state_pseudo_label_params,
-                    ),
-                    bc_train_config=self.bc_train_config,
-                ).run()
-                if self.show_plots:
-                    PACERVisualiser(
-                        demonstrations,
-                        pacer_result=pacer_bc_result.pacer_result,
-                        config=self.pacer_visualisation_config,
-                    ).render()
-                    plt.show()  # pyright: ignore[reportUnknownMemberType]
-
-            if self.demonstrations_choice in {"CUSTOM_FROM_LOAD", "CUSTOM_DRAW"}:
-                break
-
-        console.rule(characters="\u2501", style="gold3")
 
 
 # ──────────────────────────────────────────────────────────────────────────────
