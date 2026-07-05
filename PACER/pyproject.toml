@@ -8,7 +8,7 @@ requires-python = ">=3.14"
 dependencies = [
     "dtaidistance>=2.4.0",
     "matplotlib>=3.11.0",
-    "numpy>=2.5.0",
+    "numpy>=2.5.1",
     "optype[numpy]>=0.18.0",
     "pygame>=2.6.1",
     "pylasahandwritingdataset>=0.2.1",
@@ -48,14 +48,14 @@ dev = [
     "types-xlrd>=2.0.0.20260518",
 ]
 lint = ["ruff>=0.15.20"]
-test = ["pytest>=9.1.1", "pytest-memray>=1.8.0"]
+test = ["pytest>=9.1.1", "pytest-memray>=1.9.0"]
 typecheck = [
     "basedpyright>=1.39.9",
     "mypy[mypyc]>=2.1.0",
     "pycroscope>=0.4.0",
     "pyrefly>=1.1.1",
     "pyright>=1.1.411",
-    "ty>=0.0.55",
+    "ty>=0.0.56",
     "zuban>=0.9.0",
 ]
 
