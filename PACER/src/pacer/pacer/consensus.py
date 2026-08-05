@@ -223,6 +223,79 @@ class SavitzkyGolaySmoothedTangentEstimator(TangentEstimator):
         return vectors.from_array(tangents)
 
 
+@dataclass(frozen=True)
+class LocalLinearTangentEstimator(TangentEstimator):
+    """
+    Estimates tangents via an ordinary-least-squares line
+    fit over a local sliding window centred on each bin.
+    """
+
+    window_length: int = 5  # Points in the fitting window (odd, >= 3)
+
+    def __post_init__(self) -> None:
+        assert self.window_length >= 3
+        assert self.window_length % 2 == 1
+
+    @override
+    def compute(self, vectors: VectorsType) -> VectorsType:
+        arr = vectors.numpy()
+        n = arr.shape[0]
+        half = self.window_length // 2
+        tangents = np.empty_like(arr)
+        for i in range(n):
+            lo, hi = max(0, i - half), min(n, i + half + 1)
+            if hi - lo < 2:
+                tangents[i] = 0.0
+                continue
+            x = np.arange(lo, hi, dtype=float) - i  # Centred index offsets
+            y = arr[lo:hi]
+            slope, _intercept = np.polyfit(x, y, deg=1)
+            tangents[i] = slope
+        return vectors.from_array(tangents)
+
+
+@dataclass(frozen=True)
+class RobustLocalLinearTangentEstimator(TangentEstimator):
+    """
+    Estimates tangents via a robust (Huber) line fit
+    over a local sliding window centred on each bin.
+    Down-weights outlier samples within the window.
+    """
+
+    window_length: int = 5  # Points in the fitting window (odd, >= 3)
+    epsilon: float = 1.35  # Huber threshold
+
+    def __post_init__(self) -> None:
+        assert self.window_length >= 3
+        assert self.window_length % 2 == 1
+
+    @override
+    def compute(self, vectors: VectorsType) -> VectorsType:
+        from sklearn.linear_model import HuberRegressor
+
+        arr = vectors.numpy()
+        n, dim = arr.shape
+        half = self.window_length // 2
+        tangents = np.empty_like(arr)
+        for i in range(n):
+            lo, hi = max(0, i - half), min(n, i + half + 1)
+            if hi - lo < 3:
+                # Not enough points for a robust fit; fall back to a local finite-difference slope.
+                j, k = max(i - 1, 0), min(i + 1, n - 1)
+                tangents[i] = (arr[k] - arr[j]) / max(k - j, 1)
+                continue
+            x = (np.arange(lo, hi, dtype=float) - i).reshape(-1, 1)
+            y = arr[lo:hi]
+            for d in range(dim):
+                try:
+                    reg = HuberRegressor(epsilon=self.epsilon).fit(x, y[:, d])
+                    tangents[i, d] = reg.coef_[0]
+                except ValueError:
+                    # Degenerate window (e.g. constant values); fall back to OLS.
+                    tangents[i, d] = np.polyfit(x.ravel(), y[:, d], deg=1)[0]
+        return vectors.from_array(tangents)
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 
 
