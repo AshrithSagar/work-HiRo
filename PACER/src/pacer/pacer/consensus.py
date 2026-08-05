@@ -8,16 +8,17 @@ Consensus estimators for PACER.
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
 from collections.abc import Sequence
-from dataclasses import dataclass
-from typing import Literal, Protocol, override
+from dataclasses import dataclass, field
+from typing import Any, Literal, Protocol, override
 
 import numpy as np
 import numpy.typing as npt
 import scipy
+from typingkit.numpy._typed.helpers import Dim1
 
 from pacer.base import Action, Actions, State, States
 from pacer.pacer.base import MetricValue, Residual
-from pacer.typings import DimAction, DimState, NumPoints, VectorsType
+from pacer.typings import DimAction, DimState, Matrix, NumPoints, Vector, VectorsType
 from pacer.utils import EPS, mean, median
 
 ## ── Consensus ────────────────────────────────────────────────────────────────
@@ -162,17 +163,6 @@ class UnitTangentEstimator(TangentEstimator):
 
 
 @dataclass(frozen=True)
-class ArcLengthTangentEstimator(TangentEstimator):
-    @override
-    def compute(self, vectors: VectorsType) -> VectorsType:
-        arr = vectors.numpy()
-        ds = np.linalg.norm(np.diff(arr, axis=0), axis=1)
-        s = np.concatenate([[0.0], np.cumsum(ds)])
-        tangents = np.asarray(np.gradient(arr, s, axis=0))
-        return vectors.from_array(tangents)
-
-
-@dataclass(frozen=True)
 class GaussianTangentEstimator(TangentEstimator):
     sigma: float = 1.0
 
@@ -223,14 +213,100 @@ class SavitzkyGolaySmoothedTangentEstimator(TangentEstimator):
         return vectors.from_array(tangents)
 
 
-@dataclass(frozen=True)
-class LocalLinearTangentEstimator(TangentEstimator):
+class WindowParametrisation(Protocol):
     """
-    Estimates tangents via an ordinary-least-squares line
-    fit over a local sliding window centred on each bin.
+    Computes a scalar parameter associated with each point,
+    used as the independent variable for local tangent estimation.
     """
 
+    def compute(self, vectors: VectorsType) -> Vector[Any]: ...
+
+
+@dataclass(frozen=True, slots=True)
+class IndexParametrisation(WindowParametrisation):
+    """
+    Parametrises by raw point index.
+    Assumes uniform spacing between points.
+    """
+
+    @override
+    def compute(self, vectors: VectorsType) -> Vector[Any]:
+        return Vector(np.arange(len(vectors)))
+
+
+@dataclass(frozen=True, slots=True)
+class ArcLengthParametrisation(WindowParametrisation):
+    """
+    Parametrises by cumulative Euclidean arc-length.
+    Corrects for uneven point spacing along the trajectory.
+    """
+
+    @override
+    def compute(self, vectors: VectorsType) -> Vector[Any]:
+        ds = np.linalg.norm(np.diff(vectors, axis=0), axis=1)
+        return Vector(np.concatenate([[0.0], np.cumsum(ds)]))
+
+
+class LocalLineFitter(Protocol):
+    """Fits a local linear model over a parameterised window and returns the estimated tangent (slope)."""
+
+    min_points: int
+    """
+    Minimum number of samples required for a valid fit.
+    Smaller windows fall back to a finite-difference estimate.
+    """
+
+    def fit_slope(
+        self, x: Vector[NumPoints], y: Matrix[NumPoints, Dim1]
+    ) -> Vector[Dim1]: ...
+
+
+@dataclass(frozen=True, slots=True)
+class OLSLineFitter(LocalLineFitter):
+    """Ordinary-least-squares line fit. Sensitive to outliers within the window."""
+
+    min_points: int = 2
+
+    @override
+    def fit_slope(
+        self, x: Vector[NumPoints], y: Matrix[NumPoints, Dim1]
+    ) -> Vector[Dim1]:
+        return Vector(np.polyfit(x, y, deg=1)[0])
+
+
+@dataclass(frozen=True, slots=True)
+class HuberLineFitter(LocalLineFitter):
+    """Robust (Huber) line fit. Down-weights outlier samples within the window."""
+
+    epsilon: float = 1.35  # Huber threshold
+    min_points: int = 3
+
+    @override
+    def fit_slope(
+        self, x: Vector[NumPoints], y: Matrix[NumPoints, Dim1]
+    ) -> Vector[Dim1]:
+        from sklearn.linear_model import HuberRegressor
+
+        dim = y.shape[1]
+        slope = np.empty(dim)
+        x_col = x.reshape(-1, 1)
+        for d in range(dim):
+            try:
+                reg = HuberRegressor(epsilon=self.epsilon).fit(x_col, y[:, d])
+                slope[d] = reg.coef_[0]
+            except ValueError:
+                # Degenerate fit (e.g. constant values); fall back to OLS.
+                slope[d] = np.polyfit(x, y[:, d], deg=1)[0]
+        return Vector(slope)
+
+
+@dataclass(frozen=True)
+class LocalWindowTangentEstimator(TangentEstimator):
+    """Estimates tangents by fitting a local linear model over a sliding window centred at each sample."""
+
     window_length: int = 5  # Points in the fitting window (odd, >= 3)
+    parametrisation: WindowParametrisation = field(default_factory=IndexParametrisation)
+    fitter: LocalLineFitter = field(default_factory=OLSLineFitter)
 
     def __post_init__(self) -> None:
         assert self.window_length >= 3
@@ -238,20 +314,69 @@ class LocalLinearTangentEstimator(TangentEstimator):
 
     @override
     def compute(self, vectors: VectorsType) -> VectorsType:
-        arr = vectors.numpy()
-        n = arr.shape[0]
+        n = len(vectors)
         half = self.window_length // 2
-        tangents = np.empty_like(arr)
+        param = self.parametrisation.compute(vectors)
+        tangents = np.empty_like(vectors)
         for i in range(n):
             lo, hi = max(0, i - half), min(n, i + half + 1)
-            if hi - lo < 2:
+            if hi - lo < self.fitter.min_points:
+                # Window too small for the chosen fitter; use a local finite difference instead.
+                j, k = max(i - 1, 0), min(i + 1, n - 1)
+                denom = param[k] - param[j]
+                tangents[i] = (
+                    (vectors[k] - vectors[j]) / denom if abs(denom) > EPS else 0.0
+                )
+                continue
+            # Centre parameter values on the current sample.
+            x = Vector(param[lo:hi] - param[i])
+            if np.ptp(x) < EPS:  # Degenerate parameter window.
                 tangents[i] = 0.0
                 continue
-            x = np.arange(lo, hi, dtype=float) - i  # Centred index offsets
-            y = arr[lo:hi]
-            slope, _intercept = np.polyfit(x, y, deg=1)
-            tangents[i] = slope
+            y = Matrix(vectors[lo:hi])
+            tangents[i] = self.fitter.fit_slope(x, y)
         return vectors.from_array(tangents)
+
+
+@dataclass(frozen=True)
+class ArcLengthTangentEstimator(TangentEstimator):
+    @override
+    def compute(self, vectors: VectorsType) -> VectorsType:
+        ds = np.linalg.norm(np.diff(vectors, axis=0), axis=1)
+        s = np.concatenate([[0.0], np.cumsum(ds)])
+        tangents = np.asarray(np.gradient(vectors, s, axis=0))
+        return vectors.from_array(tangents)
+
+
+@dataclass(frozen=True)
+class ArcLengthLocalLinearTangentEstimator(TangentEstimator):
+    window_length: int = 5
+
+    @override
+    def compute(self, vectors: VectorsType) -> VectorsType:
+        return LocalWindowTangentEstimator(
+            window_length=self.window_length,
+            parametrisation=ArcLengthParametrisation(),
+            fitter=OLSLineFitter(),
+        ).compute(vectors)
+
+
+@dataclass(frozen=True)
+class LocalLinearTangentEstimator(TangentEstimator):
+    """
+    Estimates tangents via an ordinary-least-squares line
+    fit over a local sliding window centred on each bin.
+    """
+
+    window_length: int = 5
+
+    @override
+    def compute(self, vectors: VectorsType) -> VectorsType:
+        return LocalWindowTangentEstimator(
+            window_length=self.window_length,
+            parametrisation=IndexParametrisation(),
+            fitter=OLSLineFitter(),
+        ).compute(vectors)
 
 
 @dataclass(frozen=True)
@@ -262,38 +387,16 @@ class RobustLocalLinearTangentEstimator(TangentEstimator):
     Down-weights outlier samples within the window.
     """
 
-    window_length: int = 5  # Points in the fitting window (odd, >= 3)
-    epsilon: float = 1.35  # Huber threshold
-
-    def __post_init__(self) -> None:
-        assert self.window_length >= 3
-        assert self.window_length % 2 == 1
+    window_length: int = 5
+    epsilon: float = 1.35
 
     @override
     def compute(self, vectors: VectorsType) -> VectorsType:
-        from sklearn.linear_model import HuberRegressor
-
-        arr = vectors.numpy()
-        n, dim = arr.shape
-        half = self.window_length // 2
-        tangents = np.empty_like(arr)
-        for i in range(n):
-            lo, hi = max(0, i - half), min(n, i + half + 1)
-            if hi - lo < 3:
-                # Not enough points for a robust fit; fall back to a local finite-difference slope.
-                j, k = max(i - 1, 0), min(i + 1, n - 1)
-                tangents[i] = (arr[k] - arr[j]) / max(k - j, 1)
-                continue
-            x = (np.arange(lo, hi, dtype=float) - i).reshape(-1, 1)
-            y = arr[lo:hi]
-            for d in range(dim):
-                try:
-                    reg = HuberRegressor(epsilon=self.epsilon).fit(x, y[:, d])
-                    tangents[i, d] = reg.coef_[0]
-                except ValueError:
-                    # Degenerate window (e.g. constant values); fall back to OLS.
-                    tangents[i, d] = np.polyfit(x.ravel(), y[:, d], deg=1)[0]
-        return vectors.from_array(tangents)
+        return LocalWindowTangentEstimator(
+            window_length=self.window_length,
+            parametrisation=IndexParametrisation(),
+            fitter=HuberLineFitter(epsilon=self.epsilon),
+        ).compute(vectors)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
