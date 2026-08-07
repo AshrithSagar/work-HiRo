@@ -10,11 +10,13 @@ dependencies = [
     "matplotlib>=3.11.1",
     "numpy>=2.5.1",
     "optype[numpy]>=0.18.0",
+    "pandas[output-formatting,plot]>=3.0.5",
     "pygame>=2.6.1",
     "pylasahandwritingdataset>=0.2.1",
     "rich>=15.0.0",
     "scikit-learn>=1.9.0",
     "scipy>=1.18.0",
+    "textual>=8.2.8",
     "torch>=2.13.0",
     "typingkit",
 ]
