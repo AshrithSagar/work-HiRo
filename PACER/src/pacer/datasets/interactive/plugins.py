@@ -8,9 +8,10 @@ Plugins
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
 import math
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, override
+from typing import Any, override
 
 import numpy as np
 from matplotlib.axes import Axes

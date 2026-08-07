@@ -11,14 +11,11 @@ from pacer.phase.pipeline import PhasePipeline, PhasePipelineConfig
 
 __all__ = [
     "Phase",
-    "Phases",
-    "PhasesCollection",
-    #
     "PhaseEstimator",
-    #
-    "PhaseEvaluator",
     "PhaseEvaluationReport",
-    #
+    "PhaseEvaluator",
     "PhasePipeline",
     "PhasePipelineConfig",
+    "Phases",
+    "PhasesCollection",
 ]

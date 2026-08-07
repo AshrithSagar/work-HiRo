@@ -9,7 +9,6 @@ Experiments
 from dataclasses import dataclass, field
 from typing import Any, Generic, Self, override
 
-from pacer.utils import SEED, set_seed
 import torch
 from torch import Tensor
 from torch._prims_common import DeviceLikeType
@@ -29,6 +28,7 @@ from pacer.imitation.supervised import (
 )
 from pacer.pacer import PACER, PACERConfig, PACERResult
 from pacer.typings import DimAction, DimState, NumBins, NumDemos, NumPoints
+from pacer.utils import SEED, set_seed
 
 ## ── Experiments ──────────────────────────────────────────────────────────────
 

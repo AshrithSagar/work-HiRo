@@ -7,8 +7,8 @@ Mostly HKT workarounds
 
 ## ── Imports ──────────────────────────────────────────────────────────────────
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 import optype.numpy as onp
 from typingkit.core import RuntimeGeneric

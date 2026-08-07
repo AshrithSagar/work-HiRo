@@ -19,11 +19,10 @@ from typing import Any, Protocol, TypeAlias, override
 
 import numpy as np
 import torch
-import torch.nn as nn
 from numpy.typing import NDArray
 from scipy.special import digamma
 from sklearn.neighbors import NearestNeighbors
-from torch import Tensor
+from torch import Tensor, nn
 from typingkit.core import TypedDict
 
 from pacer.base import Actions, Demonstration, Demonstrations, States

@@ -13,9 +13,8 @@ from typing import override
 
 import numpy as np
 import torch
-import torch.nn as nn
 from rich.progress import track
-from torch import Tensor
+from torch import Tensor, nn
 from torch._prims_common import DeviceLikeType
 from typingkit.core import RuntimeGeneric, TypedList, TypedMapping
 

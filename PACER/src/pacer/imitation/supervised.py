@@ -11,10 +11,9 @@ from dataclasses import dataclass, field
 from typing import Any, Generic, cast, override
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 from rich.progress import track
-from torch import Tensor
+from torch import Tensor, nn
 from torch.distributions import (
     Categorical,
     Distribution,

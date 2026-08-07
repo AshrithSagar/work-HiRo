@@ -11,11 +11,11 @@ from pacer.datasets.lasa import LASADataSet, LASADataSet3D
 from pacer.datasets.loader import DemonstrationLoader, DemonstrationLoaderConfig
 
 __all__ = [
-    "InteractiveDataSet",
-    "LegacyInteractiveDataSet",
-    "LASADataSet",
-    "LASADataSet3D",
-    "HopperDataset",
     "DemonstrationLoader",
     "DemonstrationLoaderConfig",
+    "HopperDataset",
+    "InteractiveDataSet",
+    "LASADataSet",
+    "LASADataSet3D",
+    "LegacyInteractiveDataSet",
 ]

@@ -12,8 +12,7 @@ from dataclasses import InitVar, dataclass, field
 from typing import Any, Generic, TypeVar
 
 import torch
-import torch.nn as nn
-from torch import Tensor
+from torch import Tensor, nn
 from torch._prims_common import DeviceLikeType
 
 from pacer.utils import SEED, TORCH_DEVICE, get_torch_device

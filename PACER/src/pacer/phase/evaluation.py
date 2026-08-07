@@ -60,7 +60,7 @@ class RankingLossEvaluator(PhaseEvaluator[NumDemos, NumPoints, DimState, DimActi
 
     @override
     def evaluate(self) -> float:
-        loss = float(0.0)
+        loss = 0.0
         for taus in self.phases.values():
             _taus = taus.numpy()
             diff = Matrix[NumPoints, NumPoints](_taus[None, :] - _taus[:, None])
@@ -85,7 +85,7 @@ class SpearmanEvaluator(PhaseEvaluator[NumDemos, NumPoints, DimState, DimAction]
 
     @override
     def evaluate(self) -> float:
-        total = float(0.0)
+        total = 0.0
         for taus in self.phases.values():
             _taus = taus.numpy()
             t = np.arange(len(_taus))
@@ -108,7 +108,7 @@ class PathConsistencyEvaluator(
 
     @override
     def evaluate(self) -> float:
-        total = float(0.0)
+        total = 0.0
         for demo in self.demonstrations:
             diffs: onp.Array2D[npDType] = np.diff(demo.states, axis=0)  # (T_i-1, d_x)
             norms: onp.Array1D[npDType] = np.linalg.norm(diffs, axis=1)  # (T_i-1,)

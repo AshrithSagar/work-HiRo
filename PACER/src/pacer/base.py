@@ -212,7 +212,7 @@ class SamplesCollection(
         index: SampleIndex,  # (i, t)
         /,
     ) -> Sample[DimState, DimAction]: ...  # (x_{i, t}, a_{i, t})
-    #
+    ##
     @override
     def __getitem__(
         self, index: DemoIndex | SampleIndex, /
@@ -352,7 +352,7 @@ class Demonstrations(
     ) -> Demonstration[NumPoints, DimState, DimAction]: ...
     @overload
     def __getitem__(self, index: SampleIndex, /) -> Sample[DimState, DimAction]: ...  # ty: ignore[invalid-overload]
-    #
+    ##
     def __getitem__(
         self, index: DemoIndex | SampleIndex, /
     ) -> Demonstration[NumPoints, DimState, DimAction] | Sample[DimState, DimAction]:

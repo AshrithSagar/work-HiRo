@@ -15,13 +15,12 @@ from typing import override
 import numpy as np
 import optype.numpy as onp
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 from dtaidistance import (  # type: ignore[import-untyped]  # pyright: ignore[reportMissingTypeStubs]
     dtw_ndim,
 )
 from rich.progress import track
-from torch import Tensor
+from torch import Tensor, nn
 from torch._prims_common import DeviceLikeType
 from typingkit.core import RuntimeGeneric
 
