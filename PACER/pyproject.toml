@@ -8,7 +8,7 @@ requires-python = ">=3.14"
 dependencies = [
     "dtaidistance>=2.4.0",
     "matplotlib>=3.11.1",
-    "numpy>=2.5.1",
+    "numpy>=2.5.2",
     "optype[numpy]>=0.18.0",
     "pandas[output-formatting,plot]>=3.0.5",
     "pygame>=2.6.1",
@@ -22,7 +22,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-manim = ["manim>=0.20.1"]
+manim = ["manim>=0.21.0"]
 
 [dependency-groups]
 dev = [
@@ -38,31 +38,31 @@ dev = [
     "types-networkx>=3.6.1.20260728",
     "types-openpyxl>=3.1.5.20260724",
     "types-pexpect>=4.9.0.20260518",
-    "types-protobuf>=7.34.1.20260518",
+    "types-protobuf>=7.34.1.20260816",
     "types-pygments>=2.20.0.20260728",
     "types-python-dateutil>=2.9.0.20260716",
     "types-pywin32>=312.0.0.20260724",
-    "types-pyyaml>=6.0.12.20260724",
-    "types-setuptools>=83.0.0.20260724",
+    "types-pyyaml>=6.0.12.20260815",
+    "types-setuptools>=84.0.0.20260812",
     "types-tabulate>=0.10.0.20260508",
     "types-tqdm>=4.70.0.20260805",
     "types-webencodings>=0.5.0.20260408",
     "types-xlrd>=2.0.0.20260518",
 ]
-lint = ["ruff>=0.16.1"]
-test = ["pytest>=9.1.1", "pytest-memray>=1.9.0"]
+lint = ["ruff>=0.16.3"]
+test = ["pytest>=9.1.1", "pytest-memray>=1.10.0"]
 typecheck = [
-    "basedpyright>=1.39.9",
-    "mypy[mypyc]>=2.3.0",
+    "basedpyright>=1.39.10",
+    "mypy[mypyc]>=2.3.1",
     "pycroscope>=0.4.0",
     "pyrefly>=1.2.0",
     "pyright>=1.1.411",
-    "ty>=0.0.66",
+    "ty>=0.0.72",
     "zuban>=0.9.1",
 ]
 
 [build-system]
-requires = ["uv_build>=0.12.1,<0.13.0"]
+requires = ["uv_build>=0.12.5,<0.13.0"]
 build-backend = "uv_build"
 
 [tool.basedpyright]
